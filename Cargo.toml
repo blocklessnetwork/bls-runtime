@@ -1,0 +1,11 @@
+[workspace]
+
+members = [
+    "crates/wasi-common",
+    "crates/blockless-drivers",
+    "crates/blockless-env",
+    "simple-wasi",
+]
+
+[patch.crates-io]
+wasi-common = {path = "crates/wasi-common"}

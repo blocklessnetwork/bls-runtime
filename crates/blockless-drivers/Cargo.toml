@@ -1,0 +1,26 @@
+[package]
+name = "blockless-drivers"
+version = "0.1.0"
+authors = ["Join.G"]
+description = "blockless drivers"
+keywords = ["blockless", "driver"]
+readme = "README.md"
+edition = "2021"
+
+[dependencies]
+blockless-drivers-macro = {path = "macro"}
+wasmtime-wasi = "0.36.0"
+wiggle = "0.36.0"
+anyhow = "1"
+cap-std = "0.24.1"
+tracing = "0.1.19"
+wasi-cap-std-sync = {path = "../wasi-common/cap-std-sync"}
+wasi-common = {path = "../wasi-common"}
+
+[dependencies.lazy_static]
+version = "1.4.0"
+
+[dependencies.tokio]
+version = "1"
+features = ["net"]
+

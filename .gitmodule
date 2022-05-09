@@ -1,0 +1,3 @@
+[submodule "WASI"]
+       path = crates/wasi-common/WASI
+       url = https://github.com/WebAssembly/WASI

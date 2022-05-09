@@ -1,0 +1,8 @@
+(use "typenames.witx")
+
+(module $blockless_drivers
+  (@interface func (export "blockless_open")
+    (param $url string)
+    (result $error (expected $fd (error $errno)))
+  )
+)

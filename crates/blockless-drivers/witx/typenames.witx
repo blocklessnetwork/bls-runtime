@@ -1,0 +1,25 @@
+(typename $errno
+  (enum (@witx tag u16)
+    ;;; No error occurred. System call completed successfully.
+    $success
+    ;;; Argument list too long.
+    $2big
+    ;;; Permission denied.
+    $acces
+    ;;; Address in use.
+    $addrinuse
+    ;;; Address not available.
+    $addrnotavail
+    ;;; Address family not supported.
+    $afnosupport
+    ;;; Resource unavailable, or operation would block.
+    $again
+    ;;; Connection error
+    $bad_connect
+    ;;; Driver Not Register error
+    $bad_driver
+
+  )
+)
+
+(typename $fd (handle))

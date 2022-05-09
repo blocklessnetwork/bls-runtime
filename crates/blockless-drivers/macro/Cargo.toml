@@ -1,0 +1,23 @@
+[package]
+name = "blockless-drivers-macro"
+version = "0.1.0"
+authors = ["Join.G"]
+description = "blockless drivers"
+keywords = ["blockless", "driver"]
+readme = "README.md"
+edition = "2021"
+
+[lib]
+proc-macro = true
+test = false
+
+
+[dependencies]
+wiggle-generate = { version = "=0.36.0" }
+quote = "1.0"
+syn = { version = "1.0", features = ["full"] }
+proc-macro2 = "1.0"
+
+[dependencies.witx]
+version = "0.9.1"
+
