@@ -2,7 +2,6 @@ mod config;
 use blockless_env;
 use wasmtime::*;
 use wasmtime_wasi::sync::WasiCtxBuilder;
-use wasmtime_wasi::{Dir};
 
 pub use config::BlocklessConfig;
 
@@ -20,7 +19,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) {
         .map(|path| {
             std::fs::File::open(path)
                 .ok()
-                .map(|path| Dir::from_std_file(path))
+                .map(|path| wasmtime_wasi::Dir::from_std_file(path))
         })
         .flatten();
 

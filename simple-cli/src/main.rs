@@ -1,4 +1,4 @@
-use blockless::{BlocklessConfig, blockless_run};
+use blockless::{blockless_run, BlocklessConfig};
 use tokio::runtime::Builder;
 
 fn main() {

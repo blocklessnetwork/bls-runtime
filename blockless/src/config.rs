@@ -12,7 +12,7 @@ impl BlocklessConfig {
         self.root_path.as_ref().map(|x| x.as_str())
     }
 
-    pub fn new(wasm_file:&str) -> BlocklessConfig {
+    pub fn new(wasm_file: &str) -> BlocklessConfig {
         Self {
             wasm_file: String::from(wasm_file),
             root_path: None,
