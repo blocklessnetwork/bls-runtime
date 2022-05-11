@@ -1,5 +1,5 @@
 [package]
-name = "simple-wasi"
+name = "blockless"
 version = "0.1.0"
 authors = ["Join.G"]
 description = "WASI example"
@@ -12,6 +12,4 @@ wasmtime = "0.36.0"
 wasmtime-wasi = "0.36.0"
 blockless-drivers = {path = "../crates/blockless-drivers"}
 blockless-env = {path = "../crates/blockless-env"}
-
 anyhow = "1"
-tokio = {version = "1", features = ["rt", "net"]}

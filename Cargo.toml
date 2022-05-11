@@ -4,7 +4,8 @@ members = [
     "crates/wasi-common",
     "crates/blockless-drivers",
     "crates/blockless-env",
-    "simple-wasi",
+    "blockless",
+    "simple-cli",
 ]
 
 [patch.crates-io]

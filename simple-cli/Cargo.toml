@@ -1,0 +1,14 @@
+[package]
+name = "simple-cli"
+version = "0.1.0"
+authors = ["Join.G"]
+description = "command line example"
+keywords = ["webassembly", "wasm"]
+readme = "README.md"
+edition = "2021"
+
+[dependencies]
+blockless = {path = "../blockless"}
+
+anyhow = "1"
+tokio = {version = "1", features = ["rt", "net"]}
