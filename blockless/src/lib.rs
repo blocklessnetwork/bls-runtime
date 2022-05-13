@@ -1,5 +1,7 @@
 mod config;
 use blockless_env;
+pub use config::Stdout;
+use std::path::Path;
 use wasmtime::*;
 use wasmtime_wasi::sync::WasiCtxBuilder;
 
@@ -22,10 +24,35 @@ pub async fn blockless_run(b_conf: BlocklessConfig) {
                 .map(|path| wasmtime_wasi::Dir::from_std_file(path))
         })
         .flatten();
-    let mut builder = WasiCtxBuilder::new()
-        .inherit_stdio()
-        .inherit_args()
-        .unwrap();
+    let mut builder = WasiCtxBuilder::new().inherit_args().unwrap();
+    match b_conf.stdout_ref() {
+        &Stdout::FileName(ref file_name) => {
+            let mut is_set_stdout = false;
+            if let Some(r) = b_conf.root_path_ref() {
+                let root = Path::new(r);
+                let file_name = root.join(file_name);
+                let mut file_opts = std::fs::File::options();
+                file_opts.create(true);
+                file_opts.append(true);
+
+                if let Some(f) = file_opts.open(file_name).ok().map(|file| {
+                    let file = cap_std::fs::File::from_std(file);
+                    let f = wasmtime_wasi::file::File::from_cap_std(file);
+                    Box::new(f)
+                }) {
+                    is_set_stdout = true;
+                    builder = builder.stdout(f)
+                }
+            }
+            if !is_set_stdout {
+                builder = builder.inherit_stdout();
+            }
+        }
+        &Stdout::Inherit => {
+            builder = builder.inherit_stdout();
+        }
+        Stdout::Null => {}
+    }
     if let Some(d) = root_dir {
         builder = builder.preopened_dir(d, "/").unwrap();
     }
