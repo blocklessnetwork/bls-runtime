@@ -34,6 +34,7 @@ impl BlocklessConfig {
         }
     }
 
+    /// stdout file must be work in sandbox root_path, if root_path is not setting, the stdout file will use Inherit
     pub fn stdout(&mut self, stdout: Stdout) {
         self.stdout = stdout
     }
