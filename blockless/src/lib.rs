@@ -22,13 +22,13 @@ pub async fn blockless_run(b_conf: BlocklessConfig) {
                 .map(|path| wasmtime_wasi::Dir::from_std_file(path))
         })
         .flatten();
-    let builder = WasiCtxBuilder::new()
+    let mut builder = WasiCtxBuilder::new()
         .inherit_stdio()
         .inherit_args()
         .unwrap();
-    builder = if let Some(d) = root_dir {
-        builder.preopened_dir(d, "/").unwrap();
-    };
+    if let Some(d) = root_dir {
+        builder = builder.preopened_dir(d, "/").unwrap();
+    }
     let ctx = builder.build();
     let mut store = Store::new(&engine, ctx);
     // Instantiate our module with the imports we've created, and run it.
