@@ -25,6 +25,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) {
         })
         .flatten();
     let mut builder = WasiCtxBuilder::new().inherit_args().unwrap();
+    //stdout file process for setting.
     match b_conf.stdout_ref() {
         &Stdout::FileName(ref file_name) => {
             let mut is_set_stdout = false;
