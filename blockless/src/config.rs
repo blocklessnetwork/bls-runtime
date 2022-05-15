@@ -17,7 +17,7 @@ impl BlocklessConfig {
     pub fn wasm_file_ref(&self) -> &str {
         &self.wasm_file
     }
-    
+
     pub fn root_path(&mut self, r: &str) {
         self.root_path = Some(r.into());
     }
@@ -34,7 +34,7 @@ impl BlocklessConfig {
         }
     }
 
-    /// stdout file must be work in sandbox root_path, 
+    /// stdout file must be work in sandbox root_path,
     /// if root_path is not setting, the stdout file will use Inherit
     pub fn stdout(&mut self, stdout: Stdout) {
         self.stdout = stdout

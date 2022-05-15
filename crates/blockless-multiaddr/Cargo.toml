@@ -1,0 +1,7 @@
+[package]
+name = "blockless-multiaddr"
+version = "0.1.0"
+description = "multiaddr"
+keywords = ["blockless", "multiaddr"]
+readme = "README.md"
+edition = "2021"

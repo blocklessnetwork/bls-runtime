@@ -4,6 +4,7 @@ members = [
     "crates/wasi-common",
     "crates/blockless-drivers",
     "crates/blockless-env",
+    "crates/blockless-multiaddr",
     "blockless",
     "simple-cli",
 ]
