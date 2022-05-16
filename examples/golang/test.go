@@ -22,7 +22,7 @@ func main() {
 	go func() {
 		var buf = make([]byte, 1024)
 		var fd int
-		if err := blockless_open("124.239.251.16:80", &fd); err != 0 {
+		if err := blockless_open("/tcp/124.239.251.16:80", &fd); err != 0 {
 			fmt.Println("err:", err)
 			ch <- 12
 			return

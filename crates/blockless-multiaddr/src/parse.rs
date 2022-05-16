@@ -39,7 +39,7 @@ impl Status {
     }
 }
 
-fn parse(address: &[u8]) -> Result<MultiAddr, Error> {
+pub fn parse(address: &[u8]) -> Result<MultiAddr, Error> {
     let mut addr = address.iter();
     let mut token: Status = Status::None;
     let mut paths = Vec::new();
@@ -71,9 +71,7 @@ fn parse(address: &[u8]) -> Result<MultiAddr, Error> {
         let idc = Indicator::new(address, beign, address.len());
         paths.push(idc);
     }
-    Ok(MultiAddr {
-        paths,
-    })
+    Ok(MultiAddr { paths })
 }
 
 #[cfg(test)]

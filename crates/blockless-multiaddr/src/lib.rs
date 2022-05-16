@@ -31,15 +31,19 @@ impl<'a> Indicator<'a> {
         }
     }
 
-    pub fn value(&self) ->  &[u8] {
+    pub fn value(&self) -> &[u8] {
         self.val
     }
 
-    pub fn begin(&self) ->  usize {
+    pub fn value_to_str(&self) -> &str {
+        unsafe {std::str::from_utf8_unchecked(self.val)}
+    }
+
+    pub fn begin(&self) -> usize {
         self.begin
     }
 
-    pub fn end(&self) ->  usize {
+    pub fn end(&self) -> usize {
         self.end
     }
 }
@@ -47,10 +51,13 @@ impl<'a> Indicator<'a> {
 impl<'a> MultiAddr<'a> {
     pub fn schema(&self) -> Result<&str, Error> {
         if self.paths.len() > 0 {
-            std::str::from_utf8(self.paths[0].value())
-                .map_err(|_| Error::InvalidToken)
+            std::str::from_utf8(self.paths[0].value()).map_err(|_| Error::InvalidToken)
         } else {
             Err(Error::Partial)
         }
+    }
+
+    pub fn paths_ref(&self) -> &Vec<Indicator<'a>> {
+        &self.paths
     }
 }

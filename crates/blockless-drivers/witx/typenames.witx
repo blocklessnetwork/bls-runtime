@@ -18,6 +18,8 @@
     $bad_connect
     ;;; Driver Not Register error
     $bad_driver
+    ;;; Driver Open Error
+    $bad_open
 
   )
 )

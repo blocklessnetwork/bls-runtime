@@ -8,6 +8,7 @@ pub enum ErrorKind {
     ConnectError,
     MemoryNotExport,
     DriverNotFound,
+    DriverBadOpen,
 }
 
 impl std::error::Error for ErrorKind {}
@@ -18,6 +19,7 @@ impl std::fmt::Display for ErrorKind {
             &Self::ConnectError => write!(f, "Connect Error"),
             &Self::MemoryNotExport => write!(f, "Memoery not export"),
             &Self::DriverNotFound => write!(f, "Driver not found."),
+            &Self::DriverBadOpen => write!(f, "Driver bad open"),
         }
     }
 }

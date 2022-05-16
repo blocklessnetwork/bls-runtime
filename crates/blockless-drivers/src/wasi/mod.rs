@@ -1,5 +1,6 @@
 use crate::ErrorKind;
 use crate::{Driver, DriverConetxt};
+use std::sync::Arc;
 use tracing::debug;
 use wasi_common::file::{FileCaps, FileEntry};
 use wasi_common::WasiCtx;
@@ -19,6 +20,7 @@ impl From<ErrorKind> for types::Errno {
             ErrorKind::ConnectError => Errno::BadConnect,
             ErrorKind::DriverNotFound => Errno::BadDriver,
             ErrorKind::MemoryNotExport => Errno::Addrnotavail,
+            ErrorKind::DriverBadOpen => Errno::BadOpen,
         }
     }
 }
@@ -44,7 +46,7 @@ impl blockless_drivers::BlocklessDrivers for WasiCtx {
         path: &GuestPtr<'a, str>,
     ) -> Result<types::Fd, ErrorKind> {
         let path: &str = &path.as_str().unwrap();
-        let mut drv: Box<dyn Driver + Sync + Send> = match self.find_driver(path) {
+        let drv: Arc<dyn Driver + Sync + Send> = match self.find_driver(path) {
             Some(d) => d,
             None => return Err(ErrorKind::DriverNotFound),
         };

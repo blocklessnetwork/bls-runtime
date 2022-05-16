@@ -24,3 +24,5 @@ version = "1.4.0"
 version = "1"
 features = ["net"]
 
+[dependencies.blockless-multiaddr]
+path = "../blockless-multiaddr"
