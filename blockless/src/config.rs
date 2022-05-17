@@ -34,8 +34,10 @@ impl BlocklessConfig {
             wasm_file: String::from(wasm_file),
             root_path: None,
             stdout: Stdout::Inherit,
+            //vm instruction limit.
             limited_fuel: None,
             limited_time: None,
+            //memory limit, 1 page = 64k. 
             limited_memory: None,
         }
     }

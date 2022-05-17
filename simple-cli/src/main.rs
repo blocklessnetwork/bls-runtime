@@ -6,7 +6,8 @@ fn main() {
     rt.block_on(async {
         let mut bc = BlocklessConfig::new("/Users/join/Downloads/main.wasi");
         bc.root_path("/Users/join/Downloads");
-        bc.limited_memory(Some(8));
+        bc.limited_fuel(Some(20));
+        bc.limited_memory(Some(3));
         blockless_run(bc).await;
     });
 }
