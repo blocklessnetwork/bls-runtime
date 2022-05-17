@@ -13,7 +13,21 @@ const ENTRY: &str = "_start";
 pub async fn blockless_run(b_conf: BlocklessConfig) {
     let mut conf = Config::new();
     conf.async_support(true);
-    conf.consume_fuel(false);
+    if let Some(_) = b_conf.get_limited_fuel() {
+        //fuel is enable.
+        conf.consume_fuel(true);
+    }
+    
+    if let Some(m) = b_conf.get_limited_memory() {
+        let mut instance_limits = InstanceLimits::default();
+        instance_limits.memory_pages = m;
+        let pool = InstanceAllocationStrategy::Pooling {
+            strategy: PoolingAllocationStrategy::default(),
+            instance_limits,
+        };
+
+        conf.allocation_strategy(pool);
+    }
     let engine = Engine::new(&conf).unwrap();
     let mut linker = Linker::new(&engine);
     blockless_env::add_to_linker(&mut linker);
@@ -61,7 +75,13 @@ pub async fn blockless_run(b_conf: BlocklessConfig) {
     }
     let ctx = builder.build();
     let mut store = Store::new(&engine, ctx);
-    // store.add_fuel(1_0_0000).unwrap();
+    //set the fuel from the configure.
+    if let Some(f) = b_conf.get_limited_fuel() {
+        let _ = store.add_fuel(f).map_err(|e| {
+            error!("add fuel error: {}", e);
+        });
+    }
+    
     // Instantiate our module with the imports we've created, and run it.
     let module = Module::from_file(&engine, b_conf.wasm_file_ref()).unwrap();
     linker.module(&mut store, "", &module).unwrap();

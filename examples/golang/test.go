@@ -16,9 +16,12 @@ func call_test() int32
 func blockless_open(a string, fd *int) syscall.Errno
 
 func main() {
-
+	var ss = make([]byte, 1024*64)
 	ch := make(chan int)
-	fmt.Println("--------++++-sss-")
+	for i := 1; i < 1024*64; i++ {
+		ss[i] = byte(i)
+	}
+	fmt.Println("--------++++-sss-", string(ss))
 	go func() {
 		var buf = make([]byte, 1024)
 		var fd int

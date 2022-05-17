@@ -54,7 +54,7 @@ impl BlocklessConfig {
         self.limited_time = time
     }
 
-    pub fn get_limited_time(&mut self) -> Option<u64>  {
+    pub fn get_limited_time(&self) -> Option<u64>  {
         self.limited_time
     }
 
@@ -70,7 +70,7 @@ impl BlocklessConfig {
         self.limited_memory = m
     }
 
-    pub fn get_limited_memory(&mut self) -> Option<u64>  {
+    pub fn get_limited_memory(&self) -> Option<u64>  {
         self.limited_memory
     }
 
