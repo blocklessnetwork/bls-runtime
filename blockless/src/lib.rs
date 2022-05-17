@@ -95,9 +95,9 @@ pub async fn blockless_run(b_conf: BlocklessConfig) {
 
 
 fn trap_info(t: &Trap, fuel: Option<u64>) {
-    if let Some(0) = fuel {
-        error!("all fuel is consumed, the app exited. {:?}", t);
+    if let Some(_) = fuel {
+        error!("all fuel is consumed, the app exited. {}", t);
     } else {
-        error!("{:?}", t);
+        error!("error: {:?}", t);
     }
 }

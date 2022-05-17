@@ -12,3 +12,6 @@ blockless = {path = "../blockless"}
 
 anyhow = "1"
 tokio = {version = "1", features = ["rt", "net"]}
+
+[dependencies.env_logger]
+version = "0.8"
