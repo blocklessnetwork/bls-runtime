@@ -11,6 +11,9 @@ pub struct BlocklessConfig {
     wasm_file: String,
     root_path: Option<String>,
     stdout: Stdout,
+    limited_fuel: Option<u64>,
+    limited_time: Option<u64>,
+    limited_memory: Option<u64>,
 }
 
 impl BlocklessConfig {
@@ -31,6 +34,9 @@ impl BlocklessConfig {
             wasm_file: String::from(wasm_file),
             root_path: None,
             stdout: Stdout::Inherit,
+            limited_fuel: None,
+            limited_time: None,
+            limited_memory: None,
         }
     }
 
@@ -43,4 +49,29 @@ impl BlocklessConfig {
     pub fn stdout_ref(&self) -> &Stdout {
         &self.stdout
     }
+
+    pub fn limited_time(&mut self, time: Option<u64>)  {
+        self.limited_time = time
+    }
+
+    pub fn get_limited_time(&mut self) -> Option<u64>  {
+        self.limited_time
+    }
+
+    pub fn limited_fuel(&mut self, fuel: Option<u64>)  {
+        self.limited_fuel = fuel
+    }
+
+    pub fn get_limited_fuel(&self) -> Option<u64> {
+        self.limited_fuel
+    }
+
+    pub fn limited_memory(&mut self, m: Option<u64>)  {
+        self.limited_memory = m
+    }
+
+    pub fn get_limited_memory(&mut self) -> Option<u64>  {
+        self.limited_memory
+    }
+
 }

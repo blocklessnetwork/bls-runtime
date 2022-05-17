@@ -14,3 +14,4 @@ cap-std = "0.24.1"
 blockless-drivers = {path = "../crates/blockless-drivers"}
 blockless-env = {path = "../crates/blockless-env"}
 anyhow = "1"
+log = "0.4"

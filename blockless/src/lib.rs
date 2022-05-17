@@ -4,6 +4,7 @@ pub use config::Stdout;
 use std::path::Path;
 use wasmtime::*;
 use wasmtime_wasi::sync::WasiCtxBuilder;
+use log::{info, error};
 
 pub use config::BlocklessConfig;
 
@@ -12,6 +13,7 @@ const ENTRY: &str = "_start";
 pub async fn blockless_run(b_conf: BlocklessConfig) {
     let mut conf = Config::new();
     conf.async_support(true);
+    conf.consume_fuel(false);
     let engine = Engine::new(&conf).unwrap();
     let mut linker = Linker::new(&engine);
     blockless_env::add_to_linker(&mut linker);
@@ -59,10 +61,23 @@ pub async fn blockless_run(b_conf: BlocklessConfig) {
     }
     let ctx = builder.build();
     let mut store = Store::new(&engine, ctx);
+    // store.add_fuel(1_0_0000).unwrap();
     // Instantiate our module with the imports we've created, and run it.
     let module = Module::from_file(&engine, b_conf.wasm_file_ref()).unwrap();
     linker.module(&mut store, "", &module).unwrap();
     let inst = linker.instantiate_async(&mut store, &module).await.unwrap();
     let func = inst.get_typed_func::<(), (), _>(&mut store, ENTRY).unwrap();
-    let _ = func.call_async(&mut store, ()).await.unwrap();
+    match func.call_async(&mut store, ()).await {
+        Err(ref t) => trap_info(t, store.fuel_consumed()),
+        Ok(_) => info!("program exit normal."),
+    }
+}
+
+
+fn trap_info(t: &Trap, fuel: Option<u64>) {
+    if let Some(0) = fuel {
+        error!("all fuel is consumed, the app exited. {:?}", t);
+    } else {
+        error!("{:?}", t);
+    }
 }
