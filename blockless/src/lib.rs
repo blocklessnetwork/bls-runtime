@@ -88,16 +88,19 @@ pub async fn blockless_run(b_conf: BlocklessConfig) {
     let inst = linker.instantiate_async(&mut store, &module).await.unwrap();
     let func = inst.get_typed_func::<(), (), _>(&mut store, ENTRY).unwrap();
     match func.call_async(&mut store, ()).await {
-        Err(ref t) => trap_info(t, store.fuel_consumed()),
+        Err(ref t) => trap_info(t, store.fuel_consumed(), b_conf.get_limited_fuel().unwrap()),
         Ok(_) => info!("program exit normal."),
     }
 }
 
-
-fn trap_info(t: &Trap, fuel: Option<u64>) {
-    if let Some(_) = fuel {
-        error!("all fuel is consumed, the app exited. {}", t);
+fn trap_info(t: &Trap, fuel: Option<u64>, max_fuel: u64) {
+    if let Some(fuel) = fuel {
+        if fuel >= max_fuel {
+            error!("All fuel is consumed, the app exited, fuel consumed {}, Max Fuel is {}.", fuel, max_fuel);
+        } else {
+            error!("Fuel consumed {}, Max {}. {}", fuel, max_fuel, t);
+        }
     } else {
-        error!("error: {:?}", t);
+        error!("error: {}", t);
     }
 }

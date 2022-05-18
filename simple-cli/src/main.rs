@@ -8,7 +8,7 @@ fn main() {
         env_logger::init_from_env(env);
         let mut bc = BlocklessConfig::new("/Users/join/Downloads/main.wasi");
         bc.root_path("/Users/join/Downloads");
-        bc.limited_fuel(Some(200));
+        bc.limited_fuel(Some(2000_0000));
         bc.limited_memory(Some(3));
         blockless_run(bc).await;
     });
