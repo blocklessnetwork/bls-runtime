@@ -21,8 +21,8 @@ impl BlocklessConfig {
         &self.wasm_file
     }
 
-    pub fn root_path(&mut self, r: &str) {
-        self.root_path = Some(r.into());
+    pub fn root_path(&mut self, r: Option<String>) {
+        self.root_path = r;
     }
 
     pub fn root_path_ref(&self) -> Option<&str> {

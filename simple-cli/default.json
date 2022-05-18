@@ -1,0 +1,6 @@
+{
+    "root_path": "/Users/join/Downloads", 
+    "limited_fuel": 20000000,
+    "limited_memory": 20,
+    "entry": "/Users/join/Downloads/main.wasi"
+}

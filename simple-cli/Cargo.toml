@@ -9,8 +9,8 @@ edition = "2021"
 
 [dependencies]
 blockless = {path = "../blockless"}
-
 anyhow = "1"
+json = "0.12"
 tokio = {version = "1", features = ["rt", "net"]}
 
 [dependencies.env_logger]
