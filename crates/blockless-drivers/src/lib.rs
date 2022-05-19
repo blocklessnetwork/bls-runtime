@@ -11,6 +11,7 @@ use std::sync::Arc;
 use tcp_driver::TcpDriver;
 use wasi_common::WasiCtx;
 use wasi_common::WasiFile;
+use log::error;
 
 pub trait Driver {
     fn open(
@@ -48,14 +49,14 @@ impl DriverConetxtImpl {
     fn find_driver(&self, uri: &str) -> Option<Arc<dyn Driver + Sync + Send>> {
         let addr = match multiaddr::parse(uri.as_bytes()) {
             Err(e) => {
-                eprintln!("error parse:{:?}", e);
+                error!("error parse:{:?}", e);
                 return None;
             }
             Ok(addr) => addr,
         };
         let schema = match addr.schema() {
             Err(e) => {
-                eprint!("get schema error:{:?}", e);
+                error!("get schema error:{:?}", e);
                 return None;
             }
             Ok(s) => s.to_lowercase(),

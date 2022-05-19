@@ -5,6 +5,7 @@ use tokio::net::TcpStream;
 use wasi_cap_std_sync::net::Socket;
 use wasi_common::WasiFile;
 use blockless_multiaddr as multiaddr;
+use log::error;
 
 pub struct TcpDriver {}
 
@@ -19,18 +20,18 @@ impl Driver for TcpDriver {
         let _opts: String = opts.into();
         return Box::pin(async move {
             let ma = multiaddr::parse(socket.as_bytes()).map_err(|e| {
-                eprintln!("error open:{:?}", e);
+                error!("error open:{:?}", e);
                 ErrorKind::DriverBadOpen
             })?;
             if ma.paths_ref().len() < 1 {
-                eprintln!("error open error path : {}", socket);
+                error!("error open error path : {}", socket);
                 return Err(ErrorKind::DriverBadOpen);
             }
             let socket = ma.paths_ref()[1].value_to_str();
             let stream = match TcpStream::connect(socket).await {
                 Ok(s) => s,
                 Err(e) => {
-                    eprintln!("error connect in driver {}: {}", socket, e);
+                    error!("error connect in driver {}: {}", socket, e);
                     return Err(ErrorKind::ConnectError);
                 }
             };

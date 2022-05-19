@@ -14,6 +14,7 @@ wiggle = "0.36.0"
 anyhow = "1"
 cap-std = "0.24.1"
 tracing = "0.1.19"
+log = "0.4"
 dlopen_derive = "0.1"
 wasi-cap-std-sync = {path = "../wasi-common/cap-std-sync"}
 wasi-common = {path = "../wasi-common"}
