@@ -1,7 +1,7 @@
 use crate::ErrorKind;
 use crate::{Driver, DriverConetxt};
 use std::sync::Arc;
-use tracing::debug;
+use log::debug;
 use wasi_common::file::{FileCaps, FileEntry};
 use wasi_common::WasiCtx;
 use wiggle::GuestPtr;

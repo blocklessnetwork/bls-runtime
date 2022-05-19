@@ -1,6 +1,7 @@
 pub mod error;
 pub mod tcp_driver;
 pub mod wasi;
+mod cdylib_driver;
 use blockless_multiaddr as multiaddr;
 pub use error::*;
 use lazy_static::*;
