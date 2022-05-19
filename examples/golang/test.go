@@ -13,7 +13,7 @@ func call_test() int32
 
 //go:wasm-module blockless
 //export blockless_open
-func blockless_open(a string, fd *int) syscall.Errno
+func blockless_open(a string, opts string, fd *int) syscall.Errno
 
 func main() {
 	var ss = make([]byte, 1024*64)
@@ -25,7 +25,7 @@ func main() {
 	go func() {
 		var buf = make([]byte, 1024)
 		var fd int
-		if err := blockless_open("/tcp/124.239.251.16:80", &fd); err != 0 {
+		if err := blockless_open("/tcp/124.239.251.16:80", "", &fd); err != 0 {
 			fmt.Println("err:", err)
 			ch <- 12
 			return

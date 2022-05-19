@@ -44,8 +44,10 @@ impl blockless_drivers::BlocklessDrivers for WasiCtx {
     async fn blockless_open<'a>(
         &mut self,
         path: &GuestPtr<'a, str>,
+        opts: &GuestPtr<'a, str>,
     ) -> Result<types::Fd, ErrorKind> {
         let path: &str = &path.as_str().unwrap();
+        let opts: &str = &opts.as_str().unwrap();
         let drv: Arc<dyn Driver + Sync + Send> = match self.find_driver(path) {
             Some(d) => d,
             None => return Err(ErrorKind::DriverNotFound),
@@ -56,7 +58,7 @@ impl blockless_drivers::BlocklessDrivers for WasiCtx {
             | FileCaps::WRITE
             | FileCaps::POLL_READWRITE;
         match drv
-            .open(path)
+            .open(path, opts)
             .await
             .map(|f| Box::new(FileEntry::new(caps, f)))
         {

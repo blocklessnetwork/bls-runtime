@@ -12,10 +12,12 @@ impl Driver for TcpDriver {
     fn open(
         &self,
         socket: &str,
+        opts: &str,
     ) -> Pin<Box<dyn Future<Output = Result<Box<dyn WasiFile>, ErrorKind>> + Send>> {
         let socket: String = socket.into();
+        //this open options.
+        let _opts: String = opts.into();
         return Box::pin(async move {
-            let socket = socket;
             let ma = multiaddr::parse(socket.as_bytes()).map_err(|e| {
                 eprintln!("error open:{:?}", e);
                 ErrorKind::DriverBadOpen

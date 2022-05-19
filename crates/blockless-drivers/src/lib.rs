@@ -16,6 +16,7 @@ pub trait Driver {
     fn open(
         &self,
         uri: &str,
+        opts: &str,
     ) -> Pin<Box<dyn Future<Output = Result<Box<dyn WasiFile>, ErrorKind>> + Send>>;
 }
 
