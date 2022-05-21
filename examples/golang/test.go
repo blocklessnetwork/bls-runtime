@@ -16,12 +16,18 @@ func call_test() int32
 func blockless_open(a string, opts string, fd *int) syscall.Errno
 
 func main() {
-	var ss = make([]byte, 1024*64)
 	ch := make(chan int)
-	for i := 1; i < 1024*64; i++ {
-		ss[i] = byte(i)
-	}
-	fmt.Println("--------++++-sss-", string(ss))
+	go func() {
+		var fd int
+		if err := blockless_open("/http/124.239.251.16:80", "", &fd); err != 0 {
+			fmt.Println("err:", err)
+			return
+		}
+		println("http driver", fd)
+		var buf = make([]byte, 16)
+		syscall.Read(fd, buf)
+		syscall.Write(fd, buf)
+	}()
 	go func() {
 		var buf = make([]byte, 1024)
 		var fd int

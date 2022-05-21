@@ -2,5 +2,11 @@
     "root_path": "/Users/join/Downloads", 
     "limited_fuel": 20000000,
     "limited_memory": 20,
-    "entry": "/Users/join/Downloads/main.wasi"
+    "entry": "/Users/join/Downloads/main.wasi",
+    "drivers": [
+        {
+            "path": "/Users/join/Downloads/http.so",
+            "schema": "http"
+        }
+    ]
 }

@@ -1,12 +1,13 @@
 mod config;
+use blockless_drivers::{CdylibDriver, DriverConetxt};
 use blockless_env;
 pub use config::Stdout;
+use log::{error, info};
 use std::path::Path;
 use wasmtime::*;
-use wasmtime_wasi::sync::WasiCtxBuilder;
-use log::{info, error};
+use wasmtime_wasi::{sync::WasiCtxBuilder, WasiCtx};
 
-pub use config::BlocklessConfig;
+pub use config::{BlocklessConfig, DriverConfig};
 
 const ENTRY: &str = "_start";
 
@@ -17,7 +18,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) {
         //fuel is enable.
         conf.consume_fuel(true);
     }
-    
+
     if let Some(m) = b_conf.get_limited_memory() {
         let mut instance_limits = InstanceLimits::default();
         instance_limits.memory_pages = m;
@@ -28,6 +29,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) {
 
         conf.allocation_strategy(pool);
     }
+    
     let engine = Engine::new(&conf).unwrap();
     let mut linker = Linker::new(&engine);
     blockless_env::add_to_linker(&mut linker);
@@ -74,6 +76,8 @@ pub async fn blockless_run(b_conf: BlocklessConfig) {
         builder = builder.preopened_dir(d, "/").unwrap();
     }
     let ctx = builder.build();
+    let drivers = b_conf.drivers_ref();
+    load_driver(&ctx, drivers);
     let mut store = Store::new(&engine, ctx);
     //set the fuel from the configure.
     if let Some(f) = b_conf.get_limited_fuel() {
@@ -81,7 +85,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) {
             error!("add fuel error: {}", e);
         });
     }
-    
+
     // Instantiate our module with the imports we've created, and run it.
     let module = Module::from_file(&engine, b_conf.wasm_file_ref()).unwrap();
     linker.module(&mut store, "", &module).unwrap();
@@ -93,10 +97,20 @@ pub async fn blockless_run(b_conf: BlocklessConfig) {
     }
 }
 
+fn load_driver(ctx: &WasiCtx, cfs: &[DriverConfig]) {
+    cfs.iter().for_each(|cfg| {
+        let drv = CdylibDriver::load(cfg.path(), cfg.schema()).unwrap();
+        ctx.insert_driver(drv);
+    });
+}
+
 fn trap_info(t: &Trap, fuel: Option<u64>, max_fuel: u64) {
     if let Some(fuel) = fuel {
         if fuel >= max_fuel {
-            error!("All fuel is consumed, the app exited, fuel consumed {}, Max Fuel is {}.", fuel, max_fuel);
+            error!(
+                "All fuel is consumed, the app exited, fuel consumed {}, Max Fuel is {}.",
+                fuel, max_fuel
+            );
         } else {
             error!("Fuel consumed {}, Max {}. {}", fuel, max_fuel, t);
         }

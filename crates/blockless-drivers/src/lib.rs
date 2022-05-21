@@ -1,20 +1,24 @@
+mod cdylib_driver;
 pub mod error;
 pub mod tcp_driver;
 pub mod wasi;
-mod cdylib_driver;
 use blockless_multiaddr as multiaddr;
+pub use cdylib_driver::CdylibDriver;
 pub use error::*;
 use lazy_static::*;
+use log::error;
 use std::collections::HashMap;
 use std::future::Future;
 use std::pin::Pin;
 use std::sync::Arc;
+use std::sync::Mutex;
 use tcp_driver::TcpDriver;
 use wasi_common::WasiCtx;
 use wasi_common::WasiFile;
-use log::error;
 
 pub trait Driver {
+    fn name(&self) -> &str;
+
     fn open(
         &self,
         uri: &str,
@@ -24,10 +28,11 @@ pub trait Driver {
 
 pub trait DriverConetxt {
     fn find_driver(&self, uri: &str) -> Option<Arc<dyn Driver + Sync + Send>>;
+    fn insert_driver<T: Driver + Sync + Send + 'static>(&self, driver: T);
 }
 
 lazy_static! {
-    pub static ref DRIVERS: DriverConetxtImpl = DriverConetxtImpl::new();
+    pub static ref DRIVERS: Mutex<DriverConetxtImpl> = Mutex::new(DriverConetxtImpl::new());
 }
 
 pub struct DriverConetxtImpl {
@@ -39,12 +44,16 @@ impl DriverConetxtImpl {
         let mut ctx = DriverConetxtImpl {
             drivers: HashMap::new(),
         };
-        ctx.insert_driver("tcp", TcpDriver {});
+        ctx.insert_driver(TcpDriver {});
         ctx
     }
 
-    fn insert_driver(&mut self, key: &str, driver: impl Driver + Send + Sync + 'static) {
-        self.drivers.insert(key.to_lowercase(), Arc::new(driver));
+    fn insert_driver<T>(&mut self, driver: T)
+    where
+        T: Driver + Send + Sync + 'static,
+    {
+        let key = driver.name().to_lowercase();
+        self.drivers.insert(key, Arc::new(driver));
     }
 
     fn find_driver(&self, uri: &str) -> Option<Arc<dyn Driver + Sync + Send>> {
@@ -68,6 +77,12 @@ impl DriverConetxtImpl {
 
 impl DriverConetxt for WasiCtx {
     fn find_driver(&self, uri: &str) -> Option<Arc<dyn Driver + Sync + Send>> {
-        DRIVERS.find_driver(uri)
+        let drv = DRIVERS.lock().unwrap();
+        drv.find_driver(uri)
+    }
+
+    fn insert_driver<T: Driver + Sync + Send + 'static>(&self, driver: T) {
+        let mut drv = DRIVERS.lock().unwrap();
+        drv.insert_driver(driver);
     }
 }

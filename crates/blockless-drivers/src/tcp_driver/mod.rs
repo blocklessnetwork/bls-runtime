@@ -1,15 +1,19 @@
 use crate::{Driver, ErrorKind};
+use blockless_multiaddr as multiaddr;
+use log::error;
 use std::future::Future;
 use std::pin::Pin;
 use tokio::net::TcpStream;
 use wasi_cap_std_sync::net::Socket;
 use wasi_common::WasiFile;
-use blockless_multiaddr as multiaddr;
-use log::error;
 
 pub struct TcpDriver {}
 
 impl Driver for TcpDriver {
+    fn name(&self) -> &str {
+        "tcp"
+    }
+
     fn open(
         &self,
         socket: &str,

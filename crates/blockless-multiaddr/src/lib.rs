@@ -36,7 +36,7 @@ impl<'a> Indicator<'a> {
     }
 
     pub fn value_to_str(&self) -> &str {
-        unsafe {std::str::from_utf8_unchecked(self.val)}
+        unsafe { std::str::from_utf8_unchecked(self.val) }
     }
 
     pub fn begin(&self) -> usize {

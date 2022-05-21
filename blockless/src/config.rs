@@ -7,6 +7,25 @@ pub enum Stdout {
     FileName(String),
 }
 
+pub struct DriverConfig {
+    schema: String,
+    path: String,
+}
+
+impl DriverConfig {
+    pub fn new(schema: String, path: String) -> DriverConfig {
+        DriverConfig { schema, path }
+    }
+
+    pub fn schema(&self) -> &str {
+        &self.schema
+    }
+
+    pub fn path(&self) -> &str {
+        &self.path
+    }
+}
+
 pub struct BlocklessConfig {
     wasm_file: String,
     root_path: Option<String>,
@@ -14,6 +33,7 @@ pub struct BlocklessConfig {
     limited_fuel: Option<u64>,
     limited_time: Option<u64>,
     limited_memory: Option<u64>,
+    drivers: Vec<DriverConfig>,
 }
 
 impl BlocklessConfig {
@@ -37,9 +57,18 @@ impl BlocklessConfig {
             //vm instruction limit.
             limited_fuel: None,
             limited_time: None,
-            //memory limit, 1 page = 64k. 
+            //memory limit, 1 page = 64k.
             limited_memory: None,
+            drivers: Vec::new(),
         }
+    }
+
+    pub fn add_driver(&mut self, d_conf: DriverConfig) {
+        self.drivers.push(d_conf)
+    }
+
+    pub fn drivers_ref(&self) -> &[DriverConfig] {
+        &self.drivers
     }
 
     /// stdout file must be work in sandbox root_path,
@@ -48,19 +77,23 @@ impl BlocklessConfig {
         self.stdout = stdout
     }
 
+    pub fn drivers(&mut self, drvs: Vec<DriverConfig>) {
+        self.drivers = drvs;
+    }
+
     pub fn stdout_ref(&self) -> &Stdout {
         &self.stdout
     }
 
-    pub fn limited_time(&mut self, time: Option<u64>)  {
+    pub fn limited_time(&mut self, time: Option<u64>) {
         self.limited_time = time
     }
 
-    pub fn get_limited_time(&self) -> Option<u64>  {
+    pub fn get_limited_time(&self) -> Option<u64> {
         self.limited_time
     }
 
-    pub fn limited_fuel(&mut self, fuel: Option<u64>)  {
+    pub fn limited_fuel(&mut self, fuel: Option<u64>) {
         self.limited_fuel = fuel
     }
 
@@ -68,12 +101,11 @@ impl BlocklessConfig {
         self.limited_fuel
     }
 
-    pub fn limited_memory(&mut self, m: Option<u64>)  {
+    pub fn limited_memory(&mut self, m: Option<u64>) {
         self.limited_memory = m
     }
 
-    pub fn get_limited_memory(&self) -> Option<u64>  {
+    pub fn get_limited_memory(&self) -> Option<u64> {
         self.limited_memory
     }
-
 }
