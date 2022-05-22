@@ -3,6 +3,10 @@
     "limited_fuel": 20000000,
     "limited_memory": 20,
     "entry": "/Users/join/Downloads/main.wasi",
+    "permissions": [
+        "/tcp/103.235.46.39:80",
+        "/https/www.163.com"
+    ],
     "drivers": [
         {
             "path": "/Users/join/Downloads/http.so",
