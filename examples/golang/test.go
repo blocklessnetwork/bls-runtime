@@ -23,6 +23,7 @@ func main() {
 			fmt.Println("err:", err)
 			return
 		}
+		defer syscall.Close(fd)
 		println("--- http driver", fd)
 		var buf = make([]byte, 16)
 		for {
