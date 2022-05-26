@@ -77,16 +77,4 @@ impl blockless_drivers::BlocklessDrivers for WasiCtx {
         }
     }
 
-    async fn blockless_close(
-        &mut self,
-        fd: types::Fd
-    ) -> Result<(), ErrorKind> {
-        self.table.delete(u32::from(fd)).map(|b: Box<dyn Any + Send + Sync>| {
-            (*b).downcast_ref::<FileEntry>().map(|f: &FileEntry| {
-                
-            });
-        });
-        Ok(())
-    }
-
 }

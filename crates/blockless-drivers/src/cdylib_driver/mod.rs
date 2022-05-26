@@ -76,7 +76,7 @@ impl Driver for CdylibDriver {
             let mut fd = -1;
             let rs = api.blockless_open(&addr, &opts, &mut fd);
             if  rs != 0 {
-                return Err(ErrorKind::from(rs));
+                return Err(rs.into());
             }
             let file: DriverWasiFile = DriverWasiFile::new(api, fd)?;
             let file: Box<dyn WasiFile> = Box::new(file);

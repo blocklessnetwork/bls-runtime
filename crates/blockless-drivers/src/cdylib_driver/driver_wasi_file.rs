@@ -22,6 +22,14 @@ impl DriverWasiFile {
     }
 }
 
+impl Drop for DriverWasiFile {
+    fn drop(&mut self) {
+        if self.fd > 0 {
+            self.api.blockless_close(self.fd);
+        }
+    }
+}
+
 #[async_trait::async_trait]
 impl WasiFile for DriverWasiFile {
     fn as_any(&self) -> &dyn Any {
@@ -40,6 +48,9 @@ impl WasiFile for DriverWasiFile {
         let mut n = 0;
         let rs = self.api.blockless_read(self.fd, buf, &mut n);
         if rs != 0 {
+            if rs == -1 {
+                return Ok(n as _);
+            }
             return Err(ErrorKind::from(rs).into());
         } else {
             return Ok(n as _);

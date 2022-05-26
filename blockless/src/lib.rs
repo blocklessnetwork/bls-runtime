@@ -112,7 +112,7 @@ fn trap_info(t: &Trap, fuel: Option<u64>, max_fuel: u64) {
                 fuel, max_fuel
             );
         } else {
-            error!("Fuel consumed {}, Max {}. {}", fuel, max_fuel, t);
+            error!("Fuel {}:{}. {}", fuel, max_fuel, t);
         }
     } else {
         error!("error: {}", t);

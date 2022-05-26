@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"io"
 	"runtime"
 	"syscall"
 )
@@ -28,11 +27,9 @@ func main() {
 		var buf = make([]byte, 16)
 		for {
 			if n, err := syscall.Read(fd, buf); err != nil {
-				if err != io.EOF {
-					fmt.Println("err:", err)
-					return
-				}
-				fmt.Print(string(buf[:n]))
+				fmt.Println("err:", err)
+				return
+			} else if n == 0 {
 				break
 			} else {
 				fmt.Print(string(buf[:n]))

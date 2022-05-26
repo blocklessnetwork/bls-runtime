@@ -97,7 +97,12 @@ func blockless_read(fd int32, p *C.char, len int32, retn *int32) int32 {
 	}
 	if n, err := ctx.resp.Body.Read(bs); err != nil {
 		if err == io.EOF {
-			return -1
+			if n > 0 {
+				*retn = int32(n)
+				return 0
+			} else {
+				return -1
+			}
 		}
 		fmt.Fprintf(os.Stderr, "read body error: %s\n", err)
 		return -2

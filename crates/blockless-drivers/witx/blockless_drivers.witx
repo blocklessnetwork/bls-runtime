@@ -7,8 +7,4 @@
     (result $error (expected $fd (error $errno)))
   )
 
-  (@interface func (export "blockless_close")
-    (param $fd $fd)
-    (result $error (expected (error $errno)))
-  )
 )

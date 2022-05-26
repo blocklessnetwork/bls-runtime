@@ -41,6 +41,12 @@ impl DriverApi {
             (self.api_write)(fd, buf.as_ptr(), buf_len, wn as *mut i32)
         }
     }
+
+    pub fn blockless_close(&self, fd: i32) -> i32 {
+        unsafe {
+            (self.api_close)(fd)
+        }
+    }
 }
 
 impl Clone for DriverApi {
