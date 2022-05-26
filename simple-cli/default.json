@@ -1,11 +1,11 @@
 {
     "root_path": "/Users/join/Downloads", 
-    "limited_fuel": 20000000,
+    "limited_fuel": 200000000,
     "limited_memory": 20,
     "entry": "/Users/join/Downloads/main.wasi",
     "permissions": [
         "/tcp/103.235.46.39:80",
-        "/https/www.163.com"
+        "/https/www.163.com/index.html"
     ],
     "drivers": [
         {

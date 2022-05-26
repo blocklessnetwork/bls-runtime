@@ -2,6 +2,7 @@ package main
 
 import (
 	"fmt"
+	"io"
 	"runtime"
 	"syscall"
 )
@@ -19,14 +20,25 @@ func main() {
 	ch := make(chan int)
 	go func() {
 		var fd int
-		if err := blockless_open("/http/124.239.251.16:80", "", &fd); err != 0 {
+		if err := blockless_open("/http/124.239.251.16:80", `{"method": "get"}`, &fd); err != 0 {
 			fmt.Println("err:", err)
 			return
 		}
-		println("http driver", fd)
+		println("--- http driver", fd)
 		var buf = make([]byte, 16)
-		syscall.Read(fd, buf)
-		syscall.Write(fd, buf)
+		for {
+			if n, err := syscall.Read(fd, buf); err != nil {
+				if err != io.EOF {
+					fmt.Println("err:", err)
+					return
+				}
+				fmt.Print(string(buf[:n]))
+				break
+			} else {
+				fmt.Print(string(buf[:n]))
+			}
+		}
+		fmt.Println("------")
 	}()
 	go func() {
 		var buf = make([]byte, 1024)
@@ -36,7 +48,7 @@ func main() {
 			ch <- 12
 			return
 		}
-		println("fd", fd)
+		println("go 2fd", fd)
 		defer func() {
 			syscall.Close(int(fd))
 		}()

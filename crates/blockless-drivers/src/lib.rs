@@ -24,6 +24,7 @@ pub trait Driver {
         uri: &str,
         opts: &str,
     ) -> Pin<Box<dyn Future<Output = Result<Box<dyn WasiFile>, ErrorKind>> + Send>>;
+
 }
 
 pub trait DriverConetxt {

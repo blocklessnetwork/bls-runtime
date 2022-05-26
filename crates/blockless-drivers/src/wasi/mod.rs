@@ -2,8 +2,9 @@ use crate::ErrorKind;
 use crate::{Driver, DriverConetxt};
 use log::debug;
 use std::sync::Arc;
+use std::any::Any;
 use wasi_common::file::{FileCaps, FileEntry};
-use wasi_common::WasiCtx;
+use wasi_common::{WasiCtx};
 use wiggle::GuestPtr;
 
 wiggle::from_witx!({
@@ -19,8 +20,13 @@ impl From<ErrorKind> for types::Errno {
         match e {
             ErrorKind::ConnectError => Errno::BadConnect,
             ErrorKind::DriverNotFound => Errno::BadDriver,
-            ErrorKind::MemoryNotExport => Errno::Addrnotavail,
+            ErrorKind::Addrnotavail => Errno::Addrnotavail,
+            ErrorKind::MemoryNotExport => Errno::Acces,
             ErrorKind::DriverBadOpen => Errno::BadOpen,
+            ErrorKind::DriverBadParams => Errno::BadParams,
+            ErrorKind::BadFileDescriptor => Errno::Badf,
+            ErrorKind::EofError => Errno::Eof,
+            ErrorKind::Unkown => Errno::Unknown,
         }
     }
 }
@@ -70,4 +76,17 @@ impl blockless_drivers::BlocklessDrivers for WasiCtx {
             Err(e) => Err(e),
         }
     }
+
+    async fn blockless_close(
+        &mut self,
+        fd: types::Fd
+    ) -> Result<(), ErrorKind> {
+        self.table.delete(u32::from(fd)).map(|b: Box<dyn Any + Send + Sync>| {
+            (*b).downcast_ref::<FileEntry>().map(|f: &FileEntry| {
+                
+            });
+        });
+        Ok(())
+    }
+
 }

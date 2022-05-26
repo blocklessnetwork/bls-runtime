@@ -1,8 +1,10 @@
+use crate::error::*;
+
 use super::driver_api::DriverApi;
 use anyhow::Result;
 use std::any::Any;
 use std::io;
-use wasi_common::Error;
+use anyhow::Error;
 use wasi_common::{file::FileType, WasiFile};
 
 pub(crate) struct DriverWasiFile {
@@ -11,8 +13,12 @@ pub(crate) struct DriverWasiFile {
 }
 
 impl DriverWasiFile {
-    pub(crate) fn new(api: DriverApi, fd: i32) -> Self {
-        DriverWasiFile { api, fd }
+    pub(crate) fn new(api: DriverApi, fd: i32) -> Result<Self, ErrorKind> {
+        if fd < 0 {
+            let e = ErrorKind::from(fd);
+            return Err(e);
+        }
+        Ok(DriverWasiFile { api, fd })
     }
 }
 
@@ -31,8 +37,13 @@ impl WasiFile for DriverWasiFile {
             .iter_mut()
             .find(|b| !b.is_empty())
             .map_or(&mut [][..], |b| &mut **b);
-        let n = self.api.blockless_read(self.fd, buf);
-        Ok(n.try_into()?)
+        let mut n = 0;
+        let rs = self.api.blockless_read(self.fd, buf, &mut n);
+        if rs != 0 {
+            return Err(ErrorKind::from(rs).into());
+        } else {
+            return Ok(n as _);
+        }
     }
 
     async fn write_vectored<'a>(&mut self, slices: &[io::IoSlice<'a>]) -> Result<u64, Error> {
@@ -40,7 +51,11 @@ impl WasiFile for DriverWasiFile {
             .iter()
             .find(|b| !b.is_empty())
             .map_or(&[][..], |b| &**b);
-        let n = self.api.blockless_write(self.fd, buf);
+        let mut n = 0;
+        let rs = self.api.blockless_write(self.fd, buf, &mut n);
+        if  rs != 0 {
+            return Err(ErrorKind::from(rs).into());
+        }
         Ok(n.try_into()?)
     }
 }

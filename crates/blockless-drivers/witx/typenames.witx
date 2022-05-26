@@ -2,6 +2,8 @@
   (enum (@witx tag u16)
     ;;; No error occurred. System call completed successfully.
     $success
+    ;;; End of file
+    $eof
     ;;; Argument list too long.
     $2big
     ;;; Permission denied.
@@ -14,13 +16,18 @@
     $afnosupport
     ;;; Resource unavailable, or operation would block.
     $again
-    ;;; Connection error
+    ;;; Bad file descriptor
+    $badf
+    ;;; Bad message.
     $bad_connect
     ;;; Driver Not Register error
     $bad_driver
     ;;; Driver Open Error
     $bad_open
-
+    ;;; Driver found bad params
+    $bad_params
+    ;;; Unknow error
+    $unknown
   )
 )
 

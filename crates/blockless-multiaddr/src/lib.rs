@@ -60,4 +60,23 @@ impl<'a> MultiAddr<'a> {
     pub fn paths_ref(&self) -> &Vec<Indicator<'a>> {
         &self.paths
     }
+
+    pub fn to_url_string(&self) -> Result<String, Error> {
+        let mut rs = String::new();
+        rs += self.schema()?;
+        let path = self.paths
+            .iter()
+            .skip(1)
+            .fold(String::new(), 
+                |f, b| {
+                    if f.len() > 0 {}
+                    f + b.value_to_str() + "/"
+                }
+            );
+        if self.paths.len() > 0 {
+            rs += "://";
+        }
+        rs += &path;
+        Ok(rs)
+    }
 }
