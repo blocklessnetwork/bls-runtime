@@ -3,7 +3,7 @@ use crate::{Driver, DriverConetxt};
 use log::debug;
 use std::sync::Arc;
 use wasi_common::file::{FileCaps, FileEntry};
-use wasi_common::{WasiCtx};
+use wasi_common::WasiCtx;
 use wiggle::GuestPtr;
 
 wiggle::from_witx!({
@@ -75,5 +75,4 @@ impl blockless_drivers::BlocklessDrivers for WasiCtx {
             Err(e) => Err(e),
         }
     }
-
 }

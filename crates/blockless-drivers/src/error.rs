@@ -36,14 +36,13 @@ impl std::fmt::Display for ErrorKind {
 
 impl From<i32> for ErrorKind {
     fn from(i: i32) -> ErrorKind {
-        match i { 
+        match i {
             -1 => ErrorKind::EofError,
             -2 => ErrorKind::ConnectError,
-           -5 => ErrorKind::Addrnotavail,
-           -11 => ErrorKind::DriverBadOpen,
-           -12 => ErrorKind::DriverBadParams,
-           _ => ErrorKind::Unkown,
+            -5 => ErrorKind::Addrnotavail,
+            -11 => ErrorKind::DriverBadOpen,
+            -12 => ErrorKind::DriverBadParams,
+            _ => ErrorKind::Unkown,
         }
     }
 }
-

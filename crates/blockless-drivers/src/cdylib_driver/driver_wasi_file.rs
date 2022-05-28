@@ -1,10 +1,10 @@
 use crate::error::*;
 
 use super::driver_api::DriverApi;
+use anyhow::Error;
 use anyhow::Result;
 use std::any::Any;
 use std::io;
-use anyhow::Error;
 use wasi_common::{file::FileType, WasiFile};
 
 pub(crate) struct DriverWasiFile {
@@ -64,7 +64,7 @@ impl WasiFile for DriverWasiFile {
             .map_or(&[][..], |b| &**b);
         let mut n = 0;
         let rs = self.api.blockless_write(self.fd, buf, &mut n);
-        if  rs != 0 {
+        if rs != 0 {
             return Err(ErrorKind::from(rs).into());
         }
         Ok(n.try_into()?)

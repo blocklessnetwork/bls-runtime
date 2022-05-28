@@ -56,8 +56,24 @@ pub fn parse(address: &[u8]) -> Result<MultiAddr, Error> {
             return Err(Error::InvalidToken);
         }
         token = match token {
-            Status::None if *c == b'/' => continue,
+            Status::None if *c == b'/' => {
+                if paths.len() == 0 {
+                    return Err(Error::InvalidToken);
+                } else {
+                    continue;
+                }
+            }
             Status::None => Status::IndicatorBegin(c_off),
+            Status::IndicatorBegin(beign) if *c == b':' && paths.len() == 0  => {
+                //schema check.
+                if address[c_off..].len() < 3 || 
+                    &address[c_off+1..c_off+3] != b"//" {
+                    return Err(Error::InvalidToken);
+                }
+                paths.push(Indicator::new(address, beign, c_off));
+                addr = address[c_off+3..].iter();
+                Status::None
+            }
             Status::IndicatorBegin(beign) if *c == b'/' => {
                 paths.push(Indicator::new(address, beign, c_off));
                 Status::None
@@ -76,27 +92,62 @@ pub fn parse(address: &[u8]) -> Result<MultiAddr, Error> {
 
 #[cfg(test)]
 mod tests {
+    use crate::Error;
+
     use super::parse;
 
     #[test]
     fn parse_drivers() {
         let s = "////driver/test".as_bytes();
-        let res = parse(s).unwrap();
-        assert!(res.paths[0].value() == b"driver");
-        assert!(res.paths[1].value() == b"test");
+        let res = parse(s);
+        assert!(matches!(res, Err(Error::InvalidToken)));
     }
 
     #[test]
     fn parse_drivers2() {
         let s = "////".as_bytes();
-        let res = parse(s).unwrap();
-        assert!(res.paths.len() == 0);
+        let res = parse(s);
+        assert!(matches!(res, Err(Error::InvalidToken)));
     }
 
     #[test]
     fn parse_drivers3() {
-        let s = "////2".as_bytes();
+        let s = "tcp://".as_bytes();
         let res = parse(s).unwrap();
-        assert!(res.paths[0].value() == b"2");
+        assert!(res.paths[0].value() == b"tcp");
+    }
+
+    #[test]
+    fn parse_drivers4() {
+        let s = "tcp://192.168.0.1:8080".as_bytes();
+        let res = parse(s).unwrap();
+        assert!(res.paths[1].value() == b"192.168.0.1:8080");
+    }
+
+    #[test]
+    fn parse_drivers5() {
+        let s = "tcp://192.168.0.1:8080/".as_bytes();
+        let res = parse(s).unwrap();
+        assert!(res.paths[1].value() == b"192.168.0.1:8080");
+    }
+
+    #[test]
+    fn parse_drivers6() {
+        let s = "https://doc.rust-lang.org/std/iter/struct.Skip.html".as_bytes();
+        let res = parse(s).unwrap();
+        assert!(res.paths[1].value() == b"doc.rust-lang.org");
+        assert!(res.paths[2].value() == b"std");
+        assert!(res.paths[3].value() == b"iter");
+        assert!(res.paths[4].value() == b"struct.Skip.html");
+        let r = res.to_url_string().unwrap();
+        assert!(r.as_bytes() == s)
+    }
+
+    #[test]
+    fn parse_drivers8() {
+        let s = "http://sso.idaas.gmail.com/sso/?redirect=http%3A%2F%2Fsso.test.idaas.koal.com%2Fauthn-api%2Fv5%2Fcas%2F0%2Flogin%3Fservice%3Dhttp%253A%252F%252Fadmin.test.idaas.koal.com&appId=0".as_bytes();
+        let res = parse(s).unwrap();
+        let r = res.to_url_string().unwrap();
+        assert!(r.as_bytes() == s)
     }
 }

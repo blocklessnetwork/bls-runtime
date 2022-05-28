@@ -197,7 +197,6 @@ impl FileEntry {
         }
     }
 
-
     pub fn drop_caps_to(&mut self, caps: FileCaps) -> Result<(), Error> {
         self.capable_of(caps)?;
         self.caps = caps;

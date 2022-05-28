@@ -1,15 +1,20 @@
 mod driver_api;
 mod driver_wasi_file;
-use crate::{Driver, ErrorKind, multiaddr};
+use crate::{multiaddr, Driver, ErrorKind};
 use anyhow::Result;
 use dlopen::raw::Library;
 use driver_api::DriverApi;
 use driver_wasi_file::DriverWasiFile;
-use wasi_common::WasiFile;
 use log::error;
+use wasi_common::WasiFile;
 
-type OpenFuncType =
-    unsafe extern "C" fn(uri: *const u8, uri_len: i32, opts: *const u8, opts_len: i32, fd: *mut i32) -> i32;
+type OpenFuncType = unsafe extern "C" fn(
+    uri: *const u8,
+    uri_len: i32,
+    opts: *const u8,
+    opts_len: i32,
+    fd: *mut i32,
+) -> i32;
 type ReadFuncType = unsafe extern "C" fn(fd: i32, buf: *mut u8, len: i32, n: *mut i32) -> i32;
 type WriteFuncType = unsafe extern "C" fn(fd: i32, buf: *const u8, len: i32, n: *mut i32) -> i32;
 type CloseFuncType = unsafe extern "C" fn(fd: i32) -> i32;
@@ -72,10 +77,12 @@ impl Driver for CdylibDriver {
                 }
                 Ok(addr) => addr,
             };
-            let addr = addr.to_url_string().map_err(|_| ErrorKind::DriverBadParams)?;
+            let addr = addr
+                .to_url_string()
+                .map_err(|_| ErrorKind::DriverBadParams)?;
             let mut fd = -1;
             let rs = api.blockless_open(&addr, &opts, &mut fd);
-            if  rs != 0 {
+            if rs != 0 {
                 return Err(rs.into());
             }
             let file: DriverWasiFile = DriverWasiFile::new(api, fd)?;

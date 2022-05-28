@@ -29,7 +29,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) {
 
         conf.allocation_strategy(pool);
     }
-    
+
     let engine = Engine::new(&conf).unwrap();
     let mut linker = Linker::new(&engine);
     blockless_env::add_to_linker(&mut linker);

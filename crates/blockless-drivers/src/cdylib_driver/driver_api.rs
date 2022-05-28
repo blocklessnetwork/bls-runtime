@@ -1,4 +1,4 @@
-use super::{OpenFuncType, ReadFuncType, WriteFuncType, CloseFuncType};
+use super::{CloseFuncType, OpenFuncType, ReadFuncType, WriteFuncType};
 
 pub struct DriverApi {
     api_open: OpenFuncType,
@@ -8,10 +8,12 @@ pub struct DriverApi {
 }
 
 impl DriverApi {
-    pub fn new(api_open: OpenFuncType, 
-        api_read: ReadFuncType, 
+    pub fn new(
+        api_open: OpenFuncType,
+        api_read: ReadFuncType,
         api_write: WriteFuncType,
-        api_close: CloseFuncType) -> Self {
+        api_close: CloseFuncType,
+    ) -> Self {
         DriverApi {
             api_open,
             api_read,
@@ -24,7 +26,13 @@ impl DriverApi {
         unsafe {
             let uri_len: i32 = uri.len() as _;
             let opts_len: i32 = opts.len() as _;
-            (self.api_open)(uri.as_ptr(), uri_len, opts.as_ptr(), opts_len, fd as *mut i32)
+            (self.api_open)(
+                uri.as_ptr(),
+                uri_len,
+                opts.as_ptr(),
+                opts_len,
+                fd as *mut i32,
+            )
         }
     }
 
@@ -43,9 +51,7 @@ impl DriverApi {
     }
 
     pub fn blockless_close(&self, fd: i32) -> i32 {
-        unsafe {
-            (self.api_close)(fd)
-        }
+        unsafe { (self.api_close)(fd) }
     }
 }
 

@@ -63,20 +63,15 @@ impl<'a> MultiAddr<'a> {
 
     pub fn to_url_string(&self) -> Result<String, Error> {
         let mut rs = String::new();
-        rs += self.schema()?;
-        let path = self.paths
-            .iter()
-            .skip(1)
-            .fold(String::new(), 
-                |f, b| {
-                    if f.len() > 0 {}
-                    f + b.value_to_str() + "/"
-                }
-            );
-        if self.paths.len() > 0 {
-            rs += "://";
+        let last = self.paths.len() - 1;
+        for (i, indx) in self.paths.iter().enumerate() { 
+            rs += indx.value_to_str();
+            if i == 0 {
+                rs += "://";
+            } else if i != last {
+                rs += "/";
+            }
         }
-        rs += &path;
         Ok(rs)
     }
 }

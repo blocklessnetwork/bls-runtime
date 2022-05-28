@@ -1,5 +1,5 @@
 {
-    "root_path": "/Users/join/Downloads", 
+    "root_path": "/Users/join/Downloads/uuid/stdout", 
     "limited_fuel": 200000000,
     "limited_memory": 20,
     "entry": "/Users/join/Downloads/main.wasi",
