@@ -19,7 +19,7 @@ func main() {
 	ch := make(chan int)
 	go func() {
 		var fd int
-		if err := blockless_open("/http/124.239.251.16:80", `{"method": "get"}`, &fd); err != 0 {
+		if err := blockless_open("http://124.239.251.16:80", `{"method": "get"}`, &fd); err != 0 {
 			fmt.Println("err:", err)
 			return
 		}
@@ -41,7 +41,7 @@ func main() {
 	go func() {
 		var buf = make([]byte, 1024)
 		var fd int
-		if err := blockless_open("/tcp/124.239.251.16:80", "", &fd); err != 0 {
+		if err := blockless_open("tcp://124.239.251.16:80", "", &fd); err != 0 {
 			fmt.Println("err:", err)
 			ch <- 12
 			return
@@ -77,7 +77,6 @@ func main() {
 				fmt.Println(string(buf))
 			}
 		}
-
 		ch <- 12
 	}()
 	go func() {

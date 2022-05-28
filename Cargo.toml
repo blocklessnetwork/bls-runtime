@@ -6,7 +6,7 @@ members = [
     "crates/blockless-env",
     "crates/blockless-multiaddr",
     "blockless",
-    "simple-cli",
+    "blockless-cli",
 ]
 
 [patch.crates-io]
