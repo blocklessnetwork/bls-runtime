@@ -18,10 +18,9 @@ pub fn linker_integration(args: TokenStream) -> proc_macro::TokenStream {
             funcs.push(generate_func(&module, &f, &names, Some(&config.target)));
         }
     }
+    let method_name = format_ident!("{}", config.link_method.value());
     quote!(
-        use wasi_common::WasiCtx;
-        use wasmtime::Linker;
-        pub fn add_to_linker(linker: &mut Linker<WasiCtx>) {
+        pub fn #method_name(linker: &mut Linker<WasiCtx>) {
             #(#funcs)*
         }
     )

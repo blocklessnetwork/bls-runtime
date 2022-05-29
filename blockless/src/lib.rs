@@ -32,7 +32,8 @@ pub async fn blockless_run(b_conf: BlocklessConfig) {
 
     let engine = Engine::new(&conf).unwrap();
     let mut linker = Linker::new(&engine);
-    blockless_env::add_to_linker(&mut linker);
+    blockless_env::add_drivers_to_linker(&mut linker);
+    blockless_env::add_http_to_linker(&mut linker);
     wasmtime_wasi::add_to_linker(&mut linker, |s| s).unwrap();
     let root_dir = b_conf
         .root_path_ref()
