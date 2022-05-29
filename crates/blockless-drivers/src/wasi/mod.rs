@@ -1,3 +1,4 @@
+mod http;
 use crate::ErrorKind;
 use crate::{Driver, DriverConetxt};
 use log::debug;

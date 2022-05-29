@@ -21,8 +21,8 @@ type CloseFuncType = unsafe extern "C" fn(fd: i32) -> i32;
 
 pub struct CdylibDriver {
     name: String,
-    path: String,
-    lib: Library,
+    _path: String,
+    _lib: Library,
     api: DriverApi,
 }
 
@@ -43,8 +43,8 @@ impl CdylibDriver {
         }
         Ok(Self {
             name,
-            path,
-            lib,
+            _path: path,
+            _lib: lib,
             api: DriverApi::new(api_open, api_read, api_write, api_close),
         })
     }

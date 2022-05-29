@@ -1,8 +1,6 @@
 pub use anyhow::{Context, Error};
 
-/// Internal error type for the `wasi-common` crate.
-/// Contains variants of the WASI `$errno` type are added according to what is actually used internally by
-/// the crate. Not all values are represented presently.
+
 #[derive(Debug)]
 pub enum ErrorKind {
     ConnectError,
@@ -34,6 +32,8 @@ impl std::fmt::Display for ErrorKind {
     }
 }
 
+
+
 impl From<i32> for ErrorKind {
     fn from(i: i32) -> ErrorKind {
         match i {
@@ -43,6 +43,45 @@ impl From<i32> for ErrorKind {
             -11 => ErrorKind::DriverBadOpen,
             -12 => ErrorKind::DriverBadParams,
             _ => ErrorKind::Unkown,
+        }
+    }
+}
+
+#[derive(Debug)]
+pub enum HttpErrorKind {
+    InvalidHandle,
+    MemoryAccessError,
+    BufferTooSmall,
+    HeaderNotFound,
+    Utf8Error,
+    DestinationNotAllowed,
+    InvalidMethod,
+    InvalidEncoding,
+    InvalidUrl,
+    RequestError,
+    RuntimeError,
+    TooManySessions,
+}
+
+
+impl std::error::Error for HttpErrorKind {}
+
+
+impl std::fmt::Display for HttpErrorKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            &Self::InvalidHandle => write!(f, "Invalid Error"),
+            &Self::MemoryAccessError => write!(f, "Memoery Access Error"),
+            &Self::BufferTooSmall => write!(f, "Buffer too small"),
+            &Self::HeaderNotFound => write!(f, "Header not found"),
+            &Self::Utf8Error => write!(f, "Utf8 error"),
+            &Self::DestinationNotAllowed => write!(f, "Destination not allowed"),
+            &Self::InvalidMethod => write!(f, "Invalid method"),
+            &Self::InvalidEncoding => write!(f, "Invalid encoding"),
+            &Self::InvalidUrl => write!(f, "Invalid url"),
+            &Self::RequestError => write!(f, "Request url"),
+            &Self::RuntimeError => write!(f, "Runtime error"),
+            &Self::TooManySessions => write!(f, "Too many sessions"),
         }
     }
 }
