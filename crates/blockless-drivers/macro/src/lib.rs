@@ -34,6 +34,7 @@ fn generate_func(
     target_path: Option<&syn::Path>,
 ) -> proc_macro2::TokenStream {
     let module_ident = names.module(&module.name);
+    let module_name = module.name.as_str();
     let rt = names.runtime_mod();
     let (params, results) = func.wasm_signature();
 
@@ -62,7 +63,7 @@ fn generate_func(
     let abi_func = quote!( #target_path::#module_ident::#func_ident );
     let linker = quote!(
         linker.#wrapper(
-            "blockless",
+            #module_name,
             #func_name,
             move |mut caller: #rt::wasmtime_crate::Caller<'_, WasiCtx> #(, #arg_decls)*| {
                 Box::new(async move {

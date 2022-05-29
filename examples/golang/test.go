@@ -11,7 +11,7 @@ import (
 //export call_test
 func call_test() int32
 
-//go:wasm-module blockless
+//go:wasm-module blockless_drivers
 //export blockless_open
 func blockless_open(a string, opts string, fd *int) syscall.Errno
 

@@ -29,7 +29,7 @@
   )
 )
 ;;; Handles for the HTTP extensions
-(typename $http_handle u32)
+(typename $http_handle (handle))
 
 ;;; HTTP status code
 (typename $status_code u16)

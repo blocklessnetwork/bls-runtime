@@ -1,6 +1,5 @@
 use crate::HttpErrorKind;
 use wasi_common::WasiCtx;
-use std::future::Future;
 use wiggle::{GuestPtr, GuestSlice};
 
 wiggle::from_witx!({
