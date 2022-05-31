@@ -9,15 +9,11 @@ use wasi_common::{file::FileType, WasiFile};
 
 pub(crate) struct DriverWasiFile {
     api: DriverApi,
-    fd: i32,
+    fd: u32,
 }
 
 impl DriverWasiFile {
-    pub(crate) fn new(api: DriverApi, fd: i32) -> Result<Self, ErrorKind> {
-        if fd < 0 {
-            let e = ErrorKind::from(fd);
-            return Err(e);
-        }
+    pub(crate) fn new(api: DriverApi, fd: u32) -> Result<Self, ErrorKind> {
         Ok(DriverWasiFile { api, fd })
     }
 }
@@ -48,7 +44,7 @@ impl WasiFile for DriverWasiFile {
         let mut n = 0;
         let rs = self.api.blockless_read(self.fd, buf, &mut n);
         if rs != 0 {
-            if rs == -1 {
+            if rs == 0 {
                 return Ok(n as _);
             }
             return Err(ErrorKind::from(rs).into());

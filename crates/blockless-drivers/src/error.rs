@@ -10,7 +10,7 @@ pub enum ErrorKind {
     Addrnotavail,
     DriverBadOpen,
     DriverBadParams,
-    Unkown,
+    Unknown,
 }
 
 impl std::error::Error for ErrorKind {}
@@ -25,24 +25,12 @@ impl std::fmt::Display for ErrorKind {
             &Self::BadFileDescriptor => write!(f, "Bad file descriptor"),
             &Self::DriverBadParams => write!(f, "Driver bad params"),
             &Self::Addrnotavail => write!(f, "Address is not avail"),
-            &Self::Unkown => write!(f, "unkown error"),
+            &Self::Unknown => write!(f, "unknown error"),
             &Self::EofError => write!(f, "end of file error"),
         }
     }
 }
 
-impl From<i32> for ErrorKind {
-    fn from(i: i32) -> ErrorKind {
-        match i {
-            -1 => ErrorKind::EofError,
-            -2 => ErrorKind::ConnectError,
-            -5 => ErrorKind::Addrnotavail,
-            -11 => ErrorKind::DriverBadOpen,
-            -12 => ErrorKind::DriverBadParams,
-            _ => ErrorKind::Unkown,
-        }
-    }
-}
 
 #[derive(Debug)]
 pub enum HttpErrorKind {

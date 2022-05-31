@@ -1,32 +1,32 @@
 (typename $errno
   (enum (@witx tag u16)
-    ;;; No error occurred. System call completed successfully.
+    ;;;0 No error occurred. System call completed successfully.
     $success
-    ;;; End of file
+    ;;;1 End of file
     $eof
-    ;;; Argument list too long.
+    ;;;2 Argument list too long.
     $2big
-    ;;; Permission denied.
+    ;;;3 Permission denied.
     $acces
-    ;;; Address in use.
+    ;;;4 Address in use.
     $addrinuse
-    ;;; Address not available.
+    ;;;5 Address not available.
     $addrnotavail
-    ;;; Address family not supported.
+    ;;;6 Address family not supported.
     $afnosupport
-    ;;; Resource unavailable, or operation would block.
+    ;;;7 Resource unavailable, or operation would block.
     $again
-    ;;; Bad file descriptor
+    ;;;8 Bad file descriptor
     $badf
-    ;;; Bad message.
+    ;;;9 Bad message.
     $bad_connect
-    ;;; Driver Not Register error
+    ;;;10 Driver Not Register error
     $bad_driver
-    ;;; Driver Open Error
+    ;;;11 Driver Open Error
     $bad_open
-    ;;; Driver found bad params
+    ;;;12 Driver found bad params
     $bad_params
-    ;;; Unknow error
+    ;;;13 Unknow error
     $unknown
   )
 )

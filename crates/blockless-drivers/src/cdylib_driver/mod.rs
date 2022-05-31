@@ -13,11 +13,11 @@ type OpenFuncType = unsafe extern "C" fn(
     uri_len: i32,
     opts: *const u8,
     opts_len: i32,
-    fd: *mut i32,
-) -> i32;
-type ReadFuncType = unsafe extern "C" fn(fd: i32, buf: *mut u8, len: i32, n: *mut i32) -> i32;
-type WriteFuncType = unsafe extern "C" fn(fd: i32, buf: *const u8, len: i32, n: *mut i32) -> i32;
-type CloseFuncType = unsafe extern "C" fn(fd: i32) -> i32;
+    fd: *mut u32,
+) -> u32;
+type ReadFuncType = unsafe extern "C" fn(fd: u32, buf: *mut u8, len: i32, n: *mut i32) -> u32;
+type WriteFuncType = unsafe extern "C" fn(fd: u32, buf: *const u8, len: i32, n: *mut i32) -> u32;
+type CloseFuncType = unsafe extern "C" fn(fd: u32) -> u32;
 
 pub struct CdylibDriver {
     name: String,
@@ -80,7 +80,7 @@ impl Driver for CdylibDriver {
             let addr = addr
                 .to_url_string()
                 .map_err(|_| ErrorKind::DriverBadParams)?;
-            let mut fd = -1;
+            let mut fd = 0;
             let rs = api.blockless_open(&addr, &opts, &mut fd);
             if rs != 0 {
                 return Err(rs.into());

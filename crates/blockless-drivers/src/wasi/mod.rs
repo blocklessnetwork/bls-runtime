@@ -1,3 +1,4 @@
+#![allow(non_upper_case_globals)]
 pub mod http;
 pub mod guest_ptr;
 pub use guest_ptr::ArrayTuple;
@@ -28,7 +29,43 @@ impl From<ErrorKind> for types::Errno {
             ErrorKind::DriverBadParams => Errno::BadParams,
             ErrorKind::BadFileDescriptor => Errno::Badf,
             ErrorKind::EofError => Errno::Eof,
-            ErrorKind::Unkown => Errno::Unknown,
+            ErrorKind::Unknown => Errno::Unknown,
+        }
+    }
+}
+
+macro_rules! enum_2_u32 {
+    ($($t:tt),+) => {
+       $(const $t : u32 = types::Errno::$t as _;)*
+    }
+}
+
+enum_2_u32!(
+    BadConnect,
+    BadDriver,
+    Addrnotavail,
+    Acces,
+    BadParams,
+    BadOpen,
+    Badf,
+    Eof,
+    Unknown
+);
+
+
+impl From<u32> for ErrorKind {
+    fn from(i: u32) -> ErrorKind {
+        match i {
+            Eof  => ErrorKind::EofError,
+            BadConnect => ErrorKind::ConnectError,
+            Addrnotavail => ErrorKind::Addrnotavail,
+            BadOpen => ErrorKind::DriverBadOpen,
+            Acces => ErrorKind::MemoryNotExport,
+            BadDriver => ErrorKind::DriverNotFound,
+            BadParams => ErrorKind::DriverBadParams,
+            Unknown => ErrorKind::Unknown,
+            Badf => ErrorKind::BadFileDescriptor,
+            _ => ErrorKind::Unknown
         }
     }
 }
