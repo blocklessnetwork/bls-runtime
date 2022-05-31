@@ -24,6 +24,7 @@ var MaxSeq int32 = 1
 type Options struct {
 	Method         string `json:"method"`
 	ConnectTimeout int32  `json:"connectTimeout"`
+	ReadTimeout    int32  `json:"readTimeout"`
 }
 
 //export blockless_open
