@@ -10,34 +10,7 @@ import (
 	"unsafe"
 )
 
-/**
-;;; No error occurred. System call completed successfully.
-    $success 0
-	;;; Permission denied.
-	$bad_fd -1
-    ;;; Argument list too long.
-    $2big -2
-    ;;; Permission denied.
-    $acces -3
-    ;;; Address in use.
-    $addrinuse -4
-    ;;; Address not available.
-    $addrnotavail -5
-    ;;; Address family not supported.
-    $afnosupport -6
-    ;;; Resource unavailable, or operation would block.
-    $again -7
-	;;; Bad file descriptor
-    $badf -8
-    ;;; Connection error
-    $bad_connect
-    ;;; Driver Not Register error
-    $bad_driver
-    ;;; Driver Open Error
-    $bad_open
-    ;;; Driver found bad params
-    $bad_params
-*/
+const ()
 
 type InnerContext struct {
 	req  *http.Request
@@ -49,7 +22,8 @@ var Context = make(map[int32]*InnerContext)
 var MaxSeq int32 = 1
 
 type Options struct {
-	Method string `json:"method"`
+	Method         string `json:"method"`
+	ConnectTimeout int32  `json:"connectTimeout"`
 }
 
 //export blockless_open
@@ -64,18 +38,17 @@ func blockless_open(f_ptr *C.char, f_len int32, opt_ptr *C.char, o_len int32, fd
 	slice = (*byte)(unsafe.Pointer(opt_ptr))
 	var opts_slice = unsafe.Slice(slice, o_len)
 	var options Options
-	fmt.Println(string(opts_slice))
 	if err := json.Unmarshal(opts_slice, &options); err != nil {
-		fmt.Fprintf(os.Stderr, "error format params: %s\n", options)
-		return -11
+		fmt.Fprintf(os.Stderr, "error format params: %s", string(opts_slice))
+		return 11
 	}
 	if req, err = http.NewRequest(options.Method, loc_url, nil); err != nil {
 		fmt.Fprintf(os.Stderr, "new request error: %s\n", err)
-		return -11
+		return 11
 	} else {
 		if resp, err = http.DefaultClient.Do(req); err != nil {
 			fmt.Fprintf(os.Stderr, "do request error: %s\n", err)
-			return -10
+			return 10
 		}
 	}
 	if len(Context) > 0 {
@@ -99,13 +72,13 @@ func blockless_read(fd int32, p *C.char, len int32, retn *int32) int32 {
 		if err == io.EOF {
 			if n > 0 {
 				*retn = int32(n)
-				return 0
 			} else {
-				return -1
+				*retn = int32(0)
 			}
+			return 0
 		}
 		fmt.Fprintf(os.Stderr, "read body error: %s\n", err)
-		return -2
+		return 2
 	} else {
 		*retn = int32(n)
 		return 0

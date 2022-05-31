@@ -4,7 +4,6 @@ import (
 	"fmt"
 	"runtime"
 	"syscall"
-	"unsafe"
 )
 
 //must be using tinygo for compile, example: tinygo build
@@ -16,14 +15,7 @@ func call_test() int32
 //export blockless_open
 func blockless_open(a string, opts string, fd *int) syscall.Errno
 
-//go:wasm-module blockless_http
-//export http_req
-func blockless_http_req(body *string, l int32)
-
 func main() {
-	var ss = []string{"a11111\x00", "222222--\x00"}
-	var fd *string = (*string)(unsafe.Pointer(&ss))
-	blockless_http_req(fd, int32(len(ss)))
 	ch := make(chan int)
 	go func() {
 		var fd int
@@ -35,7 +27,8 @@ func main() {
 		println("--- http driver", fd)
 		var buf = make([]byte, 16)
 		for {
-			if n, err := syscall.Read(fd, buf); err != nil {
+			n, err := syscall.Read(fd, buf)
+			if err != nil {
 				fmt.Println("err:", err)
 				return
 			} else if n == 0 {
