@@ -64,14 +64,13 @@ pub fn parse(address: &[u8]) -> Result<MultiAddr, Error> {
                 }
             }
             Status::None => Status::IndicatorBegin(c_off),
-            Status::IndicatorBegin(beign) if *c == b':' && paths.len() == 0  => {
+            Status::IndicatorBegin(beign) if *c == b':' && paths.len() == 0 => {
                 //schema check.
-                if address[c_off..].len() < 3 || 
-                    &address[c_off+1..c_off+3] != b"//" {
+                if address[c_off..].len() < 3 || &address[c_off + 1..c_off + 3] != b"//" {
                     return Err(Error::InvalidToken);
                 }
                 paths.push(Indicator::new(address, beign, c_off));
-                addr = address[c_off+3..].iter();
+                addr = address[c_off + 3..].iter();
                 Status::None
             }
             Status::IndicatorBegin(beign) if *c == b'/' => {

@@ -1,6 +1,5 @@
 pub use anyhow::{Context, Error};
 
-
 #[derive(Debug)]
 pub enum ErrorKind {
     ConnectError,
@@ -32,8 +31,6 @@ impl std::fmt::Display for ErrorKind {
     }
 }
 
-
-
 impl From<i32> for ErrorKind {
     fn from(i: i32) -> ErrorKind {
         match i {
@@ -63,9 +60,7 @@ pub enum HttpErrorKind {
     TooManySessions,
 }
 
-
 impl std::error::Error for HttpErrorKind {}
-
 
 impl std::fmt::Display for HttpErrorKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {

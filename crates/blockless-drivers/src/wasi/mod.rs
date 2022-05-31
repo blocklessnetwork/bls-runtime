@@ -1,4 +1,6 @@
 pub mod http;
+pub mod guest_ptr;
+pub use guest_ptr::ArrayTuple;
 use crate::ErrorKind;
 use crate::{Driver, DriverConetxt};
 use log::debug;
