@@ -59,6 +59,7 @@ pub mod pipe;
 pub mod random;
 pub mod sched;
 pub mod snapshots;
+pub mod drivers;
 mod string_array;
 pub mod table;
 

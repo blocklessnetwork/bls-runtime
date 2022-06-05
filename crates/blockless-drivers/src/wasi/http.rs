@@ -1,6 +1,7 @@
 
 use crate::HttpErrorKind;
 use wasi_common::WasiCtx;
+use wiggle::GuestPtr;
 
 
 wiggle::from_witx!({
@@ -48,4 +49,14 @@ impl wiggle::GuestErrorType for types::HttpError {
 
 #[wiggle::async_trait]
 impl blockless_http::BlocklessHttp for WasiCtx {
+    async fn http_req<'a>(&mut self,
+        url: &GuestPtr<'a, str>,
+        opts: &GuestPtr<'a, str>
+    ) -> Result<types::HttpHandle, HttpErrorKind> {
+        Err(HttpErrorKind::BufferTooSmall)
+    }
+
+    async fn http_close(&mut self, handle: types::HttpHandle) -> Result<(), HttpErrorKind> {
+        Ok(())
+    }
 }

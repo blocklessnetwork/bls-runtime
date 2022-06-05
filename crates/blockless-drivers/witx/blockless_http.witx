@@ -56,19 +56,18 @@
 
 (module $blockless_http
     ;;; Send a request
-;;;    (@interface func (export "http_req")
-;;;        ;;;(param $url string)
-;;;        ;;;(param $method string)
-;;;        (param $headers $headers_array)
-;;;        ;;;(param $body $outgoing_body)
-;;;        ;;;(result $error (expected (tuple $status_code $response_handle) (error $http_error)))
-;;;    )
-;;;
-;;;    ;;; Close a request handle
-;;;    (@interface func (export "close")
-;;;        (param $response_handle $response_handle)
-;;;        (result $error (expected (error $http_error)))
-;;;    )
+    (@interface func (export "http_req")
+        (param $url string)
+        (param $opts string)
+        (result $error (expected $response_handle (error $http_error)))
+    )
+
+    ;;; Close a request handle
+    (@interface func (export "http_close")
+        (param $response_handle $response_handle)
+        (result $error (expected (error $http_error)))
+    )
+
 ;;;
 ;;;    ;;; Get the value associated with a header
 ;;;    (@interface func (export "header_get")
