@@ -36,7 +36,7 @@ impl From<ErrorKind> for types::Errno {
 
 macro_rules! enum_2_u32 {
     ($($t:tt),+) => {
-       $(const $t : u32 = types::Errno::$t as _;)*
+       $(const $t: u32 = types::Errno::$t as _;)*
     }
 }
 
@@ -51,7 +51,6 @@ enum_2_u32!(
     Eof,
     Unknown
 );
-
 
 impl From<u32> for ErrorKind {
     fn from(i: u32) -> ErrorKind {

@@ -10,13 +10,13 @@ use wasi_common::WasiFile;
 
 type OpenFuncType = unsafe extern "C" fn(
     uri: *const u8,
-    uri_len: i32,
+    uri_len: u32,
     opts: *const u8,
-    opts_len: i32,
+    opts_len: u32,
     fd: *mut u32,
 ) -> u32;
-type ReadFuncType = unsafe extern "C" fn(fd: u32, buf: *mut u8, len: i32, n: *mut i32) -> u32;
-type WriteFuncType = unsafe extern "C" fn(fd: u32, buf: *const u8, len: i32, n: *mut i32) -> u32;
+type ReadFuncType = unsafe extern "C" fn(fd: u32, buf: *mut u8, len: u32, n: *mut u32) -> u32;
+type WriteFuncType = unsafe extern "C" fn(fd: u32, buf: *const u8, len: u32, n: *mut u32) -> u32;
 type CloseFuncType = unsafe extern "C" fn(fd: u32) -> u32;
 
 pub struct CdylibDriver {

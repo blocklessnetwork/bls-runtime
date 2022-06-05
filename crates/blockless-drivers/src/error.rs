@@ -34,6 +34,7 @@ impl std::fmt::Display for ErrorKind {
 
 #[derive(Debug)]
 pub enum HttpErrorKind {
+    InvalidDriver,
     InvalidHandle,
     MemoryAccessError,
     BufferTooSmall,
@@ -53,6 +54,7 @@ impl std::error::Error for HttpErrorKind {}
 impl std::fmt::Display for HttpErrorKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            &Self::InvalidDriver => write!(f, "Invalid Driver"),
             &Self::InvalidHandle => write!(f, "Invalid Error"),
             &Self::MemoryAccessError => write!(f, "Memoery Access Error"),
             &Self::BufferTooSmall => write!(f, "Buffer too small"),

@@ -1,5 +1,6 @@
 mod cdylib_driver;
 pub mod error;
+pub mod http;
 pub mod tcp_driver;
 pub mod wasi;
 use blockless_multiaddr as multiaddr;
