@@ -30,8 +30,7 @@ impl HttpDriver {
         }
     }
 
-    pub fn http_read_head(&self, fd: u32, head: &str) -> Result<String, HttpErrorKind> {
-        let mut buf: Vec<u8> = Vec::with_capacity(1024*9);
+    pub fn http_read_head(&self, fd: u32, head: &[u8], buf: &mut [u8]) -> Result<u32, HttpErrorKind> {
         let mut num: u32 = 0;
         unsafe {
             let head_len = head.len() as _;
@@ -41,7 +40,7 @@ impl HttpDriver {
                 error!("error read header {}", rs);
                 return Err(HttpErrorKind::HeaderNotFound)
             }
-            Ok(String::from_utf8_unchecked(buf))
+            Ok(num)
         }
     }
 
