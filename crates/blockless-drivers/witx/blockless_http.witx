@@ -72,7 +72,7 @@
 
 ;;;
 ;;;    ;;; Get the value associated with a header
-    (@interface func (export "http_read_head")
+    (@interface func (export "http_read_header")
         (param $response_handle $response_handle)
         (param $header_name string)
         (param $header_value_buf $header_value_ptr)

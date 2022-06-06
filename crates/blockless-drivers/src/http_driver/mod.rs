@@ -104,7 +104,7 @@ pub fn init_http_driver(path: impl AsRef<OsStr>) -> anyhow::Result<()> {
     unsafe {
         let api_req = lib.symbol("http_req")?;
         let api_read_body = lib.symbol("http_read_body")?;
-        let api_read_head = lib.symbol("http_read_head")?;
+        let api_read_head = lib.symbol("http_read_header")?;
         let api_close = lib.symbol("http_close")?;
         HTTPDRIVER.replace(HttpDriver {
             api_req,
