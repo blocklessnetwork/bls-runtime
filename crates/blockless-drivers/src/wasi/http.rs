@@ -115,7 +115,7 @@ impl blockless_http::BlocklessHttp for WasiCtx {
         Ok(())
     }
 
-    async fn http_read_head<'a>(
+    async fn http_read_header<'a>(
         &mut self,
         handle: types::HttpHandle,
         head: &GuestPtr<'a, str>,
