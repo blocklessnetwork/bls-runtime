@@ -6,6 +6,7 @@ pub mod wasi;
 use blockless_multiaddr as multiaddr;
 pub use cdylib_driver::CdylibDriver;
 pub use error::*;
+use http_driver::{get_http_driver, init_http_driver};
 use lazy_static::*;
 use log::error;
 use std::collections::HashMap;
@@ -16,7 +17,6 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use tcp_driver::TcpDriver;
 use wasi_common::WasiFile;
-use http_driver::{init_http_driver, get_http_driver};
 
 pub trait Driver {
     fn name(&self) -> &str;
@@ -28,8 +28,6 @@ pub trait Driver {
     ) -> Pin<Box<dyn Future<Output = Result<Box<dyn WasiFile>, ErrorKind>> + Send>>;
 }
 
-
-
 lazy_static! {
     pub static ref DRIVERS: Mutex<DriverConetxtImpl> = Mutex::new(DriverConetxtImpl::new());
 }
@@ -40,7 +38,7 @@ pub struct DriverConetxtImpl {
 
 impl DriverConetxtImpl {
     fn new() -> Self {
-        let mut ctx = DriverConetxtImpl {
+        let ctx = DriverConetxtImpl {
             drivers: HashMap::new(),
         };
         ctx
@@ -91,7 +89,7 @@ impl DriverConetxt {
         if tcp_driver_path.exists() {
             init_http_driver(tcp_driver_path.as_os_str()).unwrap();
         }
-    
+
         Self::insert_driver(TcpDriver {});
     }
 }

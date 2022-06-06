@@ -1,9 +1,9 @@
 #![allow(non_upper_case_globals)]
-pub mod http;
 pub mod guest_ptr;
-pub use guest_ptr::ArrayTuple;
+pub mod http;
 use crate::ErrorKind;
 use crate::{Driver, DriverConetxt};
+pub use guest_ptr::ArrayTuple;
 use log::debug;
 use std::sync::Arc;
 use wasi_common::file::{FileCaps, FileEntry};
@@ -55,7 +55,7 @@ enum_2_u32!(
 impl From<u32> for ErrorKind {
     fn from(i: u32) -> ErrorKind {
         match i {
-            Eof  => ErrorKind::EofError,
+            Eof => ErrorKind::EofError,
             BadConnect => ErrorKind::ConnectError,
             Addrnotavail => ErrorKind::Addrnotavail,
             BadOpen => ErrorKind::DriverBadOpen,
@@ -64,7 +64,7 @@ impl From<u32> for ErrorKind {
             BadParams => ErrorKind::DriverBadParams,
             Unknown => ErrorKind::Unknown,
             Badf => ErrorKind::BadFileDescriptor,
-            _ => ErrorKind::Unknown
+            _ => ErrorKind::Unknown,
         }
     }
 }

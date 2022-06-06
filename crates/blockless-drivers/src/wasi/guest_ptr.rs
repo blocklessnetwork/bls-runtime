@@ -1,16 +1,16 @@
 use std::mem;
-use wiggle::{GuestType, GuestPtr, GuestTypeTransparent};
+use wiggle::{GuestPtr, GuestType, GuestTypeTransparent};
 
 #[derive(Debug)]
 pub struct ArrayTuple(u32, u32);
 
 impl<'a> GuestType<'a> for ArrayTuple {
     fn guest_size() -> u32 {
-        mem::size_of::<Self>() as u32 
+        mem::size_of::<Self>() as u32
     }
 
     fn guest_align() -> usize {
-        mem::align_of::<Self>() 
+        mem::align_of::<Self>()
     }
 
     fn read(ptr: &GuestPtr<'a, Self>) -> Result<Self, wiggle::GuestError> {

@@ -75,7 +75,7 @@ fn generate_func(
                     };
                     let (mem, ctx) = mem.data_and_store_mut(&mut caller);
                     let mem = #rt::wasmtime::WasmtimeGuestMemory::new(mem);
-                    
+
                     match #abi_func(ctx, &mem #(, #arg_names)*).await {
                         Ok(r) => Ok(<#ret_ty>::from(r)),
                         Err(#rt::Trap::String(err)) => Err(#rt::wasmtime_crate::Trap::new(err)),
@@ -85,6 +85,6 @@ fn generate_func(
             },
         ).unwrap();
     );
-    
+
     linker.into()
 }
