@@ -15,7 +15,6 @@ use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::Mutex;
 use tcp_driver::TcpDriver;
-use wasi_common::WasiCtx;
 use wasi_common::WasiFile;
 use http_driver::{init_http_driver, get_http_driver};
 
@@ -29,10 +28,7 @@ pub trait Driver {
     ) -> Pin<Box<dyn Future<Output = Result<Box<dyn WasiFile>, ErrorKind>> + Send>>;
 }
 
-pub trait DriverConetxt {
-    fn find_driver(&self, uri: &str) -> Option<Arc<dyn Driver + Sync + Send>>;
-    fn insert_driver<T: Driver + Sync + Send + 'static>(&self, driver: T);
-}
+
 
 lazy_static! {
     pub static ref DRIVERS: Mutex<DriverConetxtImpl> = Mutex::new(DriverConetxtImpl::new());
@@ -47,7 +43,6 @@ impl DriverConetxtImpl {
         let mut ctx = DriverConetxtImpl {
             drivers: HashMap::new(),
         };
-        ctx.insert_driver(TcpDriver {});
         ctx
     }
 
@@ -78,21 +73,25 @@ impl DriverConetxtImpl {
     }
 }
 
-impl DriverConetxt for WasiCtx {
-    fn find_driver(&self, uri: &str) -> Option<Arc<dyn Driver + Sync + Send>> {
+pub struct DriverConetxt;
+
+impl DriverConetxt {
+    pub fn find_driver(uri: &str) -> Option<Arc<dyn Driver + Sync + Send>> {
         let drv = DRIVERS.lock().unwrap();
         drv.find_driver(uri)
     }
 
-    fn insert_driver<T: Driver + Sync + Send + 'static>(&self, driver: T) {
+    pub fn insert_driver<T: Driver + Sync + Send + 'static>(driver: T) {
         let mut drv = DRIVERS.lock().unwrap();
         drv.insert_driver(driver);
     }
-}
 
-pub fn init_built_in_drivers(path: impl AsRef<Path>) {
-    let tcp_driver_path = path.as_ref().join("http_driver.so");
-    if tcp_driver_path.exists() {
-        init_http_driver(tcp_driver_path.as_os_str()).unwrap();
+    pub fn init_built_in_drivers(path: impl AsRef<Path>) {
+        let tcp_driver_path = path.as_ref().join("http_driver.so");
+        if tcp_driver_path.exists() {
+            init_http_driver(tcp_driver_path.as_os_str()).unwrap();
+        }
+    
+        Self::insert_driver(TcpDriver {});
     }
 }

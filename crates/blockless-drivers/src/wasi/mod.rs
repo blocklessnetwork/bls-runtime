@@ -92,7 +92,7 @@ impl blockless_drivers::BlocklessDrivers for WasiCtx {
     ) -> Result<types::Fd, ErrorKind> {
         let path: &str = &path.as_str().unwrap();
         let opts: &str = &opts.as_str().unwrap();
-        let drv: Arc<dyn Driver + Sync + Send> = match self.find_driver(path) {
+        let drv: Arc<dyn Driver + Sync + Send> = match DriverConetxt::find_driver(path) {
             Some(d) => d,
             None => return Err(ErrorKind::DriverNotFound),
         };
