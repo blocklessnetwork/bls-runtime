@@ -6,11 +6,5 @@
     "permissions": [
         "/tcp/103.235.46.39:80",
         "/https/www.163.com/index.html"
-    ],
-    "drivers": [
-        {
-            "path": "/Users/join/Downloads/http.so",
-            "schema": "http"
-        }
     ]
 }

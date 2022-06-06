@@ -1,5 +1,5 @@
 #![allow(non_upper_case_globals)]
-use crate::{HttpErrorKind, http::get_http_driver};
+use crate::{HttpErrorKind, get_http_driver};
 use log::error;
 use wasi_common::WasiCtx;
 use wiggle::GuestPtr;

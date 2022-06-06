@@ -1,5 +1,5 @@
 mod config;
-use blockless_drivers::{CdylibDriver, DriverConetxt};
+use blockless_drivers::{CdylibDriver, DriverConetxt,init_built_in_drivers};
 use blockless_env;
 pub use config::Stdout;
 use log::{error, info};
@@ -12,6 +12,7 @@ pub use config::{BlocklessConfig, DriverConfig};
 const ENTRY: &str = "_start";
 
 pub async fn blockless_run(b_conf: BlocklessConfig) {
+    init_built_in_drivers("~/Downloads");
     let mut conf = Config::new();
     conf.async_support(true);
     if let Some(_) = b_conf.get_limited_fuel() {

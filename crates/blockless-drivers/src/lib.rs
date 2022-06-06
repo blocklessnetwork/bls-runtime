@@ -1,6 +1,6 @@
 mod cdylib_driver;
 pub mod error;
-pub mod http;
+pub mod http_driver;
 pub mod tcp_driver;
 pub mod wasi;
 use blockless_multiaddr as multiaddr;
@@ -10,12 +10,14 @@ use lazy_static::*;
 use log::error;
 use std::collections::HashMap;
 use std::future::Future;
+use std::path::Path;
 use std::pin::Pin;
 use std::sync::Arc;
 use std::sync::Mutex;
 use tcp_driver::TcpDriver;
 use wasi_common::WasiCtx;
 use wasi_common::WasiFile;
+use http_driver::{init_http_driver, get_http_driver};
 
 pub trait Driver {
     fn name(&self) -> &str;
@@ -85,5 +87,12 @@ impl DriverConetxt for WasiCtx {
     fn insert_driver<T: Driver + Sync + Send + 'static>(&self, driver: T) {
         let mut drv = DRIVERS.lock().unwrap();
         drv.insert_driver(driver);
+    }
+}
+
+pub fn init_built_in_drivers(path: impl AsRef<Path>) {
+    let tcp_driver_path = path.as_ref().join("http_driver.so");
+    if tcp_driver_path.exists() {
+        init_http_driver(tcp_driver_path.as_os_str()).unwrap();
     }
 }
