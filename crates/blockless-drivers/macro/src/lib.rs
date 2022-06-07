@@ -85,6 +85,5 @@ fn generate_func(
             },
         ).unwrap();
     );
-
     linker.into()
 }

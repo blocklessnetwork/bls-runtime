@@ -8,3 +8,19 @@
 ```
 $ cargo build
 ```
+
+The configure file example
+
+```json
+{
+    "root_path": "/opt/blockless/app",
+    "limited_fuel": 200000000,
+    "limited_memory": 20,
+    "entry": "/opt/blockless/app/main.wasi",
+    "permissions": [
+        "https://www.163.com"
+    ]
+}
+```
+
+

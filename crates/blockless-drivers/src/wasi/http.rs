@@ -27,7 +27,7 @@ impl From<HttpErrorKind> for types::HttpError {
             HttpErrorKind::RequestError => HttpError::RequestError,
             HttpErrorKind::RuntimeError => HttpError::RuntimeError,
             HttpErrorKind::TooManySessions => HttpError::TooManySessions,
-            HttpErrorKind::InvalidDriver => HttpError::RuntimeError,
+            HttpErrorKind::InvalidDriver => HttpError::InvalidDriver,
         }
     }
 }
