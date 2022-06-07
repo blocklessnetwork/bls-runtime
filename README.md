@@ -9,7 +9,7 @@
 $ cargo build
 ```
 
-The configure file example
+## The configure file example
 
 ```json
 {
