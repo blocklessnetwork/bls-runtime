@@ -28,7 +28,8 @@ impl DriverConfig {
 
 pub struct BlocklessConfig {
     wasm_file: String,
-    root_path: Option<String>,
+    fs_root_path: Option<String>,
+    drivers_root_path: Option<String>,
     stdout: Stdout,
     limited_fuel: Option<u64>,
     limited_time: Option<u64>,
@@ -41,24 +42,33 @@ impl BlocklessConfig {
         &self.wasm_file
     }
 
-    pub fn root_path(&mut self, r: Option<String>) {
-        self.root_path = r;
+    pub fn fs_root_path(&mut self, r: Option<String>) {
+        self.fs_root_path = r;
     }
 
-    pub fn root_path_ref(&self) -> Option<&str> {
-        self.root_path.as_ref().map(|x| x.as_str())
+    pub fn fs_root_path_ref(&self) -> Option<&str> {
+        self.fs_root_path.as_ref().map(|x| x.as_str())
+    }
+
+    pub fn drivers_root_path_ref(&self) -> Option<&str> {
+        self.drivers_root_path.as_ref().map(|x| x.as_str())
+    }
+
+    pub fn drivers_root_path(&mut self, r: Option<String>) {
+        self.drivers_root_path = r;
     }
 
     pub fn new(wasm_file: &str) -> BlocklessConfig {
         Self {
             wasm_file: String::from(wasm_file),
-            root_path: None,
+            fs_root_path: None,
             stdout: Stdout::Inherit,
             //vm instruction limit.
             limited_fuel: None,
             limited_time: None,
             //memory limit, 1 page = 64k.
             limited_memory: None,
+            drivers_root_path: None,
             drivers: Vec::new(),
         }
     }

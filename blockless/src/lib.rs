@@ -3,7 +3,7 @@ use blockless_drivers::{CdylibDriver, DriverConetxt};
 use blockless_env;
 pub use config::Stdout;
 use log::{error, info};
-use std::path::Path;
+use std::{path::Path, env};
 use wasmtime::*;
 use wasmtime_wasi::{sync::WasiCtxBuilder, WasiCtx};
 
@@ -12,7 +12,19 @@ pub use config::{BlocklessConfig, DriverConfig};
 const ENTRY: &str = "_start";
 
 pub async fn blockless_run(b_conf: BlocklessConfig) {
-    DriverConetxt::init_built_in_drivers("/Users/join/Downloads/");
+    
+    //set the drivers root path, if not setting use exe file path.
+    let drivers_root_path = b_conf
+        .drivers_root_path_ref()
+        .map(|p| p.into())
+        .unwrap_or_else(|| {
+            let mut current_exe_path = env::current_exe().unwrap();
+            current_exe_path.pop();
+            String::from(current_exe_path.to_str().unwrap())
+        });
+    DriverConetxt::init_built_in_drivers(drivers_root_path);
+    
+
     let mut conf = Config::new();
     conf.async_support(true);
     if let Some(_) = b_conf.get_limited_fuel() {
@@ -37,7 +49,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) {
     blockless_env::add_http_to_linker(&mut linker);
     wasmtime_wasi::add_to_linker(&mut linker, |s| s).unwrap();
     let root_dir = b_conf
-        .root_path_ref()
+        .fs_root_path_ref()
         .map(|path| {
             std::fs::File::open(path)
                 .ok()
@@ -49,7 +61,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) {
     match b_conf.stdout_ref() {
         &Stdout::FileName(ref file_name) => {
             let mut is_set_stdout = false;
-            if let Some(r) = b_conf.root_path_ref() {
+            if let Some(r) = b_conf.fs_root_path_ref() {
                 let root = Path::new(r);
                 let file_name = root.join(file_name);
                 let mut file_opts = std::fs::File::options();

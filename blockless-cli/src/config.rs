@@ -10,7 +10,8 @@ impl CliConfig {
         let values = fs::read(path)?;
         let file = std::str::from_utf8(&values)?;
         let json_obj = json::parse(file)?;
-        let root_path: Option<String> = json_obj["root_path"].as_str().map(|s| s.into());
+        let fs_root_path: Option<String> = json_obj["fs_root_path"].as_str().map(|s| s.into());
+        let drivers_root_path: Option<String> = json_obj["drivers_root_path"].as_str().map(|s| s.into());
         let limited_fuel: Option<u64> = json_obj["limited_fuel"].as_u64();
         let limited_memory: Option<u64> = json_obj["limited_memory"].as_u64();
 
@@ -33,8 +34,9 @@ impl CliConfig {
 
         let entry: &str = json_obj["entry"].as_str().unwrap();
         let mut bc = BlocklessConfig::new(entry);
-        bc.root_path(root_path);
+        bc.fs_root_path(fs_root_path);
         bc.drivers(drvs);
+        bc.drivers_root_path(drivers_root_path);
         bc.limited_fuel(limited_fuel);
         bc.limited_memory(limited_memory);
         Ok(CliConfig(bc))
