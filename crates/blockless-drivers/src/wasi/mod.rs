@@ -30,6 +30,7 @@ impl From<ErrorKind> for types::Errno {
             ErrorKind::BadFileDescriptor => Errno::Badf,
             ErrorKind::EofError => Errno::Eof,
             ErrorKind::Unknown => Errno::Unknown,
+            ErrorKind::PermissionDeny => Errno::PermissionDeny,
         }
     }
 }

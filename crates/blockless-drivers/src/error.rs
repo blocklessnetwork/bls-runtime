@@ -10,6 +10,7 @@ pub enum ErrorKind {
     Addrnotavail,
     DriverBadOpen,
     DriverBadParams,
+    PermissionDeny,
     Unknown,
 }
 
@@ -18,15 +19,16 @@ impl std::error::Error for ErrorKind {}
 impl std::fmt::Display for ErrorKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
-            &Self::ConnectError => write!(f, "Connect Error"),
+            &Self::ConnectError => write!(f, "Connect Error."),
             &Self::MemoryNotExport => write!(f, "Memoery not export"),
             &Self::DriverNotFound => write!(f, "Driver not found."),
-            &Self::DriverBadOpen => write!(f, "Driver bad open"),
-            &Self::BadFileDescriptor => write!(f, "Bad file descriptor"),
-            &Self::DriverBadParams => write!(f, "Driver bad params"),
-            &Self::Addrnotavail => write!(f, "Address is not avail"),
-            &Self::Unknown => write!(f, "unknown error"),
-            &Self::EofError => write!(f, "end of file error"),
+            &Self::DriverBadOpen => write!(f, "Driver bad open."),
+            &Self::BadFileDescriptor => write!(f, "Bad file descriptor."),
+            &Self::DriverBadParams => write!(f, "Driver bad params."),
+            &Self::Addrnotavail => write!(f, "Address is not avail."),
+            &Self::Unknown => write!(f, "Unknown error."),
+            &Self::EofError => write!(f, "End of file error."),
+            &Self::PermissionDeny => write!(f, "Permision deny."),
         }
     }
 }
@@ -46,6 +48,7 @@ pub enum HttpErrorKind {
     RequestError,
     RuntimeError,
     TooManySessions,
+    PermissionDeny,
 }
 
 impl std::error::Error for HttpErrorKind {}
@@ -66,6 +69,7 @@ impl std::fmt::Display for HttpErrorKind {
             &Self::RequestError => write!(f, "Request url"),
             &Self::RuntimeError => write!(f, "Runtime error"),
             &Self::TooManySessions => write!(f, "Too many sessions"),
+            &Self::PermissionDeny => write!(f, "Permision deny."),
         }
     }
 }

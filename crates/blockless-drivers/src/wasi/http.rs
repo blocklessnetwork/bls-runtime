@@ -28,6 +28,7 @@ impl From<HttpErrorKind> for types::HttpError {
             HttpErrorKind::RuntimeError => HttpError::RuntimeError,
             HttpErrorKind::TooManySessions => HttpError::TooManySessions,
             HttpErrorKind::InvalidDriver => HttpError::InvalidDriver,
+            HttpErrorKind::PermissionDeny => HttpError::PermissionDeny,
         }
     }
 }
@@ -50,6 +51,7 @@ enum_2_u32!(
     InvalidUrl,
     RequestError,
     RuntimeError,
+    PermissionDeny,
     TooManySessions
 );
 
@@ -68,6 +70,7 @@ impl From<u32> for HttpErrorKind {
             RuntimeError => HttpErrorKind::RuntimeError,
             RequestError => HttpErrorKind::RequestError,
             TooManySessions => HttpErrorKind::TooManySessions,
+            PermissionDeny => HttpErrorKind::PermissionDeny,
             _ => HttpErrorKind::RuntimeError,
         }
     }
@@ -101,6 +104,9 @@ impl blockless_http::BlocklessHttp for WasiCtx {
             error!("guest url error: {}", e);
             HttpErrorKind::Utf8Error
         })?;
+        if !self.blockless_config.as_ref().unwrap().is_permission(url) {
+            return Err(HttpErrorKind::PermissionDeny);
+        }
         let opts: &str = &opts.as_str().map_err(|e| {
             error!("guest options error: {}", e);
             HttpErrorKind::Utf8Error

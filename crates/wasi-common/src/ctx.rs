@@ -4,7 +4,7 @@ use crate::file::{FileCaps, FileEntry, WasiFile};
 use crate::sched::WasiSched;
 use crate::string_array::{StringArray, StringArrayError};
 use crate::table::Table;
-use crate::{Error, BlocklessConfig};
+use crate::{BlocklessConfig, Error};
 use cap_rand::RngCore;
 use std::path::{Path, PathBuf};
 

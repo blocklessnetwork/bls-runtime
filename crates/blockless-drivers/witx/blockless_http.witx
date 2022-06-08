@@ -26,8 +26,10 @@
     $runtime_error
     ;;; Too many sessions
     $too_many_sessions
-    ;;;InvalidDriver
+    ;;;invalid_driver
     $invalid_driver
+    ;;;permision deny
+    $permission_deny
   )
 )
 ;;; Handles for the HTTP extensions

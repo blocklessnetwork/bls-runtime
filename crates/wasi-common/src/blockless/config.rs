@@ -40,7 +40,7 @@ pub struct BlocklessConfig {
     limited_memory: Option<u64>,
     drivers: Vec<DriverConfig>,
     permisions: Vec<Permision>,
-    group_permisions: HashMap<String, Vec<Permision>>
+    group_permisions: HashMap<String, Vec<Permision>>,
 }
 
 impl BlocklessConfig {
@@ -59,13 +59,13 @@ impl BlocklessConfig {
     pub fn permisions(&mut self, perms: Vec<Permision>) {
         let mut g_perms: HashMap<String, Vec<_>> = HashMap::new();
         perms.iter().for_each(|p| {
-            g_perms.entry(p.schema.clone())
+            g_perms
+                .entry(p.schema.clone())
                 .or_insert_with(|| Vec::new())
                 .push(p.clone());
         });
         self.permisions = perms;
         self.group_permisions = g_perms;
-        
     }
 
     pub fn fs_root_path_ref(&self) -> Option<&str> {

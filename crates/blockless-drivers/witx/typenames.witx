@@ -28,6 +28,8 @@
     $bad_params
     ;;;13 Unknow error
     $unknown
+    ;;;permision deny
+    $permission_deny
   )
 )
 

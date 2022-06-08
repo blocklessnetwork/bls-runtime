@@ -1,11 +1,10 @@
 use blockless_drivers::{CdylibDriver, DriverConetxt};
 use blockless_env;
 use log::{error, info};
-pub use wasi_common::*;
 use std::{env, path::Path};
+pub use wasi_common::*;
 use wasmtime::*;
 use wasmtime_wasi::{sync::WasiCtxBuilder, WasiCtx};
-
 
 const ENTRY: &str = "_start";
 
@@ -86,7 +85,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) {
         builder = builder.preopened_dir(d, "/").unwrap();
     }
     let mut ctx = builder.build();
-    
+
     let drivers = b_conf.drivers_ref();
     load_driver(&ctx, drivers);
     let fuel = b_conf.get_limited_fuel();
@@ -99,7 +98,6 @@ pub async fn blockless_run(b_conf: BlocklessConfig) {
             error!("add fuel error: {}", e);
         });
     }
-    
 
     // Instantiate our module with the imports we've created, and run it.
     let module = Module::from_file(&engine, &wasm_file).unwrap();
