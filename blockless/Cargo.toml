@@ -8,6 +8,7 @@ readme = "README.md"
 edition = "2021"
 
 [dependencies]
+wasi-common = {path = "../crates/wasi-common"}
 wasmtime = "0.36.0"
 wasmtime-wasi = "0.36.0"
 cap-std = "0.24.1"

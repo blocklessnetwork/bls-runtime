@@ -1,13 +1,11 @@
-mod config;
 use blockless_drivers::{CdylibDriver, DriverConetxt};
 use blockless_env;
-pub use config::Stdout;
 use log::{error, info};
+pub use wasi_common::*;
 use std::{env, path::Path};
 use wasmtime::*;
 use wasmtime_wasi::{sync::WasiCtxBuilder, WasiCtx};
 
-pub use config::{BlocklessConfig, DriverConfig};
 
 const ENTRY: &str = "_start";
 
@@ -87,24 +85,29 @@ pub async fn blockless_run(b_conf: BlocklessConfig) {
     if let Some(d) = root_dir {
         builder = builder.preopened_dir(d, "/").unwrap();
     }
-    let ctx = builder.build();
+    let mut ctx = builder.build();
+    
     let drivers = b_conf.drivers_ref();
     load_driver(&ctx, drivers);
+    let fuel = b_conf.get_limited_fuel();
+    let wasm_file: String = b_conf.wasm_file_ref().into();
+    ctx.blockless_config = Some(b_conf);
     let mut store = Store::new(&engine, ctx);
     //set the fuel from the configure.
-    if let Some(f) = b_conf.get_limited_fuel() {
+    if let Some(f) = fuel {
         let _ = store.add_fuel(f).map_err(|e| {
             error!("add fuel error: {}", e);
         });
     }
+    
 
     // Instantiate our module with the imports we've created, and run it.
-    let module = Module::from_file(&engine, b_conf.wasm_file_ref()).unwrap();
+    let module = Module::from_file(&engine, &wasm_file).unwrap();
     linker.module(&mut store, "", &module).unwrap();
     let inst = linker.instantiate_async(&mut store, &module).await.unwrap();
     let func = inst.get_typed_func::<(), (), _>(&mut store, ENTRY).unwrap();
     match func.call_async(&mut store, ()).await {
-        Err(ref t) => trap_info(t, store.fuel_consumed(), b_conf.get_limited_fuel().unwrap()),
+        Err(ref t) => trap_info(t, store.fuel_consumed(), fuel.unwrap()),
         Ok(_) => info!("program exit normal."),
     }
 }

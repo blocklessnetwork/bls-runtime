@@ -71,3 +71,6 @@ pub use file::{FileEntry, WasiFile};
 pub use sched::{Poll, WasiSched};
 pub use string_array::StringArrayError;
 pub use table::Table;
+
+pub mod blockless;
+pub use blockless::*;

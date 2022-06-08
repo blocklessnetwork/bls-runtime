@@ -4,7 +4,7 @@ use crate::file::{FileCaps, FileEntry, WasiFile};
 use crate::sched::WasiSched;
 use crate::string_array::{StringArray, StringArrayError};
 use crate::table::Table;
-use crate::Error;
+use crate::{Error, BlocklessConfig};
 use cap_rand::RngCore;
 use std::path::{Path, PathBuf};
 
@@ -15,6 +15,7 @@ pub struct WasiCtx {
     pub clocks: WasiClocks,
     pub sched: Box<dyn WasiSched>,
     pub table: Table,
+    pub blockless_config: Option<BlocklessConfig>,
 }
 
 impl WasiCtx {
@@ -31,6 +32,7 @@ impl WasiCtx {
             clocks,
             sched,
             table,
+            blockless_config: None,
         };
         s.set_stdin(Box::new(crate::pipe::ReadPipe::new(std::io::empty())));
         s.set_stdout(Box::new(crate::pipe::WritePipe::new(std::io::sink())));
