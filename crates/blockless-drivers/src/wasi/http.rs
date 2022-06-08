@@ -130,7 +130,7 @@ impl blockless_http::BlocklessHttp for WasiCtx {
         let mut dest_buf = vec![0; buf_len as _];
         let buf = buf.clone();
         let rs = driver.http_read_head(handle.into(), head.as_bytes(), &mut dest_buf[..])?;
-        buf.as_array(buf_len)
+        buf.as_array(rs)
             .copy_from_slice(&dest_buf[0..rs as _])
             .map_err(|_| HttpErrorKind::MemoryAccessError)?;
         Ok(rs)
