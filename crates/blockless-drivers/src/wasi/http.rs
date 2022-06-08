@@ -95,7 +95,7 @@ impl blockless_http::BlocklessHttp for WasiCtx {
         &mut self,
         url: &GuestPtr<'a, str>,
         opts: &GuestPtr<'a, str>,
-    ) -> Result<types::HttpHandle, HttpErrorKind> {
+    ) -> Result<(types::HttpHandle, types::CodeType), HttpErrorKind> {
         let driver = get_http_driver().ok_or(HttpErrorKind::InvalidDriver)?;
         let url: &str = &url.as_str().map_err(|e| {
             error!("guest url error: {}", e);
@@ -105,8 +105,8 @@ impl blockless_http::BlocklessHttp for WasiCtx {
             error!("guest options error: {}", e);
             HttpErrorKind::Utf8Error
         })?;
-        let fd = driver.http_req(url, opts)?;
-        Ok(types::HttpHandle::from(fd))
+        let (fd, code) = driver.http_req(url, opts)?;
+        Ok((types::HttpHandle::from(fd), types::CodeType::from(code)))
     }
 
     async fn http_close(&mut self, handle: types::HttpHandle) -> Result<(), HttpErrorKind> {

@@ -47,6 +47,9 @@
 ;;; Number of bytes having been written
 (typename $written_bytes u32)
 
+;;; http response code
+(typename $code_type s32)
+
 (typename $outgoing_body
   (record
     ;;; The address of the buffer to be filled.
@@ -63,7 +66,7 @@
     (@interface func (export "http_req")
         (param $url string)
         (param $opts string)
-        (result $error (expected $response_handle (error $http_error)))
+        (result $error (expected (tuple $response_handle $code_type) (error $http_error)))
     )
 
     ;;; Close a request handle

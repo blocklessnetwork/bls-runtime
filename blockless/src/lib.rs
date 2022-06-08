@@ -3,7 +3,7 @@ use blockless_drivers::{CdylibDriver, DriverConetxt};
 use blockless_env;
 pub use config::Stdout;
 use log::{error, info};
-use std::{path::Path, env};
+use std::{env, path::Path};
 use wasmtime::*;
 use wasmtime_wasi::{sync::WasiCtxBuilder, WasiCtx};
 
@@ -12,7 +12,6 @@ pub use config::{BlocklessConfig, DriverConfig};
 const ENTRY: &str = "_start";
 
 pub async fn blockless_run(b_conf: BlocklessConfig) {
-    
     //set the drivers root path, if not setting use exe file path.
     let drivers_root_path = b_conf
         .drivers_root_path_ref()
@@ -23,7 +22,6 @@ pub async fn blockless_run(b_conf: BlocklessConfig) {
             String::from(current_exe_path.to_str().unwrap())
         });
     DriverConetxt::init_built_in_drivers(drivers_root_path);
-    
 
     let mut conf = Config::new();
     conf.async_support(true);

@@ -11,6 +11,7 @@ type ReqFuncType = unsafe extern "C" fn(
     opts: *const u8,
     opts_len: u32,
     fd: *mut u32,
+    code: *mut i32,
 ) -> u32;
 type ReadBodyFuncType =
     unsafe extern "C" fn(fd: u32, buf: *mut u8, buf_len: u32, num: *mut u32) -> u32;
@@ -33,16 +34,24 @@ pub struct HttpDriver {
 }
 
 impl HttpDriver {
-    pub fn http_req(&self, url: &str, opts: &str) -> Result<u32, HttpErrorKind> {
+    pub fn http_req(&self, url: &str, opts: &str) -> Result<(u32, i32), HttpErrorKind> {
         unsafe {
             let url_len = url.len() as _;
             let opts_len = opts.len() as _;
             let mut fd = 0;
-            let rs = (self.api_req)(url.as_ptr(), url_len, opts.as_ptr(), opts_len, &mut fd as _);
+            let mut code = 0;
+            let rs = (self.api_req)(
+                url.as_ptr(),
+                url_len,
+                opts.as_ptr(),
+                opts_len,
+                &mut fd as _,
+                &mut code as _,
+            );
             if rs != 0 {
                 return Err(HttpErrorKind::from(rs));
             }
-            Ok(fd)
+            Ok((fd, code))
         }
     }
 
