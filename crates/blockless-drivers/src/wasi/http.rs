@@ -127,7 +127,7 @@ impl blockless_http::BlocklessHttp for WasiCtx {
             error!("guest head error: {}", e);
             HttpErrorKind::Utf8Error
         })?;
-        let mut dest_buf = Vec::with_capacity(buf_len as _);
+        let mut dest_buf = vec![0; buf_len as _];
         let buf = buf.clone();
         let rs = driver.http_read_head(handle.into(), head.as_bytes(), &mut dest_buf[..])?;
         buf.as_array(buf_len)
@@ -143,13 +143,14 @@ impl blockless_http::BlocklessHttp for WasiCtx {
         buf_len: u32,
     ) -> Result<u32, HttpErrorKind> {
         let driver = get_http_driver().ok_or(HttpErrorKind::InvalidDriver)?;
-
-        let mut dest_buf = Vec::with_capacity(buf_len as _);
+        let mut dest_buf = vec![0; buf_len as _];
         let buf = buf.clone();
         let rs = driver.http_read_body(handle.into(), &mut dest_buf[..])?;
-        buf.as_array(buf_len)
-            .copy_from_slice(&dest_buf[0..rs as _])
-            .map_err(|_| HttpErrorKind::MemoryAccessError)?;
+        if rs > 0 {
+            buf.as_array(rs)
+                .copy_from_slice(&dest_buf[0..rs as _])
+                .map_err(|_| HttpErrorKind::MemoryAccessError)?;
+        }
         Ok(rs)
     }
 }

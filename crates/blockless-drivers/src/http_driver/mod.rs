@@ -66,7 +66,7 @@ impl HttpDriver {
             );
             if rs != 0 {
                 error!("error read header {}", rs);
-                return Err(HttpErrorKind::HeaderNotFound);
+                return Err(HttpErrorKind::from(rs));
             }
             Ok(num)
         }
@@ -78,10 +78,10 @@ impl HttpDriver {
             let mut num: u32 = 0;
             let rs = (self.api_read_body)(fd, buf.as_mut_ptr(), buf_len, &mut num as _);
             if rs != 0 {
-                error!("error read header {}", rs);
-                return Err(HttpErrorKind::RequestError);
+                error!("error read body {}", rs);
+                return Err(HttpErrorKind::from(rs));
             }
-            Ok(rs)
+            Ok(num)
         }
     }
 

@@ -1,7 +1,7 @@
 {
     "fs_root_path": "/Users/join/Downloads/uuid", 
     "drivers_root_path": "/Users/join/Downloads", 
-    "limited_fuel": 2000,
+    "limited_fuel": 200000000,
     "limited_memory": 20,
     "entry": "/Users/join/Downloads/main.wasi",
     "permissions": [
