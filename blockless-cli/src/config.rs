@@ -1,7 +1,8 @@
 use anyhow::Result;
-use blockless::{BlocklessConfig, DriverConfig};
+use blockless::{BlocklessConfig, DriverConfig, Permission, MultiAddr};
 use json::{self, JsonValue};
 use std::fs;
+use blockless;
 
 pub(crate) struct CliConfig(pub(crate) BlocklessConfig);
 
@@ -33,10 +34,44 @@ impl CliConfig {
             _ => Vec::<DriverConfig>::new(),
         };
 
+        let perms: Vec<Permission> = match json_obj["permissions"] {
+            JsonValue::Array(ref perms) => {
+                perms.iter()
+                    .filter_map(|p| {
+                        let p = p.as_str();
+                        match p {
+                            Some(p) => {
+                                let bs = p.as_bytes();
+                                let addr = MultiAddr::parse(bs);
+                                let addr = if addr.is_ok() {
+                                    addr.unwrap()
+                                } else {
+                                    return None;
+                                };
+                                let schema = addr.schema();
+                                let schema = if schema.is_ok() {
+                                    schema.unwrap()
+                                } else {
+                                    return None;
+                                };
+                                Some(Permission {
+                                    schema: schema.into(),
+                                    url: p.into(),
+                                })
+                            }
+                            None => None,
+                        }
+                    })
+                    .collect()
+            }
+            _ => Vec::new(),
+        };
+
         let entry: &str = json_obj["entry"].as_str().unwrap();
         let mut bc = BlocklessConfig::new(entry);
         bc.fs_root_path(fs_root_path);
         bc.drivers(drvs);
+        bc.permisions(perms);
         bc.drivers_root_path(drivers_root_path);
         bc.limited_fuel(limited_fuel);
         bc.limited_memory(limited_memory);

@@ -1,6 +1,6 @@
 use std::collections::HashMap;
 
-use crate::Permision;
+use crate::Permission;
 
 pub enum Stdout {
     //no stdout.
@@ -39,8 +39,8 @@ pub struct BlocklessConfig {
     limited_time: Option<u64>,
     limited_memory: Option<u64>,
     drivers: Vec<DriverConfig>,
-    permisions: Vec<Permision>,
-    group_permisions: HashMap<String, Vec<Permision>>,
+    permisions: Vec<Permission>,
+    group_permisions: HashMap<String, Vec<Permission>>,
 }
 
 impl BlocklessConfig {
@@ -52,11 +52,11 @@ impl BlocklessConfig {
         self.fs_root_path = r;
     }
 
-    pub fn permisions_ref(&self) -> &Vec<Permision> {
+    pub fn permisions_ref(&self) -> &Vec<Permission> {
         &self.permisions
     }
 
-    pub fn permisions(&mut self, perms: Vec<Permision>) {
+    pub fn permisions(&mut self, perms: Vec<Permission>) {
         let mut g_perms: HashMap<String, Vec<_>> = HashMap::new();
         perms.iter().for_each(|p| {
             g_perms

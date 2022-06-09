@@ -4,7 +4,7 @@ use log::{error, info};
 use std::{env, path::Path};
 pub use wasi_common::*;
 use wasmtime::*;
-use wasmtime_wasi::{sync::WasiCtxBuilder, WasiCtx};
+use wasmtime_wasi::{sync::WasiCtxBuilder};
 
 const ENTRY: &str = "_start";
 
@@ -87,7 +87,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) {
     let mut ctx = builder.build();
 
     let drivers = b_conf.drivers_ref();
-    load_driver(&ctx, drivers);
+    load_driver(drivers);
     let fuel = b_conf.get_limited_fuel();
     let wasm_file: String = b_conf.wasm_file_ref().into();
     ctx.blockless_config = Some(b_conf);
@@ -110,7 +110,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) {
     }
 }
 
-fn load_driver(ctx: &WasiCtx, cfs: &[DriverConfig]) {
+fn load_driver(cfs: &[DriverConfig]) {
     cfs.iter().for_each(|cfg| {
         let drv = CdylibDriver::load(cfg.path(), cfg.schema()).unwrap();
         DriverConetxt::insert_driver(drv);

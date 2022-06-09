@@ -1,7 +1,7 @@
 mod config;
-mod permision;
+mod permission;
 pub use config::*;
-pub use permision::*;
+pub use permission::*;
 
 impl BlocklessConfig {
     pub fn is_permission(&self, url: &str) -> bool {

@@ -36,3 +36,6 @@ trace_log = [ "wiggle/tracing_log", "tracing/log" ]
 # Need to make the wiggle_metadata feature available to consumers of this
 # crate if they want the snapshots to have metadata available.
 wiggle_metadata = ["wiggle/wiggle_metadata"]
+
+[dependencies.blockless-multiaddr]
+path = "../blockless-multiaddr"

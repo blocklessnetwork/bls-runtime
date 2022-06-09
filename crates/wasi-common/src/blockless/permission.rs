@@ -1,10 +1,12 @@
+
 #[derive(Clone)]
-pub struct Permision {
-    pub schema: String,
+pub struct Permission {
     pub url: String,
+    pub schema: String,
 }
 
-impl Permision {
+impl Permission {
+   
     pub fn is_permision(&self, url: &str) -> bool {
         url.to_ascii_lowercase().starts_with(&self.url)
     }

@@ -74,3 +74,5 @@ pub use table::Table;
 
 pub mod blockless;
 pub use blockless::*;
+
+pub use blockless_multiaddr::*;

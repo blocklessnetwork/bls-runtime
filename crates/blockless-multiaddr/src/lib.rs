@@ -57,6 +57,10 @@ impl<'a> MultiAddr<'a> {
         }
     }
 
+    pub fn parse(s: &[u8]) -> Result<MultiAddr, Error> {
+        parse::parse(s)
+    }
+
     pub fn paths_ref(&self) -> &Vec<Indicator<'a>> {
         &self.paths
     }
