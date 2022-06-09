@@ -19,7 +19,7 @@ $ cargo build
     "limited_memory": 20,
     "entry": "/opt/blockless/app/main.wasi",
     "permissions": [
-        "https://www.163.com"
+        "https://blockless-website.vercel.app"
     ]
 }
 ```
@@ -36,7 +36,12 @@ $ cargo build
 
 - entry: the entry funcion file of app. please see the example of the app.
 
-- permissions: the resources permissions, app can't use the resources out of the permission list.
+- permissions: the resources permissions, app can't use the resources out of the permission list. if you use the resources that are not in permissions list, the app will get the error code of "Permission Deny". if you panic in your app, you will get the error like follow example.
+
+```log
+panic: Permission deny
+[2022-06-09T02:12:39Z ERROR blockless] Fuel 137607:200000000. wasm trap: wasm `unreachable` instruction executed
+```
 
 ## How to run the app
 

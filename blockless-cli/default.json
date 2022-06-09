@@ -5,7 +5,6 @@
     "limited_memory": 20,
     "entry": "/Users/join/Downloads/main.wasi",
     "permissions": [
-        "/tcp/103.235.46.39:80",
-        "/https/www.163.com/index.html"
+        "https://blockless-website.vercel.app"
     ]
 }
