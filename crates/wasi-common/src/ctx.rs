@@ -45,6 +45,13 @@ impl WasiCtx {
             .insert_at(fd, Box::new(FileEntry::new(caps, file)));
     }
 
+    pub fn resource_permission(&self, resource: &str) -> bool {
+        match self.blockless_config {
+            Some(ref c) => c.resource_permission(resource),
+            None => false,
+        }
+    }
+
     pub fn insert_dir(
         &mut self,
         fd: u32,

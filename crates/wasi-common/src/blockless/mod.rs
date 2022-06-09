@@ -4,7 +4,7 @@ pub use config::*;
 pub use permission::*;
 
 impl BlocklessConfig {
-    pub fn is_permission(&self, url: &str) -> bool {
+    pub fn resource_permission(&self, url: &str) -> bool {
         self.permisions_ref()
             .iter()
             .find(|p| p.is_permision(url))

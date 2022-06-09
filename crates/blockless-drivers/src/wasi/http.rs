@@ -104,7 +104,8 @@ impl blockless_http::BlocklessHttp for WasiCtx {
             error!("guest url error: {}", e);
             HttpErrorKind::Utf8Error
         })?;
-        if !self.blockless_config.as_ref().unwrap().is_permission(url) {
+        if !self.resource_permission(url) {
+            error!("Permission Deny");
             return Err(HttpErrorKind::PermissionDeny);
         }
         let opts: &str = &opts.as_str().map_err(|e| {

@@ -20,6 +20,7 @@ $ cargo build
     "entry": "/opt/blockless/app/main.wasi",
     "permissions": [
         "https://blockless-website.vercel.app"
+        "file://test.txt"
     ]
 }
 ```
@@ -42,6 +43,8 @@ $ cargo build
 panic: Permission deny
 [2022-06-09T02:12:39Z ERROR blockless] Fuel 137607:200000000. wasm trap: wasm `unreachable` instruction executed
 ```
+
+for the file permission the url is start with "file://", if you use "file:///", should not work.
 
 ## How to run the app
 

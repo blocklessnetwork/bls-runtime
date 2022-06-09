@@ -1,10 +1,11 @@
 {
-    "fs_root_path": "/Users/join/Downloads/uuid", 
+    "fs_root_path": "/Users/join/Downloads", 
     "drivers_root_path": "/Users/join/Downloads", 
     "limited_fuel": 200000000,
     "limited_memory": 20,
     "entry": "/Users/join/Downloads/main.wasi",
     "permissions": [
-        "https://blockless-website.vercel.app"
+        "https://blockless-website.vercel.app",
+        "file://a.go"
     ]
 }
