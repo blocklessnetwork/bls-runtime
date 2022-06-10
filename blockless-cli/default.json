@@ -2,10 +2,10 @@
     "fs_root_path": "/Users/join/Downloads", 
     "drivers_root_path": "/Users/join/Downloads", 
     "limited_fuel": 200000000,
-    "limited_memory": 20,
+    "limited_memory": 30,
     "entry": "/Users/join/Downloads/main.wasi",
     "permissions": [
-        "https://blockless-website.vercel.app",
+        "https://demo.bls.dev/tokens",
         "file://a.go"
     ]
 }
