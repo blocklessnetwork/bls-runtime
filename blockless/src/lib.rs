@@ -1,6 +1,6 @@
 use blockless_drivers::{CdylibDriver, DriverConetxt};
 use blockless_env;
-use log::{error, info, debug};
+use log::{error, debug};
 use std::{env, path::Path};
 pub use wasi_common::*;
 use wasmtime::*;
