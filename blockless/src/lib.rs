@@ -1,6 +1,6 @@
 use blockless_drivers::{CdylibDriver, DriverConetxt};
 use blockless_env;
-use log::{error, info};
+use log::{error, info, debug};
 use std::{env, path::Path};
 pub use wasi_common::*;
 use wasmtime::*;
@@ -8,7 +8,12 @@ use wasmtime_wasi::{sync::WasiCtxBuilder};
 
 const ENTRY: &str = "_start";
 
-pub async fn blockless_run(b_conf: BlocklessConfig) {
+pub struct ExitStatus {
+    pub fuel: Option<u64>,
+    pub code: i32,
+}
+
+pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
     //set the drivers root path, if not setting use exe file path.
     let drivers_root_path = b_conf
         .drivers_root_path_ref()
@@ -104,9 +109,19 @@ pub async fn blockless_run(b_conf: BlocklessConfig) {
     linker.module(&mut store, "", &module).unwrap();
     let inst = linker.instantiate_async(&mut store, &module).await.unwrap();
     let func = inst.get_typed_func::<(), (), _>(&mut store, ENTRY).unwrap();
-    match func.call_async(&mut store, ()).await {
-        Err(ref t) => trap_info(t, store.fuel_consumed(), fuel.unwrap()),
-        Ok(_) => info!("program exit normal."),
+    let exit_code = match func.call_async(&mut store, ()).await {
+        Err(ref t) => {
+            trap_info(t, store.fuel_consumed(), fuel.unwrap());
+            t.i32_exit_status().unwrap_or(-1)
+        }
+        Ok(_) => {
+            debug!("program exit normal."); 
+            0
+        }
+    };
+    ExitStatus {
+        fuel: store.fuel_consumed(),
+        code: exit_code,
     }
 }
 
