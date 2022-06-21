@@ -65,7 +65,7 @@ $ cargo run PATH_OF_CONFIG
 
 ## Language Support
 
-You can use a variety of different languages write the app of blockless of the implementation:
+You can use a variety of different languages write the app of blockless :
 
 - Go - Tiny Go support.
 - Rust - Blockless crate.
