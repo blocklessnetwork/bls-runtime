@@ -21,6 +21,19 @@ The runtime is depeneded on wasm implements. so it have follow features of wasm.
 $ cargo build
 ```
 
+## Language Support
+
+You can use a variety of different languages write the app of blockless :
+
+- [Go] - Tiny Go support.
+- [Rust] - Blockless crate.
+- [Typescript] - AssemblyScript Support.
+
+[Go]: https://github.com/txlabs/blockless-sdk-golang
+[Rust]: https://github.com/txlabs/blockless-sdk-rust
+[Typescript]: https://github.com/txlabs/blockless-sdk-assemblyscript
+
+
 ## The example of configure file 
 
 ```json
@@ -63,14 +76,3 @@ for the file permission the url is start with "file://", if you use "file:///", 
 $ cargo run PATH_OF_CONFIG
 ```
 
-## Language Support
-
-You can use a variety of different languages write the app of blockless :
-
-- [Go] - Tiny Go support.
-- [Rust] - Blockless crate.
-- [Typescript] - AssemblyScript Support.
-
-[Go]: https://github.com/txlabs/blockless-sdk-golang
-[Rust]: https://github.com/txlabs/blockless-sdk-rust
-[Typescript]: https://github.com/txlabs/blockless-sdk-assemblyscript
