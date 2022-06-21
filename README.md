@@ -7,6 +7,11 @@ The runtime is depeneded on wasm implements. so it have follow features of wasm.
 
 - Fast. built on the optimizing code generator to quickly generate high-quality machine code. runtime is also optimized for cases such as efficient instantiation, low-overhead transitions between the embedder and wasm, and scalability of concurrent instances.
 
+- Extends. can run standard bytecode programs compiled from C/C++, Rust, Swift, AssemblyScript, or Kotlin source code. It also supports mixing of those languages (e.g., to use Rust to implement a JavaScript API).
+
+- Configurable. Support configure file to provide many options such as further means of restricting WebAssembly beyond its basic guarantees such as its CPU , Memory consumption and etc.
+
+
 
 ## How to build
 1. Install the rust with rustup, please visit the site 'https://rustup.rs/'.
