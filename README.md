@@ -67,7 +67,11 @@ $ cargo run PATH_OF_CONFIG
 
 You can use a variety of different languages write the app of blockless :
 
-- Go - Tiny Go support.
-- Rust - Blockless crate.
-- Typescript - AssemblyScript Support.
+- [Go] - Tiny Go support.
+- [Rust] - Blockless crate.
+- [Typescript] - AssemblyScript Support.
+
+[Go]: https://github.com/txlabs/blockless-sdk-golang
+[Rust]: https://github.com/txlabs/blockless-sdk-rust
+[Typescript]: https://github.com/txlabs/blockless-sdk-assemblyscript
 
