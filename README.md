@@ -5,7 +5,7 @@
 ## Features of blockless runtime.
 The runtime is depeneded on wasm implements. so it have follow features of wasm.
 
-- Fast. built on the optimizing code generator to quickly generate high-quality machine code either at runtime. runtime is also optimized for cases such as efficient instantiation, low-overhead transitions between the embedder and wasm, and scalability of concurrent instances.
+- Fast. built on the optimizing code generator to quickly generate high-quality machine code. runtime is also optimized for cases such as efficient instantiation, low-overhead transitions between the embedder and wasm, and scalability of concurrent instances.
 
 
 ## How to build
