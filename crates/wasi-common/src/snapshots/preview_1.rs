@@ -805,12 +805,12 @@ impl wasi_snapshot_preview1::WasiSnapshotPreview1 for WasiCtx {
         fs_rights_inheriting: types::Rights,
         fdflags: types::Fdflags,
     ) -> Result<types::Fd, Error> {
-        static PREFIX: &str = "file://";
+        // static PREFIX: &str = "file://";
         let path = path.as_str()?;
-        if !&path.starts_with(PREFIX) || !self.resource_permission(&path) {
-            tracing::error!("Permission Deny");
-            return Err(Error::not_found());
-        }
+        // if !&path.starts_with(PREFIX) || !self.resource_permission(&path) {
+        //     tracing::error!("Permission Deny");
+        //     return Err(Error::not_found());
+        // }
         let table = self.table();
         let dirfd = u32::from(dirfd);
         if table.is::<FileEntry>(dirfd) {
@@ -820,7 +820,7 @@ impl wasi_snapshot_preview1::WasiSnapshotPreview1 for WasiCtx {
 
         let symlink_follow = dirflags.contains(types::Lookupflags::SYMLINK_FOLLOW);
         // drop chars file://
-        let path = &path[PREFIX.len()..];
+        //let path = &path[PREFIX.len()..];
         let oflags = OFlags::from(&oflags);
         let fdflags = FdFlags::from(fdflags);
         if oflags.contains(OFlags::DIRECTORY) {
