@@ -73,3 +73,32 @@ impl std::fmt::Display for HttpErrorKind {
         }
     }
 }
+
+#[derive(Debug)]
+pub enum IpfsErrorKind {
+    InvalidHandle,
+    Utf8Error,
+    InvalidMethod,
+    InvalidEncoding,
+    RequestError,
+    RuntimeError,
+    TooManySessions,
+    PermissionDeny,
+}
+
+impl std::error::Error for IpfsErrorKind {}
+
+impl std::fmt::Display for IpfsErrorKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            &Self::InvalidHandle => write!(f, "Invalid Error"),
+            &Self::Utf8Error => write!(f, "Utf8 error"),
+            &Self::InvalidMethod => write!(f, "Invalid method"),
+            &Self::InvalidEncoding => write!(f, "Invalid encoding"),
+            &Self::RequestError => write!(f, "Request url"),
+            &Self::RuntimeError => write!(f, "Runtime error"),
+            &Self::TooManySessions => write!(f, "Too many sessions"),
+            &Self::PermissionDeny => write!(f, "Permision deny."),
+        }
+    }
+}

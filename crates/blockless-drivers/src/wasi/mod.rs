@@ -1,6 +1,7 @@
 #![allow(non_upper_case_globals)]
 pub mod guest_ptr;
 pub mod http;
+pub mod ipfs;
 use crate::ErrorKind;
 use crate::{Driver, DriverConetxt};
 pub use guest_ptr::ArrayTuple;

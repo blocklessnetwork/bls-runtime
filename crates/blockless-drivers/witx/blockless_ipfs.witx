@@ -1,0 +1,49 @@
+(typename $ipfs_error
+  (enum (@witx tag u16)
+    ;;; Success
+    $success
+    ;;; Invalid handle
+    $invalid_handle
+    $utf8_error
+    ;;; Destination not allowed
+    $invalid_method
+    ;;; Invalid encoding
+    $invalid_encoding
+    ;;; Request error
+    $request_error
+    ;;; Runtime error
+    $runtime_error
+    ;;; Too many sessions
+    $too_many_sessions
+    ;;;invalid_driver
+    $invalid_driver
+    ;;;permision deny
+    $permission_deny
+  )
+)
+
+(typename $ipfs_handle (handle))
+
+(typename $status_code u32)
+
+(typename $incoming_body_ptr (@witx pointer u8))
+
+
+;;; Number of bytes having been written
+(typename $written_bytes u32)
+
+(module $blockless_ipfs
+
+    (@interface func (export "ipfs_command")
+        (param $params string)
+        (result $error (expected (tuple $ipfs_handle $status_code) (error $ipfs_error)))
+    )
+
+    (@interface func (export "ipfs_read_body")
+        (param $ipfs_handle $ipfs_handle)
+        (param $body_buf $incoming_body_ptr)
+        (param $body_buf_len u32)
+        (result $error (expected $written_bytes (error $ipfs_error)))
+    )
+)
+

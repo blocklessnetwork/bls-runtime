@@ -35,9 +35,6 @@
 ;;; Handles for the HTTP extensions
 (typename $http_handle (handle))
 
-;;; HTTP status code
-(typename $status_code u16)
-
 ;;; A response handle
 (typename $response_handle $http_handle)
 
