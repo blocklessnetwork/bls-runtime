@@ -72,14 +72,38 @@ pub async fn read_body(handle: u32, buf: &mut [u8]) -> Result<u32, IpfsErrorKind
 async fn inner_command(cmd: &str) -> Result<Respone, IpfsErrorKind> {
     let json = match json::parse(cmd) {
         Ok(o) => o,
-        Err(_) => return Err(IpfsErrorKind::InvalidEncoding),
+        Err(_) => return Err(IpfsErrorKind::InvalidParameter),
     };
     let api = match json["api"].as_str() {
         Some(s) => String::from(s),
-        None => return Err(IpfsErrorKind::InvalidEncoding),
+        None => return Err(IpfsErrorKind::InvalidParameter),
+    };
+    let args = match json["args"] {
+        json::JsonValue::Array(ref arr) => {
+            let mut kv = Vec::with_capacity(arr.len());
+            for v in arr.iter() {
+                let name = match v["name"] {
+                    json::JsonValue::String(ref s) => String::from(s),
+                    _ => return Err(IpfsErrorKind::InvalidParameter),
+                };
+                let value = match v["value"] {
+                    json::JsonValue::String(ref s) => String::from(s),
+                    json::JsonValue::Boolean(b) => format!("{}", b),
+                    json::JsonValue::Number(b) => format!("{}", b),
+                    json::JsonValue::Short(b) => b.into(),
+                    _ => return Err(IpfsErrorKind::InvalidParameter),
+                };
+                kv.push((name, value));
+            }
+            match serde_urlencoded::to_string(&kv) {
+                Ok(o) => Some(o),
+                Err(_) => return Err(IpfsErrorKind::InvalidParameter),
+            }
+        },
+        _ => None,
     };
     match api.as_str() {
-        "files/ls" => Api::new(HOST, PORT).file_api().ls().await,
+        "files/ls" => Api::new(HOST, PORT).file_api().ls(args).await,
         _ => return Err(IpfsErrorKind::InvalidMethod),
     }
 }

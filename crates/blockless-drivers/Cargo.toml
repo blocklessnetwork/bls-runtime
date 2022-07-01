@@ -17,6 +17,7 @@ log = "0.4"
 async-trait = "0.1"
 dlopen = "0.1"
 reqwest = "0.11"
+serde_urlencoded = "0.7"
 json = {version = "0.12.4"}
 wasi-cap-std-sync = {path = "../wasi-common/cap-std-sync"}
 wasi-common = {path = "../wasi-common"}

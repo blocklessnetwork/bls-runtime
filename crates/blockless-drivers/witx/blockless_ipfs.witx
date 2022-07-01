@@ -7,6 +7,8 @@
     $utf8_error
     ;;; Destination not allowed
     $invalid_method
+    ;;; Invalid parameter
+    $invalid_parameter
     ;;; Invalid encoding
     $invalid_encoding
     ;;; Request error

@@ -18,6 +18,7 @@ impl From<IpfsErrorKind> for types::IpfsError {
         match e {
             IpfsErrorKind::InvalidHandle => IpfsError::InvalidHandle,
             IpfsErrorKind::Utf8Error => IpfsError::Utf8Error,
+            IpfsErrorKind::InvalidParameter => IpfsError::InvalidParameter,
             IpfsErrorKind::InvalidMethod => IpfsError::InvalidMethod,
             IpfsErrorKind::InvalidEncoding => IpfsError::InvalidEncoding,
             IpfsErrorKind::RequestError => IpfsError::RequestError,
@@ -28,21 +29,6 @@ impl From<IpfsErrorKind> for types::IpfsError {
     }
 }
 
-macro_rules! enum_2_u32 {
-    ($($t:tt),+) => {
-       $(const $t: u32 = types::IpfsError::$t as _;)*
-    }
-}
-
-enum_2_u32!(
-    InvalidHandle,
-    InvalidMethod,
-    InvalidEncoding,
-    RequestError,
-    RuntimeError,
-    PermissionDeny,
-    TooManySessions
-);
 
 impl types::UserErrorConversion for WasiCtx {
     fn ipfs_error_from_ipfs_error_kind(
