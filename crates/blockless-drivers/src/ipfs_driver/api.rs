@@ -60,7 +60,12 @@ impl Api {
         format!("http://{}:{}/{}", &self.host, self.port, api)
     }
 
-    pub async fn simple_post(&self, url: &str) -> Result<Respone, IpfsErrorKind> {
+    pub async fn simple_post(&self, url: &str, args: Option<String>) -> Result<Respone, IpfsErrorKind> {
+        let url = self.build_url(url);
+        let url = match args {
+            Some(ar) => format!("{}?{}", url, ar),
+            None => url,
+        };
         let client = reqwest::Client::new();
         let resp = client
             .post(url)
