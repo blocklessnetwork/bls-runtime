@@ -3,6 +3,7 @@ mod file;
 use std::{collections::HashMap, sync::Once};
 
 use api::*;
+use json::JsonValue;
 #[cfg(feature = "runtime")]
 use tokio::runtime::{Builder, Runtime};
 
@@ -29,8 +30,8 @@ pub fn get_runtime() -> Option<&'static Runtime> {
     unsafe { RUNTIME.as_ref() }
 }
 
-pub fn get_ctx() -> Option<&'static mut HashMap<u32, Respone>> {
-    static mut CTX: Option<HashMap<u32, Respone>> = None;
+pub fn get_ctx() -> Option<&'static mut HashMap<u32, Response>> {
+    static mut CTX: Option<HashMap<u32, Response>> = None;
     static CTX_ONCE: Once = Once::new();
     CTX_ONCE.call_once(|| {
         unsafe {
@@ -69,7 +70,7 @@ pub async fn read_body(handle: u32, buf: &mut [u8]) -> Result<u32, IpfsErrorKind
     }
 }
 
-async fn inner_command(cmd: &str) -> Result<Respone, IpfsErrorKind> {
+async fn inner_command(cmd: &str) -> Result<Response, IpfsErrorKind> {
     let json = match json::parse(cmd) {
         Ok(o) => o,
         Err(_) => return Err(IpfsErrorKind::InvalidParameter),
@@ -84,6 +85,7 @@ async fn inner_command(cmd: &str) -> Result<Respone, IpfsErrorKind> {
             for v in arr.iter() {
                 let name = match v["name"] {
                     json::JsonValue::String(ref s) => String::from(s),
+                    json::JsonValue::Short(b) => b.into(),
                     _ => return Err(IpfsErrorKind::InvalidParameter),
                 };
                 let value = match v["value"] {
@@ -104,6 +106,8 @@ async fn inner_command(cmd: &str) -> Result<Respone, IpfsErrorKind> {
     };
     match api.as_str() {
         "files/ls" => Api::new(HOST, PORT).file_api().ls(args).await,
+        "files/mkdir" => Api::new(HOST, PORT).file_api().mkdir(args).await,
+        "files/rm" => Api::new(HOST, PORT).file_api().rm(args).await,
         _ => return Err(IpfsErrorKind::InvalidMethod),
     }
 }

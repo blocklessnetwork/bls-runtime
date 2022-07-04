@@ -7,13 +7,13 @@ pub struct Api {
     port: u16,
 }
 
-pub struct Respone {
+pub struct Response {
     pub(crate) status: u16,
     pub(crate) body: Option<Vec<u8>>,
     pub(crate) read_p: usize,
 }
 
-impl Respone {
+impl Response {
     fn new(status: u16, body: Option<Vec<u8>>) -> Self {
         Self {
             status,
@@ -60,7 +60,7 @@ impl Api {
         format!("http://{}:{}/{}", &self.host, self.port, api)
     }
 
-    pub async fn simple_post(&self, url: &str, args: Option<String>) -> Result<Respone, IpfsErrorKind> {
+    pub async fn simple_post(&self, url: &str, args: Option<String>) -> Result<Response, IpfsErrorKind> {
         let url = self.build_url(url);
         let url = match args {
             Some(ar) => format!("{}?{}", url, ar),
@@ -74,7 +74,7 @@ impl Api {
             .map_err(|_| IpfsErrorKind::RequestError)?;
         let status = resp.status().as_u16();
         let bytes = resp.bytes().await.map_err(|_| IpfsErrorKind::RuntimeError)?;
-        return Ok(Respone::new(status, Some(bytes.to_vec())));
+        return Ok(Response::new(status, Some(bytes.to_vec())));
     }
 }
 
@@ -84,7 +84,7 @@ mod test {
     #[test]
     fn test_copy_body_remain() {
         let val: &[u8] = b"121212121";
-        let mut resp = Respone::new(200, Some(val.to_vec()));
+        let mut resp = Response::new(200, Some(val.to_vec()));
         let mut buf: [u8; 1024] = [0; 1024];
         let size = resp.copy_body_remain(&mut buf[..]);
         assert!(val.len() == size);
@@ -94,7 +94,7 @@ mod test {
     #[test]
     fn test_copy_body_remain2() {
         let val: &[u8] = b"12345678912345678912345679123456789";
-        let mut resp = Respone::new(200, Some(val.to_vec()));
+        let mut resp = Response::new(200, Some(val.to_vec()));
         let mut buf: [u8; 10] = [0; 10];
         let mut v = Vec::<u8>::new();
         loop {
