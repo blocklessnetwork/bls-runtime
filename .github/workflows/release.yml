@@ -20,5 +20,10 @@ jobs:
           args: --release --all-features
       - uses: actions/upload-artifact@v3
         with:
-          name: blockless-runtime
-          path: target/release
+          name: ${{ matrix.os }}-blockless-runtime
+          path: |
+            target/release
+            !target/release/build
+            !target/release/deps
+            !target/release/examples
+            !target/release/incremental
