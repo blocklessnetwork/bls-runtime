@@ -5,8 +5,10 @@ name: CI
 
 jobs:
   build_and_test:
-    name: Rust project
-    runs-on: macos-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
       - uses: actions-rs/toolchain@v1
@@ -16,3 +18,7 @@ jobs:
         with:
           command: build
           args: --release --all-features
+      - uses: actions/upload-artifact@v3
+        with:
+          name: blockless-runtime
+          path: target/release
