@@ -19,13 +19,13 @@ jobs:
         with:
           command: build
           args: --release --all-features
-      - name: Tar files
-        run: |
-          rm -rf target/release/build
-          rm -rf target/release/deps
-          rm -rf target/release/examples
-          rm -rf target/release/incremental
-          tar -cvzf blockless-runtime.${{ matrix.os }}.amd64.tar.gz target/release
+      - name: Archive Release
+        uses: thedoctor0/zip-release@main
+        with:
+          type: "tar"
+          filename: blockless-runtime.${{ matrix.os }}.amd64.tar.gz
+          path: target/release
+          exclusions: "/*build/* /*deps/* /*examples/* /*incremental/*"
       - name: Get release
         id: get_release
         uses: bruceadams/get-release@v1.2.3
