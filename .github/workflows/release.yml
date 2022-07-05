@@ -1,8 +1,9 @@
 on:
-  push:
-    # Sequence of patterns matched against refs/tags
-    tags:
-      - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
+  workflow_dispatch:
+    inputs:
+      logLevel:
+        description: "tag"
+        required: true
 
 name: Release
 
@@ -20,8 +21,8 @@ jobs:
         with:
           draft: false
           prerelease: false
-          release_name: ${{ github.ref }}
-          tag_name: ${{ github.ref }}
+          release_name: ${{ github.event.inputs.tags }}
+          tag_name: ${{ github.event.inputs.tags }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
       - uses: actions-rs/toolchain@v1
