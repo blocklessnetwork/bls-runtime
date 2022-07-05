@@ -1,8 +1,6 @@
 on:
-  push:
-    # Sequence of patterns matched against refs/tags
-    tags:
-      - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
+  release:
+    types: [created]
 
 name: Release
 
@@ -14,17 +12,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
-      - name: release
-        uses: actions/create-release@v1
-        id: create_release
-        with:
-          draft: false
-          prerelease: false
-          tag_name: ${{ github.ref }}
-          release_name: Release ${{ github.ref }}
-          body: release
-        env:
-          GITHUB_TOKEN: ${{ github.token }}
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -39,12 +26,17 @@ jobs:
           rm -rf target/release/examples
           rm -rf target/release/incremental
           tar -cvzf blockless-runtime.${{ matrix.os }}.amd64.tar.gz target/release
+      - name: Get release
+        id: get_release
+        uses: bruceadams/get-release@v1.2.3
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - name: upload artifact
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ github.token }}
         with:
-          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
           asset_path: blockless-runtime.${{ matrix.os }}.amd64.tar.gz
           asset_name: blockless-runtime.${{ matrix.os }}.amd64.tar.gz
           asset_content_type: application/gzip
