@@ -25,7 +25,7 @@ jobs:
           type: "tar"
           filename: blockless-runtime.${{ matrix.os }}.amd64.tar.gz
           path: target/release
-          exclusions: "/*build/* /*deps/* /*examples/* /*incremental/*"
+          exclusions: "build/ deps/ examples/ incremental/"
       - name: Get release
         id: get_release
         uses: bruceadams/get-release@v1.2.3
