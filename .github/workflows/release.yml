@@ -1,7 +1,7 @@
 on:
   workflow_dispatch:
     inputs:
-      logLevel:
+      tag_name:
         description: "tag"
         required: true
 
@@ -21,8 +21,8 @@ jobs:
         with:
           draft: false
           prerelease: false
-          release_name: ${{ github.event.inputs.tags }}
-          tag_name: ${{ github.event.inputs.tags }}
+          release_name: ${{ github.event.inputs.tag_name }}
+          tag_name: ${{ github.event.inputs.tag_name }}
         env:
           GITHUB_TOKEN: ${{ github.token }}
       - uses: actions-rs/toolchain@v1
