@@ -1,7 +1,10 @@
 on:
-  workflow_dispatch:
+  push:
+    # Sequence of patterns matched against refs/tags
+    tags:
+      - "v*" # Push events to matching v*, i.e. v1.0, v20.15.10
 
-name: CI
+name: Release
 
 jobs:
   build_and_test:
@@ -11,6 +14,17 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
+      - name: release
+        uses: actions/create-release@v1
+        id: create_release
+        with:
+          draft: false
+          prerelease: false
+          release_name: ${{ github.ref }}
+          tag_name: ${{ github.ref }}
+          body_path: CHANGELOG.md
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -18,12 +32,19 @@ jobs:
         with:
           command: build
           args: --release --all-features
-      - uses: actions/upload-artifact@v3
+      - name: Tar files
+        run: |
+          rm -rf target/release/build
+          rm -rf target/release/deps
+          rm -rf target/release/examples
+          rm -rf target/release/incremental
+          tar -cvzf blockless-runtime.${{ matrix.os }}.amd64.tar.gz target/release
+      - name: upload artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
         with:
-          name: ${{ matrix.os }}-blockless-runtime
-          path: |
-            target/release
-            !target/release/build
-            !target/release/deps
-            !target/release/examples
-            !target/release/incremental
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: blockless-runtime.${{ matrix.os }}.amd64.tar.gz
+          asset_name: blockless-runtime.${{ matrix.os }}.amd64.tar.gz
+          asset_content_type: application/gzip

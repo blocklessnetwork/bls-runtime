@@ -1,0 +1,29 @@
+on:
+  workflow_dispatch:
+
+name: Build
+
+jobs:
+  build_and_test:
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - uses: actions-rs/cargo@v1
+        with:
+          command: build
+          args: --release --all-features
+      - uses: actions/upload-artifact@v3
+        with:
+          name: ${{ matrix.os }}-blockless-runtime
+          path: |
+            target/release
+            !target/release/build
+            !target/release/deps
+            !target/release/examples
+            !target/release/incremental
