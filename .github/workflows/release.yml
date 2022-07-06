@@ -39,6 +39,10 @@ jobs:
         uses: JesseTG/rm@v1.0.3
         with:
           path: target/release/examples
+      - name: Remove File
+        uses: JesseTG/rm@v1.0.3
+        with:
+          path: target/release/deps
       - name: Archive Release
         uses: thedoctor0/zip-release@main
         with:
