@@ -1,9 +1,12 @@
 mod api;
 mod file;
+mod http_raw;
+mod util;
 use std::{collections::HashMap, sync::Once};
-
+pub use util::gen_boundary;
+use http_raw::HttpRaw;
 use api::*;
-use json::JsonValue;
+
 #[cfg(feature = "runtime")]
 use tokio::runtime::{Builder, Runtime};
 
@@ -30,8 +33,14 @@ pub fn get_runtime() -> Option<&'static Runtime> {
     unsafe { RUNTIME.as_ref() }
 }
 
-pub fn get_ctx() -> Option<&'static mut HashMap<u32, Response>> {
-    static mut CTX: Option<HashMap<u32, Response>> = None;
+pub enum ApiCtx {
+    Response(Response),
+    HttpRaw(HttpRaw),
+}
+
+
+pub fn get_ctx() -> Option<&'static mut HashMap<u32, ApiCtx>> {
+    static mut CTX: Option<HashMap<u32, ApiCtx>> = None;
     static CTX_ONCE: Once = Once::new();
     CTX_ONCE.call_once(|| {
         unsafe {
@@ -52,9 +61,17 @@ pub fn increase_fd() -> Option<u32> {
 pub async fn command(cmd: &str) -> Result<(u16, u32), IpfsErrorKind> {
     let rs = inner_command(cmd).await?;
     let fd = increase_fd().unwrap();
-    let status = rs.status;
-    get_ctx().unwrap().insert(fd, rs);
-    Ok((status, fd))
+    match rs {
+        ApiCtx::Response(rs) => {
+            let status = rs.status;
+            get_ctx().unwrap().insert(fd, ApiCtx::Response(rs));
+            Ok((status, fd))
+        }
+        ApiCtx::HttpRaw(raw) => {
+            get_ctx().unwrap().insert(fd, ApiCtx::HttpRaw(raw));
+            Ok((0, fd))
+        }
+    }
 }
 
 pub async fn read_body(handle: u32, buf: &mut [u8]) -> Result<u32, IpfsErrorKind> {
@@ -63,14 +80,17 @@ pub async fn read_body(handle: u32, buf: &mut [u8]) -> Result<u32, IpfsErrorKind
         return Err(IpfsErrorKind::InvalidEncoding);
     }
     match ctx.get_mut(&handle) {
-        Some(resp) => {
+        Some(ApiCtx::Response(resp)) => {
             Ok(resp.copy_body_remain(buf) as _)
         }
-        None => return Err(IpfsErrorKind::RuntimeError),
+        Some(ApiCtx::HttpRaw(raw)) if raw.is_connect() => {
+            Ok(0)
+        }
+        _ => return Err(IpfsErrorKind::RuntimeError),
     }
 }
 
-async fn inner_command(cmd: &str) -> Result<Response, IpfsErrorKind> {
+async fn inner_command(cmd: &str) -> Result<ApiCtx, IpfsErrorKind> {
     let json = match json::parse(cmd) {
         Ok(o) => o,
         Err(_) => return Err(IpfsErrorKind::InvalidParameter),
@@ -105,9 +125,10 @@ async fn inner_command(cmd: &str) -> Result<Response, IpfsErrorKind> {
         _ => None,
     };
     match api.as_str() {
-        "files/ls" => Api::new(HOST, PORT).file_api().ls(args).await,
-        "files/mkdir" => Api::new(HOST, PORT).file_api().mkdir(args).await,
-        "files/rm" => Api::new(HOST, PORT).file_api().rm(args).await,
+        "files/ls" => Api::new(HOST, PORT).file_api().ls(args).await.map(ApiCtx::Response),
+        "files/mkdir" => Api::new(HOST, PORT).file_api().mkdir(args).await.map(ApiCtx::Response),
+        "files/rm" => Api::new(HOST, PORT).file_api().rm(args).await.map(ApiCtx::Response),
+        "files/write" => Api::new(HOST, PORT).file_api().write(args).await.map(ApiCtx::HttpRaw),
         _ => return Err(IpfsErrorKind::InvalidMethod),
     }
 }

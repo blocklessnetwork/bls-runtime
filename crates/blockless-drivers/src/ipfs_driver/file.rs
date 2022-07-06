@@ -1,4 +1,4 @@
-use super::api::{Api, Response};
+use super::{api::{Api, Response}, HttpRaw};
 use crate::IpfsErrorKind;
 
 pub struct FileApi(Api);
@@ -21,5 +21,10 @@ impl FileApi {
     pub async fn rm(&self, args: Option<String>) -> Result<Response, IpfsErrorKind> {
         static MKDIR_API: &str = "api/v0/files/rm";
         self.0.simple_post(MKDIR_API, args).await
+    }
+
+    pub async fn write(&self, args: Option<String>) -> Result<HttpRaw, IpfsErrorKind> {
+        static WRITE_API: &str = "api/v0/files/write";
+        self.0.multipart_raw(WRITE_API, args).await
     }
 }

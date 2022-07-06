@@ -1,6 +1,6 @@
 use crate::IpfsErrorKind;
 
-use super::file::FileApi;
+use super::{file::FileApi, HttpRaw, gen_boundary};
 
 pub struct Api {
     host: String,
@@ -75,6 +75,21 @@ impl Api {
         let status = resp.status().as_u16();
         let bytes = resp.bytes().await.map_err(|_| IpfsErrorKind::RuntimeError)?;
         return Ok(Response::new(status, Some(bytes.to_vec())));
+    }
+
+    pub async fn multipart_raw(&self, url: &str, args: Option<String>) -> Result<HttpRaw, IpfsErrorKind> {
+        let url = self.build_url(url);
+        let url = match args {
+            Some(ar) => format!("{}?{}", url, ar),
+            None => url,
+        };
+        let mut http = HttpRaw::from_url(&url)?;
+        let boudary = format!("------------------------{}", gen_boundary());
+        http.insert_header("Content-Type".into(), format!("multipart/form-data; boundary={}", &boudary));
+        http.boundary(Some(boudary));
+        http.method("POST");
+        http.connect().await?;
+        return Ok(http);
     }
 }
 
