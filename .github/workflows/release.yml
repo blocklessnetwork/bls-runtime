@@ -43,7 +43,7 @@ jobs:
         uses: thedoctor0/zip-release@main
         with:
           type: "zip"
-          filename: blockless-runtime.${{ matrix.os }}.x64.zip
+          filename: ../../blockless-runtime.${{ matrix.os }}.x64.zip
           directory: target/release
           path: .
       - name: Get release
