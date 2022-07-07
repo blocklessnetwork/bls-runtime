@@ -1,4 +1,4 @@
-use std::{io::{Write, BufWriter}, collections::HashMap};
+use std::{io::Write, collections::HashMap};
 
 use bytes::BytesMut;
 use httparse::Status;
