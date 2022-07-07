@@ -42,7 +42,7 @@
         (result $error (expected (tuple $ipfs_handle $status_code) (error $ipfs_error)))
     )
 
-    (@interface func (export "ipfs_read_body")
+    (@interface func (export "ipfs_read")
         (param $ipfs_handle $ipfs_handle)
         (param $body_buf $incoming_body_ptr)
         (param $body_buf_len u32)

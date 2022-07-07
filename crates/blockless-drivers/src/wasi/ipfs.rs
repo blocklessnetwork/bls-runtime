@@ -59,7 +59,7 @@ impl blockless_ipfs::BlocklessIpfs for WasiCtx {
         Ok((types::IpfsHandle::from(fd), types::StatusCode::from(status)))
     }
 
-    async fn ipfs_read_body<'a>(
+    async fn ipfs_read<'a>(
         &mut self,
         handle: types::IpfsHandle,
         buf: &GuestPtr<'a, u8>,
