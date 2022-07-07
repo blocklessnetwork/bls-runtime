@@ -15,7 +15,6 @@ linker_integration!({
     link_method: "add_http_to_linker",
 });
 
-
 linker_integration!({
     witx: ["$BLOCKLESS_DRIVERS_ROOT/witx/blockless_ipfs.witx"],
     target: blockless_drivers::wasi::ipfs,

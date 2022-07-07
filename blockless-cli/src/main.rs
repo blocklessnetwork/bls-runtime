@@ -12,7 +12,11 @@ fn main() {
         return;
     }
     let cfg = CliConfig::from_file(path.unwrap()).unwrap();
-    let rt = Builder::new_current_thread().enable_io().enable_time().build().unwrap();
+    let rt = Builder::new_current_thread()
+        .enable_io()
+        .enable_time()
+        .build()
+        .unwrap();
     rt.block_on(async {
         let env = env_logger::Env::default();
         env_logger::init_from_env(env);

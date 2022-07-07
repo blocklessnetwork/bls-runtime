@@ -2,10 +2,10 @@ mod api;
 mod file;
 mod http_raw;
 mod util;
+use api::*;
+use http_raw::HttpRaw;
 use std::{collections::HashMap, sync::Once};
 pub use util::gen_boundary;
-use http_raw::HttpRaw;
-use api::*;
 
 #[cfg(feature = "runtime")]
 use tokio::runtime::{Builder, Runtime};
@@ -38,7 +38,6 @@ pub enum ApiCtx {
     HttpRaw(HttpRaw),
 }
 
-
 pub fn get_ctx() -> Option<&'static mut HashMap<u32, ApiCtx>> {
     static mut CTX: Option<HashMap<u32, ApiCtx>> = None;
     static CTX_ONCE: Once = Once::new();
@@ -52,7 +51,7 @@ pub fn get_ctx() -> Option<&'static mut HashMap<u32, ApiCtx>> {
 
 pub fn increase_fd() -> Option<u32> {
     static mut MAX_HANDLE: u32 = 0;
-    unsafe { 
+    unsafe {
         MAX_HANDLE += 1;
         Some(MAX_HANDLE)
     }
@@ -86,9 +85,7 @@ pub async fn write_body(handle: u32, buf: &[u8]) -> Result<u32, IpfsErrorKind> {
         return Err(IpfsErrorKind::InvalidParameter);
     }
     let size = match ctx.get_mut(&handle) {
-        Some(ApiCtx::HttpRaw(raw)) if raw.is_connect() => {
-            raw.write_boundary(buf).await?
-        }
+        Some(ApiCtx::HttpRaw(raw)) if raw.is_connect() => raw.write_boundary(buf).await?,
         _ => return Err(IpfsErrorKind::InvalidHandle),
     };
     Ok(size as _)
@@ -100,9 +97,7 @@ pub async fn read_body(handle: u32, buf: &mut [u8]) -> Result<u32, IpfsErrorKind
         return Err(IpfsErrorKind::InvalidParameter);
     }
     match ctx.get_mut(&handle) {
-        Some(ApiCtx::Response(resp)) => {
-            Ok(resp.copy_body_remain(buf) as _)
-        }
+        Some(ApiCtx::Response(resp)) => Ok(resp.copy_body_remain(buf) as _),
         Some(ApiCtx::HttpRaw(raw)) if raw.is_connect() => {
             let result = raw.read_response().await?;
             if result.0 != 200 {
@@ -145,14 +140,30 @@ async fn inner_command(cmd: &str) -> Result<ApiCtx, IpfsErrorKind> {
                 Ok(o) => Some(o),
                 Err(_) => return Err(IpfsErrorKind::InvalidParameter),
             }
-        },
+        }
         _ => None,
     };
     match api.as_str() {
-        "files/ls" => Api::new(HOST, PORT).file_api().ls(args).await.map(ApiCtx::Response),
-        "files/mkdir" => Api::new(HOST, PORT).file_api().mkdir(args).await.map(ApiCtx::Response),
-        "files/rm" => Api::new(HOST, PORT).file_api().rm(args).await.map(ApiCtx::Response),
-        "files/write" => Api::new(HOST, PORT).file_api().write(args).await.map(ApiCtx::HttpRaw),
+        "files/ls" => Api::new(HOST, PORT)
+            .file_api()
+            .ls(args)
+            .await
+            .map(ApiCtx::Response),
+        "files/mkdir" => Api::new(HOST, PORT)
+            .file_api()
+            .mkdir(args)
+            .await
+            .map(ApiCtx::Response),
+        "files/rm" => Api::new(HOST, PORT)
+            .file_api()
+            .rm(args)
+            .await
+            .map(ApiCtx::Response),
+        "files/write" => Api::new(HOST, PORT)
+            .file_api()
+            .write(args)
+            .await
+            .map(ApiCtx::HttpRaw),
         _ => return Err(IpfsErrorKind::InvalidMethod),
     }
 }

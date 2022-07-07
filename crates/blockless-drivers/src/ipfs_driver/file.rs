@@ -1,4 +1,7 @@
-use super::{api::{Api, Response}, HttpRaw};
+use super::{
+    api::{Api, Response},
+    HttpRaw,
+};
 use crate::IpfsErrorKind;
 
 pub struct FileApi(Api);

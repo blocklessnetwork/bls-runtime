@@ -1,6 +1,6 @@
 use crate::IpfsErrorKind;
 
-use super::{file::FileApi, HttpRaw, gen_boundary};
+use super::{file::FileApi, gen_boundary, HttpRaw};
 
 pub struct Api {
     host: String,
@@ -37,7 +37,7 @@ impl Response {
             buf.len()
         };
         self.body.as_ref().map_or(0, |body| {
-            buf[..size].copy_from_slice(&body[self.read_p..(self.read_p+size)]);
+            buf[..size].copy_from_slice(&body[self.read_p..(self.read_p + size)]);
             self.read_p += size;
             size
         })
@@ -60,7 +60,11 @@ impl Api {
         format!("http://{}:{}/{}", &self.host, self.port, api)
     }
 
-    pub async fn simple_post(&self, url: &str, args: Option<String>) -> Result<Response, IpfsErrorKind> {
+    pub async fn simple_post(
+        &self,
+        url: &str,
+        args: Option<String>,
+    ) -> Result<Response, IpfsErrorKind> {
         let url = self.build_url(url);
         let url = match args {
             Some(ar) => format!("{}?{}", url, ar),
@@ -73,11 +77,18 @@ impl Api {
             .await
             .map_err(|_| IpfsErrorKind::RequestError)?;
         let status = resp.status().as_u16();
-        let bytes = resp.bytes().await.map_err(|_| IpfsErrorKind::RuntimeError)?;
+        let bytes = resp
+            .bytes()
+            .await
+            .map_err(|_| IpfsErrorKind::RuntimeError)?;
         return Ok(Response::new(status, Some(bytes.to_vec())));
     }
 
-    pub async fn multipart_raw(&self, url: &str, args: Option<String>) -> Result<HttpRaw, IpfsErrorKind> {
+    pub async fn multipart_raw(
+        &self,
+        url: &str,
+        args: Option<String>,
+    ) -> Result<HttpRaw, IpfsErrorKind> {
         let url = self.build_url(url);
         let url = match args {
             Some(ar) => format!("{}?{}", url, ar),
@@ -118,7 +129,7 @@ mod test {
             }
             v.extend_from_slice(&buf[0..size]);
         }
-        
+
         assert!(val.len() == v.len());
         assert!(val == &v[..v.len()]);
     }

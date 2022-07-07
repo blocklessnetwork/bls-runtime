@@ -1,10 +1,10 @@
 use blockless_drivers::{CdylibDriver, DriverConetxt};
 use blockless_env;
-use log::{error, debug};
+use log::{debug, error};
 use std::{env, path::Path};
 pub use wasi_common::*;
 use wasmtime::*;
-use wasmtime_wasi::{sync::WasiCtxBuilder};
+use wasmtime_wasi::sync::WasiCtxBuilder;
 
 const ENTRY: &str = "_start";
 
@@ -116,7 +116,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
             t.i32_exit_status().unwrap_or(-1)
         }
         Ok(_) => {
-            debug!("program exit normal."); 
+            debug!("program exit normal.");
             0
         }
     };

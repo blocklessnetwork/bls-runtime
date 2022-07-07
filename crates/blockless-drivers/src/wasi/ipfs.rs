@@ -1,9 +1,9 @@
 #![allow(non_upper_case_globals)]
+use crate::ipfs_driver;
 use crate::IpfsErrorKind;
 use log::error;
 use wasi_common::WasiCtx;
 use wiggle::GuestPtr;
-use crate::ipfs_driver;
 
 wiggle::from_witx!({
     witx: ["$BLOCKLESS_DRIVERS_ROOT/witx/blockless_ipfs.witx"],
@@ -28,7 +28,6 @@ impl From<IpfsErrorKind> for types::IpfsError {
         }
     }
 }
-
 
 impl types::UserErrorConversion for WasiCtx {
     fn ipfs_error_from_ipfs_error_kind(
@@ -61,7 +60,7 @@ impl blockless_ipfs::BlocklessIpfs for WasiCtx {
     }
 
     async fn ipfs_read_body<'a>(
-        &mut self, 
+        &mut self,
         handle: types::IpfsHandle,
         buf: &GuestPtr<'a, u8>,
         buf_len: u32,
@@ -77,16 +76,13 @@ impl blockless_ipfs::BlocklessIpfs for WasiCtx {
         Ok(rs)
     }
 
-    async fn ipfs_close(
-        &mut self, 
-        handle: types::IpfsHandle
-    ) -> Result<(), IpfsErrorKind> {
+    async fn ipfs_close(&mut self, handle: types::IpfsHandle) -> Result<(), IpfsErrorKind> {
         ipfs_driver::close(handle.into()).await?;
         Ok(())
     }
 
     async fn ipfs_write<'a>(
-        &mut self, 
+        &mut self,
         handle: types::IpfsHandle,
         buf: &GuestPtr<'a, u8>,
         buf_len: u32,
@@ -95,9 +91,7 @@ impl blockless_ipfs::BlocklessIpfs for WasiCtx {
             error!("guest url error: {}", e);
             IpfsErrorKind::InvalidParameter
         })?;
-        let buf = unsafe {
-            std::slice::from_raw_parts(params.as_ptr(), buf_len as _)
-        };
+        let buf = unsafe { std::slice::from_raw_parts(params.as_ptr(), buf_len as _) };
         let rs = ipfs_driver::write_body(handle.into(), buf).await?;
         Ok(rs)
     }
