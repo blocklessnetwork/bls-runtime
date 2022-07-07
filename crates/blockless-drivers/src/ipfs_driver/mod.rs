@@ -159,6 +159,11 @@ async fn inner_command(cmd: &str) -> Result<ApiCtx, IpfsErrorKind> {
             .rm(args)
             .await
             .map(ApiCtx::Response),
+        "files/stat" => Api::new(HOST, PORT)
+            .file_api()
+            .stat(args)
+            .await
+            .map(ApiCtx::Response),
         "files/write" => Api::new(HOST, PORT)
             .file_api()
             .write(args)
