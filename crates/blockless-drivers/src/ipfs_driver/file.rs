@@ -31,6 +31,11 @@ impl FileApi {
         self.0.simple_post(STAT_API, args).await
     }
 
+    pub async fn read(&self, args: Option<String>) -> Result<Response, IpfsErrorKind> {
+        static READ_API: &str = "api/v0/files/read";
+        self.0.simple_post(READ_API, args).await
+    }
+
     pub async fn write(&self, args: Option<String>) -> Result<HttpRaw, IpfsErrorKind> {
         static WRITE_API: &str = "api/v0/files/write";
         self.0.multipart_raw(WRITE_API, args).await
