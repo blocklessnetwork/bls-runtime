@@ -74,19 +74,43 @@ pub async fn command(cmd: &str) -> Result<(u16, u32), IpfsErrorKind> {
     }
 }
 
+pub async fn close(handle: u32) -> Result<(), IpfsErrorKind> {
+    let ctx = get_ctx().unwrap();
+    ctx.remove(&handle);
+    Ok(())
+}
+
+pub async fn write_body(handle: u32, buf: &[u8]) -> Result<u32, IpfsErrorKind> {
+    let ctx = get_ctx().unwrap();
+    if buf.len() == 0 {
+        return Err(IpfsErrorKind::InvalidParameter);
+    }
+    let size = match ctx.get_mut(&handle) {
+        Some(ApiCtx::HttpRaw(raw)) if raw.is_connect() => {
+            raw.write_boundary(buf).await?
+        }
+        _ => return Err(IpfsErrorKind::InvalidHandle),
+    };
+    Ok(size as _)
+}
+
 pub async fn read_body(handle: u32, buf: &mut [u8]) -> Result<u32, IpfsErrorKind> {
     let ctx = get_ctx().unwrap();
     if buf.len() == 0 {
-        return Err(IpfsErrorKind::InvalidEncoding);
+        return Err(IpfsErrorKind::InvalidParameter);
     }
     match ctx.get_mut(&handle) {
         Some(ApiCtx::Response(resp)) => {
             Ok(resp.copy_body_remain(buf) as _)
         }
         Some(ApiCtx::HttpRaw(raw)) if raw.is_connect() => {
+            let result = raw.read_response().await?;
+            if result.0 != 200 {
+                return Err(IpfsErrorKind::RequestError);
+            }
             Ok(0)
         }
-        _ => return Err(IpfsErrorKind::RuntimeError),
+        _ => return Err(IpfsErrorKind::InvalidHandle),
     }
 }
 

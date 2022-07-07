@@ -18,6 +18,8 @@ async-trait = "0.1"
 dlopen = "0.1"
 reqwest = {version = "0.11", features = ["stream"]}
 serde_urlencoded = "0.7"
+bytes = "1"
+httparse = "1"
 json = {version = "0.12.4"}
 wasi-cap-std-sync = {path = "../wasi-common/cap-std-sync"}
 wasi-common = {path = "../wasi-common"}

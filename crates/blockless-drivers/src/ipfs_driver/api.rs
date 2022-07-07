@@ -85,7 +85,6 @@ impl Api {
         };
         let mut http = HttpRaw::from_url(&url)?;
         let boudary = format!("------------------------{}", gen_boundary());
-        http.insert_header("Content-Type".into(), format!("multipart/form-data; boundary={}", &boudary));
         http.boundary(Some(boudary));
         http.method("POST");
         http.connect().await?;

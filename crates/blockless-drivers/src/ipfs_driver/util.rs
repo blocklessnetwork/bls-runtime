@@ -1,8 +1,6 @@
 pub fn gen_boundary() -> String {
     let a = fast_random();
-    let b = fast_random();
-
-    format!("{:016x}{:016x}", a, b)
+    format!("{:016x}", a)
 }
 
 pub(crate) fn fast_random() -> u64 {

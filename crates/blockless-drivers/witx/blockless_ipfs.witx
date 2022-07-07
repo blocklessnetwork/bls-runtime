@@ -31,8 +31,9 @@
 (typename $incoming_body_ptr (@witx pointer u8))
 
 
-;;; Number of bytes having been written
-(typename $written_bytes u32)
+;;; Number of bytes 
+(typename $num_bytes u32)
+
 
 (module $blockless_ipfs
 
@@ -45,7 +46,20 @@
         (param $ipfs_handle $ipfs_handle)
         (param $body_buf $incoming_body_ptr)
         (param $body_buf_len u32)
-        (result $error (expected $written_bytes (error $ipfs_error)))
+        (result $error (expected $num_bytes (error $ipfs_error)))
+    )
+
+    ;;; Close a request handle
+    (@interface func (export "ipfs_close")
+        (param $ipfs_handle $ipfs_handle)
+        (result $error (expected (error $ipfs_error)))
+    )
+
+    (@interface func (export "ipfs_write")
+        (param $ipfs_handle $ipfs_handle)
+        (param $body_buf $incoming_body_ptr)
+        (param $body_buf_len u32)
+        (result $error (expected $num_bytes (error $ipfs_error)))
     )
 )
 
