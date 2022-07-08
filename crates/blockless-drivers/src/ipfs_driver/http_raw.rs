@@ -1,10 +1,10 @@
-use std::{collections::HashMap, io::Write};
+use std::{collections::{HashMap, VecDeque}, io::{Write}};
 
 use crate::IpfsErrorKind;
 use bytes::BytesMut;
 use httparse::Status;
 use log::trace;
-use tokio::{io::AsyncReadExt, net::TcpStream};
+use tokio::{io::{AsyncReadExt}, net::TcpStream};
 use url::Url;
 
 pub struct HttpRaw {
@@ -127,6 +127,46 @@ impl HttpRaw {
         Ok(())
     }
 
+    pub async fn read_bulks(tcp_stream: &mut TcpStream, body_bulk: &mut BytesMut) -> Result<Vec<BytesMut>, IpfsErrorKind> {
+        let mut chunks = Vec::<BytesMut>::new();
+        loop {
+            let parsed = httparse::parse_chunk_size(&body_bulk[..])
+                .map_err(|_| IpfsErrorKind::RequestError)?;
+                let (pos, chunk_len) = match parsed {
+                    Status::Complete((pos, len)) => (pos, len),
+                    Status::Partial => {
+                        let mut buf = BytesMut::with_capacity(1024);
+                        let n = tcp_stream
+                            .read_buf(&mut buf)
+                            .await
+                            .map_err(|_| IpfsErrorKind::RequestError)?;
+                        body_bulk.extend_from_slice(&buf[..n]);
+                        continue;
+                    }
+            };
+            if chunk_len == 0 {
+                break;
+            }
+            let csize = body_bulk.len() - pos;
+            if chunk_len > csize as _ {
+                let size = chunk_len as usize - csize;
+                let mut buf = BytesMut::with_capacity(size);
+                tcp_stream
+                    .read_exact(&mut buf)
+                    .await
+                    .map_err(|_| IpfsErrorKind::RequestError)?;
+                body_bulk.extend_from_slice(&buf);
+            }
+            let _ = body_bulk.split_to(pos);
+            let data = body_bulk.split_to(chunk_len as usize);
+            if body_bulk.len() >= 2 && &body_bulk[..2] == EOL {
+                let _ = body_bulk.split_to(2);
+            }
+            chunks.push(data);
+        };
+        Ok(chunks)
+    }
+
     pub async fn read_response(&mut self) -> Result<(u16, Vec<u8>), IpfsErrorKind> {
         let tcp_stream = self
             .tcp_stream
@@ -162,27 +202,13 @@ impl HttpRaw {
             break;
         }
 
-        let (pos, len) = loop {
-            let parsed = httparse::parse_chunk_size(&bulk[parsed_pos..])
-                .map_err(|_| IpfsErrorKind::RequestError)?;
-            match parsed {
-                Status::Complete((pos, len)) => break (pos, len),
-                Status::Partial => {
-                    let mut buf = BytesMut::with_capacity(1024);
-                    let n = tcp_stream
-                        .read_buf(&mut buf)
-                        .await
-                        .map_err(|_| IpfsErrorKind::RequestError)?;
-                    readn += n;
-                    bulk.extend_from_slice(&buf[..n]);
-                    continue;
-                }
-            };
-        };
-
+        let mut body_bulk = bulk.split_off(parsed_pos);
+        let mut all = BytesMut::new();
+        let chunks = Self::read_bulks(tcp_stream, &mut body_bulk).await?;
+        chunks.iter().for_each(|item| all.extend(item.iter()));
         Ok((
             status_code,
-            bulk.split_off(parsed_pos + pos).split_to(len as _).to_vec(),
+            all.to_vec()  
         ))
     }
 
