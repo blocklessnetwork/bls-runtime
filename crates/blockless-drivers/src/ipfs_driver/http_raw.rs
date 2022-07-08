@@ -1,10 +1,10 @@
-use std::{collections::{HashMap, VecDeque}, io::{Write}};
+use std::{collections::HashMap, io::Write};
 
 use crate::IpfsErrorKind;
 use bytes::BytesMut;
 use httparse::Status;
 use log::trace;
-use tokio::{io::{AsyncReadExt}, net::TcpStream};
+use tokio::{io::AsyncReadExt, net::TcpStream};
 use url::Url;
 
 pub struct HttpRaw {
