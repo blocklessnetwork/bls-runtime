@@ -135,7 +135,7 @@ impl HttpRaw {
                 let (pos, chunk_len) = match parsed {
                     Status::Complete((pos, len)) => (pos, len),
                     Status::Partial => {
-                        let mut buf = BytesMut::with_capacity(1024);
+                        let mut buf = Vec::with_capacity(1024);
                         let n = tcp_stream
                             .read_buf(&mut buf)
                             .await
@@ -150,7 +150,7 @@ impl HttpRaw {
             let csize = body_bulk.len() - pos;
             if chunk_len > csize as _ {
                 let size = chunk_len as usize - csize;
-                let mut buf = BytesMut::with_capacity(size);
+                let mut buf = Vec::with_capacity(size);
                 tcp_stream
                     .read_exact(&mut buf)
                     .await
@@ -179,7 +179,7 @@ impl HttpRaw {
         let mut bulk = BytesMut::with_capacity(1024 * 10);
         for i in 1..10 {
             let mut headers = vec![httparse::EMPTY_HEADER; 128 * i];
-            let mut buf = BytesMut::with_capacity(1024);
+            let mut buf = Vec::with_capacity(1024);
             let n = tcp_stream
                 .read_buf(&mut buf)
                 .await
