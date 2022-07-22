@@ -1,0 +1,48 @@
+(typename $s3_error
+  (enum (@witx tag u16)
+    ;;; Success
+    $success
+    ;;; Invalid handle
+    $invalid_handle
+    $utf8_error
+    ;;; Destination not allowed
+    $invalid_method
+    ;;; Invalid parameter
+    $invalid_parameter
+    ;;; Invalid encoding
+    $invalid_encoding
+    ;;;credentials_error
+    $credentials_error
+    ;;;region_error
+    $region_error
+    ;;; Request error
+    $request_error
+    ;;; Runtime error
+    $runtime_error
+    ;;; Too many sessions
+    $too_many_sessions
+    ;;;invalid_driver
+    $invalid_driver
+    ;;;permision deny
+    $permission_deny
+  )
+)
+
+(typename $s3_result string)
+
+(typename $status_code u32)
+
+(typename $incoming_body_ptr (@witx pointer u8))
+
+;;; Number of bytes 
+(typename $num_bytes u32)
+
+(module $blockless_s3
+    (@interface func (export "bucket_create")
+        (param $params string)
+        (param $body_buf $incoming_body_ptr)
+        (param $body_buf_len u32)
+        (result $error (expected (error $s3_error)))
+    )
+)
+
