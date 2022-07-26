@@ -1,6 +1,7 @@
 use crate::IpfsErrorKind;
 
 use super::{file::FileApi, gen_boundary, HttpRaw};
+use crate::read_ext::ReadRemain;
 
 pub struct Api {
     host: String,
@@ -22,25 +23,23 @@ impl Response {
         }
     }
 
-    pub fn body_remain(&self) -> usize {
-        self.body.as_ref().map_or(0, |b| b.len() - self.read_p)
-    }
 
     pub fn copy_body_remain(&mut self, buf: &mut [u8]) -> usize {
-        let remain = self.body_remain();
-        if remain == 0 {
-            return 0;
-        }
-        let size = if remain <= buf.len() {
-            remain
-        } else {
-            buf.len()
-        };
-        self.body.as_ref().map_or(0, |body| {
-            buf[..size].copy_from_slice(&body[self.read_p..(self.read_p + size)]);
-            self.read_p += size;
-            size
-        })
+        self.copy_remain(buf)
+    }
+}
+
+impl ReadRemain for Response {
+    fn as_bytes_ref(&self) -> Option<&[u8]> {
+        self.body.as_ref().map(|v| &v[..])
+    }
+
+    fn read_point(&self) -> usize {
+        self.read_p
+    }
+
+    fn set_read_point(&mut self, point: usize) {
+        self.read_p = point;
     }
 }
 

@@ -24,6 +24,8 @@ json = {version = "0.12.4"}
 wasi-cap-std-sync = {path = "../wasi-common/cap-std-sync"}
 wasi-common = {path = "../wasi-common"}
 url = "2.2"
+rust-s3 = "0.32.0"
+
 
 [dependencies.lazy_static]
 version = "1.4.0"

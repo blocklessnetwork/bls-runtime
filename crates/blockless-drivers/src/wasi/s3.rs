@@ -1,6 +1,5 @@
 #![allow(non_upper_case_globals)]
-use crate::s3_driver;
-use crate::S3ErrorKind;
+use crate::{S3ErrorKind, s3_driver};
 use log::error;
 use wasi_common::WasiCtx;
 use wiggle::GuestPtr;
@@ -11,7 +10,6 @@ wiggle::from_witx!({
     async: *,
     wasmtime: false,
 });
-
 
 impl From<S3ErrorKind> for types::S3Error {
     fn from(e: S3ErrorKind) -> types::S3Error {
@@ -48,16 +46,49 @@ impl wiggle::GuestErrorType for types::S3Error {
     }
 }
 
-
 #[wiggle::async_trait]
 impl blockless_s3::BlocklessS3 for WasiCtx {
     async fn bucket_create<'a>(
         &mut self,
         param: &GuestPtr<'a, str>,
+    ) -> Result<types::S3Handle, S3ErrorKind> {
+        let params: &str = &param.as_str().map_err(|e| {
+            error!("guest url error: {}", e);
+            S3ErrorKind::Utf8Error
+        })?;
+        let rs = s3_driver::bucket_create(params).await?;
+        Ok(rs.into())
+    }
+
+    async fn bucket_list<'a>(
+        &mut self,
+        param: &GuestPtr<'a, str>,
+    ) -> Result<types::S3Handle, S3ErrorKind> {
+        let params: &str = &param.as_str().map_err(|e| {
+            error!("guest url error: {}", e);
+            S3ErrorKind::Utf8Error
+        })?;
+        let rs = s3_driver::bucket_list(params).await?;
+        Ok(rs.into())
+    }
+
+    async fn s3_read<'a>(
+        &mut self,
+        handle: types::S3Handle,
         buf: &GuestPtr<'a, u8>,
         buf_len: u32,
-    ) -> Result<(), S3ErrorKind> {
-        
-        Ok(())
+    ) -> Result<u32, S3ErrorKind> {
+        let mut dest_buf = vec![0; buf_len as _];
+        let rs = s3_driver::read(handle.into(), &mut dest_buf).await?;
+        if rs > 0 {
+            buf.as_array(rs)
+                .copy_from_slice(&dest_buf[0..rs as _])
+                .map_err(|_| S3ErrorKind::RuntimeError)?;
+        }
+        Ok(rs)
+    }
+
+    async fn s3_close(&mut self, handle: types::S3Handle) -> Result<(), S3ErrorKind> {
+        s3_driver::close(handle.into()).await
     }
 }

@@ -104,3 +104,38 @@ impl std::fmt::Display for IpfsErrorKind {
         }
     }
 }
+
+#[derive(Debug)]
+pub enum S3ErrorKind {
+    InvalidHandle,
+    Utf8Error,
+    InvalidMethod,
+    InvalidEncoding,
+    CredentialsError,
+    RegionError,
+    InvalidParameter,
+    RequestError,
+    RuntimeError,
+    TooManySessions,
+    PermissionDeny,
+}
+
+impl std::error::Error for S3ErrorKind {}
+
+impl std::fmt::Display for S3ErrorKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            &Self::InvalidHandle => write!(f, "Invalid Error"),
+            &Self::Utf8Error => write!(f, "Utf8 error"),
+            &Self::InvalidMethod => write!(f, "Invalid method"),
+            &Self::InvalidEncoding => write!(f, "Invalid encoding"),
+            &Self::CredentialsError => write!(f, "Credentials encoding"),
+            &Self::RegionError => write!(f, "Region encoding"),
+            &Self::InvalidParameter => write!(f, "Invalid parameter"),
+            &Self::RequestError => write!(f, "Request url"),
+            &Self::RuntimeError => write!(f, "Runtime error"),
+            &Self::TooManySessions => write!(f, "Too many sessions"),
+            &Self::PermissionDeny => write!(f, "Permision deny."),
+        }
+    }
+}

@@ -28,6 +28,8 @@
   )
 )
 
+(typename $s3_handle (handle))
+
 (typename $s3_result string)
 
 (typename $status_code u32)
@@ -40,8 +42,24 @@
 (module $blockless_s3
     (@interface func (export "bucket_create")
         (param $params string)
+        (result $error (expected $s3_handle (error $s3_error)))
+    )
+
+    (@interface func (export "bucket_list")
+        (param $params string)
+        (result $error (expected $s3_handle (error $s3_error)))
+    )
+
+    (@interface func (export "s3_read")
+        (param $ipfs_handle $s3_handle)
         (param $body_buf $incoming_body_ptr)
         (param $body_buf_len u32)
+        (result $error (expected $num_bytes (error $s3_error)))
+    )
+
+    ;;; Close a request handle
+    (@interface func (export "s3_close")
+        (param $s3_handle $s3_handle)
         (result $error (expected (error $s3_error)))
     )
 )
