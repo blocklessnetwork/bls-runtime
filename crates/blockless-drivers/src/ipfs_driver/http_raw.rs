@@ -127,22 +127,25 @@ impl HttpRaw {
         Ok(())
     }
 
-    pub async fn read_bulks(tcp_stream: &mut TcpStream, body_bulk: &mut BytesMut) -> Result<Vec<BytesMut>, IpfsErrorKind> {
+    pub async fn read_bulks(
+        tcp_stream: &mut TcpStream,
+        body_bulk: &mut BytesMut,
+    ) -> Result<Vec<BytesMut>, IpfsErrorKind> {
         let mut chunks = Vec::<BytesMut>::new();
         loop {
             let parsed = httparse::parse_chunk_size(&body_bulk[..])
                 .map_err(|_| IpfsErrorKind::RequestError)?;
-                let (pos, chunk_len) = match parsed {
-                    Status::Complete((pos, len)) => (pos, len),
-                    Status::Partial => {
-                        let mut buf = Vec::with_capacity(1024);
-                        let n = tcp_stream
-                            .read_buf(&mut buf)
-                            .await
-                            .map_err(|_| IpfsErrorKind::RequestError)?;
-                        body_bulk.extend_from_slice(&buf[..n]);
-                        continue;
-                    }
+            let (pos, chunk_len) = match parsed {
+                Status::Complete((pos, len)) => (pos, len),
+                Status::Partial => {
+                    let mut buf = Vec::with_capacity(1024);
+                    let n = tcp_stream
+                        .read_buf(&mut buf)
+                        .await
+                        .map_err(|_| IpfsErrorKind::RequestError)?;
+                    body_bulk.extend_from_slice(&buf[..n]);
+                    continue;
+                }
             };
             if chunk_len == 0 {
                 break;
@@ -163,7 +166,7 @@ impl HttpRaw {
                 let _ = body_bulk.split_to(2);
             }
             chunks.push(data);
-        };
+        }
         Ok(chunks)
     }
 
@@ -206,10 +209,7 @@ impl HttpRaw {
         let mut all = BytesMut::new();
         let chunks = Self::read_bulks(tcp_stream, &mut body_bulk).await?;
         chunks.iter().for_each(|item| all.extend(item.iter()));
-        Ok((
-            status_code,
-            all.to_vec()  
-        ))
+        Ok((status_code, all.to_vec()))
     }
 
     fn get_req_raw(&self) -> Vec<u8> {

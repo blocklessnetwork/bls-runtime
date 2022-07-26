@@ -1,5 +1,5 @@
-use log::{trace, error};
-use s3::{Region, creds::Credentials, BucketConfiguration, Bucket};
+use log::{error, trace};
+use s3::{creds::Credentials, Bucket, BucketConfiguration, Region};
 
 use crate::S3ErrorKind;
 
@@ -27,7 +27,7 @@ fn get_aws_config(json: &json::JsonValue) -> Result<S3Config, S3ErrorKind> {
         Some(s) => String::from(s),
         None => String::from("us-east-1"),
     };
-    Ok(S3Config{
+    Ok(S3Config {
         access_key,
         secret_key,
         endpoint,
@@ -55,13 +55,8 @@ pub(crate) async fn create(cfg: &str) -> Result<String, S3ErrorKind> {
         region: region.into(),
         endpoint: endpoint,
     };
-    let credentials = Credentials::new(
-        Some(&access_key),
-        Some(&secret_key),
-        None,
-        None,
-        None,
-    ).unwrap();
+    let credentials =
+        Credentials::new(Some(&access_key), Some(&secret_key), None, None, None).unwrap();
     let config = BucketConfiguration::default();
     let response = match Bucket::create(&bucket_name, region, credentials, config).await {
         Ok(respone) => respone,
@@ -100,13 +95,8 @@ pub(crate) async fn list(cfg: &str) -> Result<String, S3ErrorKind> {
         region: region.into(),
         endpoint: endpoint,
     };
-    let credentials = Credentials::new(
-        Some(&access_key),
-        Some(&secret_key),
-        None,
-        None,
-        None,
-    ).unwrap();
+    let credentials =
+        Credentials::new(Some(&access_key), Some(&secret_key), None, None, None).unwrap();
     let bucket = Bucket::new(&bucket_name, region, credentials).map_err(|e| {
         error!("new bucket error:{}", e);
         S3ErrorKind::InvalidParameter
@@ -115,16 +105,19 @@ pub(crate) async fn list(cfg: &str) -> Result<String, S3ErrorKind> {
         error!("list bucket error:{}", e);
         S3ErrorKind::RequestError
     })?;
-    
-    let rs = list_rs.iter().map(|rs| {
-        let mut obj = json::JsonValue::new_object();
-        obj["name"] = rs.name.clone().into();
-        obj["is_truncated"] = rs.is_truncated.into();
-        rs.prefix.as_ref().map(|prefix| {
-            obj["prefix"] = prefix.clone().into();
-        });
-        obj
-    }).collect::<Vec<_>>();
+
+    let rs = list_rs
+        .iter()
+        .map(|rs| {
+            let mut obj = json::JsonValue::new_object();
+            obj["name"] = rs.name.clone().into();
+            obj["is_truncated"] = rs.is_truncated.into();
+            rs.prefix.as_ref().map(|prefix| {
+                obj["prefix"] = prefix.clone().into();
+            });
+            obj
+        })
+        .collect::<Vec<_>>();
     let rs = json::JsonValue::Array(rs);
     Ok(json::stringify(rs))
 }

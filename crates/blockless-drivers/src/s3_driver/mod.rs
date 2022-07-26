@@ -1,7 +1,7 @@
 mod bucket;
 use std::{collections::HashMap, sync::Once};
 
-use crate::{S3ErrorKind, read_ext::ReadRemain};
+use crate::{read_ext::ReadRemain, S3ErrorKind};
 
 pub struct JsonResult {
     content: String,
@@ -10,15 +10,14 @@ pub struct JsonResult {
 
 impl JsonResult {
     fn new(content: String) -> Self {
-        JsonResult{ 
-            content, 
+        JsonResult {
+            content,
             read_point: 0,
         }
     }
 }
 
 impl ReadRemain for JsonResult {
-
     fn as_bytes_ref(&self) -> Option<&[u8]> {
         Some(self.content.as_bytes())
     }
@@ -33,7 +32,7 @@ impl ReadRemain for JsonResult {
 }
 
 pub enum S3Ctx {
-    JsonStringfy(JsonResult)
+    JsonStringfy(JsonResult),
 }
 
 pub fn get_ctx() -> Option<&'static mut HashMap<u32, S3Ctx>> {
@@ -64,20 +63,22 @@ pub async fn close(handle: u32) -> Result<(), S3ErrorKind> {
 pub async fn bucket_create(params: &str) -> Result<u32, S3ErrorKind> {
     let json = bucket::create(params).await?;
     let fd = increase_fd().unwrap();
-    get_ctx().unwrap().insert(fd, S3Ctx::JsonStringfy(JsonResult::new(json)));
+    get_ctx()
+        .unwrap()
+        .insert(fd, S3Ctx::JsonStringfy(JsonResult::new(json)));
     Ok(fd)
 }
-
 
 pub async fn bucket_list(params: &str) -> Result<u32, S3ErrorKind> {
     let json = bucket::list(params).await?;
     let fd = increase_fd().unwrap();
-    get_ctx().unwrap().insert(fd, S3Ctx::JsonStringfy(JsonResult::new(json)));
+    get_ctx()
+        .unwrap()
+        .insert(fd, S3Ctx::JsonStringfy(JsonResult::new(json)));
     Ok(fd)
 }
 
-
-pub async fn read(handle: u32, buf:& mut [u8]) -> Result<u32, S3ErrorKind> {
+pub async fn read(handle: u32, buf: &mut [u8]) -> Result<u32, S3ErrorKind> {
     let ctx = get_ctx().unwrap();
     if buf.len() == 0 {
         return Err(S3ErrorKind::InvalidParameter);
@@ -87,4 +88,3 @@ pub async fn read(handle: u32, buf:& mut [u8]) -> Result<u32, S3ErrorKind> {
         _ => return Err(S3ErrorKind::InvalidHandle),
     }
 }
-

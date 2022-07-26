@@ -23,7 +23,6 @@ impl Response {
         }
     }
 
-
     pub fn copy_body_remain(&mut self, buf: &mut [u8]) -> usize {
         self.copy_remain(buf)
     }

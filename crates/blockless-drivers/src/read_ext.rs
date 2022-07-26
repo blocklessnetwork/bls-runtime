@@ -1,6 +1,7 @@
 pub trait ReadRemain {
     fn remain(&self) -> usize {
-        self.as_bytes_ref().map_or(0, |b| b.len() - self.read_point())
+        self.as_bytes_ref()
+            .map_or(0, |b| b.len() - self.read_point())
     }
 
     fn as_bytes_ref(&self) -> Option<&[u8]>;

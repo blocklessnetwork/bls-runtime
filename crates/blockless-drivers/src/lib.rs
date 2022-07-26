@@ -2,10 +2,10 @@ mod cdylib_driver;
 pub mod error;
 pub mod http_driver;
 pub mod ipfs_driver;
+pub mod read_ext;
 pub mod s3_driver;
 pub mod tcp_driver;
 pub mod wasi;
-pub mod read_ext;
 use blockless_multiaddr as multiaddr;
 pub use cdylib_driver::CdylibDriver;
 pub use error::*;
@@ -20,7 +20,6 @@ use std::sync::Arc;
 use std::sync::Mutex;
 use tcp_driver::TcpDriver;
 use wasi_common::WasiFile;
-
 
 pub trait Driver {
     fn name(&self) -> &str;
