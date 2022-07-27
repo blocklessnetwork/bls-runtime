@@ -72,6 +72,23 @@ impl blockless_s3::BlocklessS3 for WasiCtx {
         Ok(rs.into())
     }
 
+    async fn bucket_put_object<'a>(
+        &mut self,
+        cfg: &GuestPtr<'a, str>,
+        buf: &GuestPtr<'a, u8>,
+        buf_len: u32,
+    ) -> Result<(), S3ErrorKind> {
+        let cfg: &str = &cfg.as_str().map_err(|e| {
+            error!("guest url error: {}", e);
+            S3ErrorKind::Utf8Error
+        })?;
+        let params = buf.as_array(buf_len).as_slice().map_err(|e| {
+            error!("guest url error: {}", e);
+            S3ErrorKind::InvalidParameter
+        })?;
+        s3_driver::bucket_put_object(cfg, &params).await
+    }
+
     async fn s3_read<'a>(
         &mut self,
         handle: types::S3Handle,

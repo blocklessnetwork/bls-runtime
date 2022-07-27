@@ -50,6 +50,13 @@
         (result $error (expected $s3_handle (error $s3_error)))
     )
 
+    (@interface func (export "bucket_put_object")
+        (param $params string)
+        (param $body_buf $incoming_body_ptr)
+        (param $body_buf_len u32)
+        (result $error (expected (error $s3_error)))
+    )
+
     (@interface func (export "s3_read")
         (param $ipfs_handle $s3_handle)
         (param $body_buf $incoming_body_ptr)

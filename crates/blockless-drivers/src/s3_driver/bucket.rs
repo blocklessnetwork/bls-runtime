@@ -77,30 +77,11 @@ pub(crate) async fn list(cfg: &str) -> Result<String, S3ErrorKind> {
         Ok(o) => o,
         Err(_) => return Err(S3ErrorKind::InvalidParameter),
     };
-    let bucket_name = match json["bucket_name"].as_str() {
-        Some(s) => String::from(s),
-        None => return Err(S3ErrorKind::InvalidParameter),
-    };
     let prefix = match json["prefix"].as_str() {
         Some(s) => String::from(s),
         None => return Err(S3ErrorKind::InvalidParameter),
     };
-    let S3Config {
-        access_key,
-        secret_key,
-        endpoint,
-        region,
-    } = get_aws_config(&json)?;
-    let region = Region::Custom {
-        region: region.into(),
-        endpoint: endpoint,
-    };
-    let credentials =
-        Credentials::new(Some(&access_key), Some(&secret_key), None, None, None).unwrap();
-    let bucket = Bucket::new(&bucket_name, region, credentials).map_err(|e| {
-        error!("new bucket error:{}", e);
-        S3ErrorKind::InvalidParameter
-    })?;
+    let bucket = new_bucket(&json)?;
     let list_rs = bucket.list(prefix, None).await.map_err(|e| {
         error!("list bucket error:{}", e);
         S3ErrorKind::RequestError
@@ -133,4 +114,49 @@ pub(crate) async fn list(cfg: &str) -> Result<String, S3ErrorKind> {
         .collect::<Vec<_>>();
     let rs = json::JsonValue::Array(rs);
     Ok(json::stringify(rs))
+}
+
+fn new_bucket(json: &json::JsonValue) -> Result<Bucket, S3ErrorKind> {
+    let bucket_name = match json["bucket_name"].as_str() {
+        Some(s) => String::from(s),
+        None => return Err(S3ErrorKind::InvalidParameter),
+    };
+    let S3Config {
+        access_key,
+        secret_key,
+        endpoint,
+        region,
+    } = get_aws_config(&json)?;
+    let region = Region::Custom {
+        region: region.into(),
+        endpoint: endpoint,
+    };
+    let credentials =
+        Credentials::new(Some(&access_key), Some(&secret_key), None, None, None).unwrap();
+    let bucket = Bucket::new(&bucket_name, region, credentials).map_err(|e| {
+        error!("new bucket error:{}", e);
+        S3ErrorKind::InvalidParameter
+    })?;
+    Ok(bucket)
+}
+
+pub(crate) async fn put_object(cfg: &str, buf: &[u8]) -> Result<(), S3ErrorKind> {
+    let json = match json::parse(cfg) {
+        Ok(o) => o,
+        Err(_) => return Err(S3ErrorKind::InvalidParameter),
+    };
+    
+    let path = match json["path"].as_str() {
+        Some(s) => String::from(s),
+        None => return Err(S3ErrorKind::InvalidParameter),
+    };
+    let bucket = new_bucket(&json)?;
+    let resp = bucket.put_object(path, buf).await.map_err(|e| {
+        error!("{}", e);
+        S3ErrorKind::RequestError
+    })?;
+    if resp.status_code() != 200 {
+        return Err(S3ErrorKind::RequestError);
+    }
+    Ok(())
 }

@@ -78,6 +78,10 @@ pub async fn bucket_list(params: &str) -> Result<u32, S3ErrorKind> {
     Ok(fd)
 }
 
+pub async fn bucket_put_object(cfg: &str, buf: &[u8]) -> Result<(), S3ErrorKind> {
+    bucket::put_object(cfg, buf).await
+}
+
 pub async fn read(handle: u32, buf: &mut [u8]) -> Result<u32, S3ErrorKind> {
     let ctx = get_ctx().unwrap();
     if buf.len() == 0 {
