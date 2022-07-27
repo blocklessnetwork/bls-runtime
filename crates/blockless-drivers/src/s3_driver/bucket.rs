@@ -115,6 +115,19 @@ pub(crate) async fn list(cfg: &str) -> Result<String, S3ErrorKind> {
             rs.prefix.as_ref().map(|prefix| {
                 obj["prefix"] = prefix.clone().into();
             });
+            let contents = rs.contents
+                .iter()
+                .map(|c| {
+                    let mut obj = json::JsonValue::new_object();
+                    obj["last_modified"] = c.last_modified.clone().into();
+                    obj["e_tag"] = c.e_tag.clone().into();
+                    obj["storage_class"] = c.storage_class.clone().into();
+                    obj["key"] = c.key.clone().into();
+                    obj["size"] = c.size.clone().into();
+                    obj
+                })
+                .collect::<Vec<_>>();
+            obj["contents"] = json::JsonValue::Array(contents);
             obj
         })
         .collect::<Vec<_>>();

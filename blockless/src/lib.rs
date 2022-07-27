@@ -48,6 +48,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
     blockless_env::add_drivers_to_linker(&mut linker);
     blockless_env::add_http_to_linker(&mut linker);
     blockless_env::add_ipfs_to_linker(&mut linker);
+    blockless_env::add_s3_to_linker(&mut linker);
     wasmtime_wasi::add_to_linker(&mut linker, |s| s).unwrap();
     let root_dir = b_conf
         .fs_root_path_ref()

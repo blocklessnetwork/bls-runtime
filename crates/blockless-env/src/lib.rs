@@ -20,3 +20,9 @@ linker_integration!({
     target: blockless_drivers::wasi::ipfs,
     link_method: "add_ipfs_to_linker",
 });
+
+linker_integration!({
+    witx: ["$BLOCKLESS_DRIVERS_ROOT/witx/blockless_s3.witx"],
+    target: blockless_drivers::wasi::s3,
+    link_method: "add_s3_to_linker",
+});

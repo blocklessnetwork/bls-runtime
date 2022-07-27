@@ -175,7 +175,7 @@ impl HttpRaw {
             .tcp_stream
             .as_mut()
             .ok_or(IpfsErrorKind::RequestError)?;
-        let mut parsed_headers;
+        let parsed_headers;
         let mut readn = 0;
         let mut parsed_pos = 0;
         let mut status_code = 0;
