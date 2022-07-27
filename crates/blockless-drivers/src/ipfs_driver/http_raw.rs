@@ -175,7 +175,7 @@ impl HttpRaw {
             .tcp_stream
             .as_mut()
             .ok_or(IpfsErrorKind::RequestError)?;
-        let parsed_headers;
+        let _parsed_headers;
         let mut readn = 0;
         let mut parsed_pos = 0;
         let mut status_code = 0;
@@ -201,7 +201,7 @@ impl HttpRaw {
                 }
             };
             status_code = resp.code.unwrap();
-            parsed_headers = headers;
+            _parsed_headers = headers;
             break;
         }
 

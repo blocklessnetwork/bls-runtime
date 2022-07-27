@@ -48,27 +48,16 @@ impl wiggle::GuestErrorType for types::S3Error {
 
 #[wiggle::async_trait]
 impl blockless_s3::BlocklessS3 for WasiCtx {
-    async fn bucket_create<'a>(
+    async fn bucket_command<'a>(
         &mut self,
+        cmd: u16,
         param: &GuestPtr<'a, str>,
     ) -> Result<types::S3Handle, S3ErrorKind> {
         let params: &str = &param.as_str().map_err(|e| {
             error!("guest url error: {}", e);
             S3ErrorKind::Utf8Error
         })?;
-        let rs = s3_driver::bucket_create(params).await?;
-        Ok(rs.into())
-    }
-
-    async fn bucket_list<'a>(
-        &mut self,
-        param: &GuestPtr<'a, str>,
-    ) -> Result<types::S3Handle, S3ErrorKind> {
-        let params: &str = &param.as_str().map_err(|e| {
-            error!("guest url error: {}", e);
-            S3ErrorKind::Utf8Error
-        })?;
-        let rs = s3_driver::bucket_list(params).await?;
+        let rs = s3_driver::bucket_command(cmd, params).await?;
         Ok(rs.into())
     }
 

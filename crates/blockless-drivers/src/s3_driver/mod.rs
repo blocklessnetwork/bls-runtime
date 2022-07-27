@@ -60,21 +60,23 @@ pub async fn close(handle: u32) -> Result<(), S3ErrorKind> {
     Ok(())
 }
 
-pub async fn bucket_create(params: &str) -> Result<u32, S3ErrorKind> {
-    let json = bucket::create(params).await?;
+pub async fn bucket_command(cmd: u16, params: &str) -> Result<u32, S3ErrorKind> {
+    let content = match cmd {
+        1 =>  {
+            let json = bucket::create(params).await?;
+            S3Ctx::JsonStringfy(JsonResult::new(json))
+        }
+        2 => {
+            let json = bucket::list(params).await?;
+            S3Ctx::JsonStringfy(JsonResult::new(json))
+        }
+        _ => return Err(S3ErrorKind::InvalidParameter)
+    };
+    
     let fd = increase_fd().unwrap();
     get_ctx()
         .unwrap()
-        .insert(fd, S3Ctx::JsonStringfy(JsonResult::new(json)));
-    Ok(fd)
-}
-
-pub async fn bucket_list(params: &str) -> Result<u32, S3ErrorKind> {
-    let json = bucket::list(params).await?;
-    let fd = increase_fd().unwrap();
-    get_ctx()
-        .unwrap()
-        .insert(fd, S3Ctx::JsonStringfy(JsonResult::new(json)));
+        .insert(fd, content);
     Ok(fd)
 }
 

@@ -40,12 +40,8 @@
 (typename $num_bytes u32)
 
 (module $blockless_s3
-    (@interface func (export "bucket_create")
-        (param $params string)
-        (result $error (expected $s3_handle (error $s3_error)))
-    )
-
-    (@interface func (export "bucket_list")
+    (@interface func (export "bucket_command")
+        (param $cmd u16)
         (param $params string)
         (result $error (expected $s3_handle (error $s3_error)))
     )
