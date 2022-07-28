@@ -160,3 +160,24 @@ pub(crate) async fn put_object(cfg: &str, buf: &[u8]) -> Result<(), S3ErrorKind>
     }
     Ok(())
 }
+
+pub(crate) async fn get_object(cfg: &str) -> Result<Vec<u8>, S3ErrorKind> {
+    let json = match json::parse(cfg) {
+        Ok(o) => o,
+        Err(_) => return Err(S3ErrorKind::InvalidParameter),
+    };
+    
+    let path = match json["path"].as_str() {
+        Some(s) => String::from(s),
+        None => return Err(S3ErrorKind::InvalidParameter),
+    };
+    let bucket = new_bucket(&json)?;
+    let resp = bucket.get_object(path).await.map_err(|e| {
+        error!("{}", e);
+        S3ErrorKind::RequestError
+    })?;
+    if resp.status_code() != 200 {
+        return Err(S3ErrorKind::RequestError);
+    }
+    Ok(Vec::from(resp.bytes()))
+}

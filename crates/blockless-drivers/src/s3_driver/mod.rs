@@ -3,23 +3,23 @@ use std::{collections::HashMap, sync::Once};
 
 use crate::{read_ext::ReadRemain, S3ErrorKind};
 
-pub struct JsonResult {
-    content: String,
+pub struct VecResult {
+    content: Vec<u8>,
     read_point: usize,
 }
 
-impl JsonResult {
-    fn new(content: String) -> Self {
-        JsonResult {
+impl VecResult {
+    fn new(content: Vec<u8>) -> Self {
+        VecResult {
             content,
             read_point: 0,
         }
     }
 }
 
-impl ReadRemain for JsonResult {
+impl ReadRemain for VecResult {
     fn as_bytes_ref(&self) -> Option<&[u8]> {
-        Some(self.content.as_bytes())
+        Some(&self.content)
     }
 
     fn read_point(&self) -> usize {
@@ -32,7 +32,7 @@ impl ReadRemain for JsonResult {
 }
 
 pub enum S3Ctx {
-    JsonStringfy(JsonResult),
+    VecResult(VecResult),
 }
 
 pub fn get_ctx() -> Option<&'static mut HashMap<u32, S3Ctx>> {
@@ -64,11 +64,15 @@ pub async fn bucket_command(cmd: u16, params: &str) -> Result<u32, S3ErrorKind> 
     let content = match cmd {
         1 =>  {
             let json = bucket::create(params).await?;
-            S3Ctx::JsonStringfy(JsonResult::new(json))
+            S3Ctx::VecResult(VecResult::new(json.as_bytes().to_vec()))
         }
         2 => {
             let json = bucket::list(params).await?;
-            S3Ctx::JsonStringfy(JsonResult::new(json))
+            S3Ctx::VecResult(VecResult::new(json.as_bytes().to_vec()))
+        }
+        3 => {
+            let rs = bucket::get_object(params).await?;
+            S3Ctx::VecResult(VecResult::new(rs))
         }
         _ => return Err(S3ErrorKind::InvalidParameter)
     };
@@ -90,7 +94,7 @@ pub async fn read(handle: u32, buf: &mut [u8]) -> Result<u32, S3ErrorKind> {
         return Err(S3ErrorKind::InvalidParameter);
     }
     match ctx.get_mut(&handle) {
-        Some(S3Ctx::JsonStringfy(resp)) => Ok(resp.copy_remain(buf) as _),
+        Some(S3Ctx::VecResult(resp)) => Ok(resp.copy_remain(buf) as _),
         _ => return Err(S3ErrorKind::InvalidHandle),
     }
 }
