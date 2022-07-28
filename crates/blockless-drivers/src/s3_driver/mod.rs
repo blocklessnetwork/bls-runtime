@@ -33,6 +33,7 @@ impl ReadRemain for VecResult {
 
 pub enum S3Ctx {
     VecResult(VecResult),
+    None,
 }
 
 pub fn get_ctx() -> Option<&'static mut HashMap<u32, S3Ctx>> {
@@ -73,6 +74,10 @@ pub async fn bucket_command(cmd: u16, params: &str) -> Result<u32, S3ErrorKind> 
         3 => {
             let rs = bucket::get_object(params).await?;
             S3Ctx::VecResult(VecResult::new(rs))
+        }
+        4 => {
+            bucket::delete_object(params).await?;
+            S3Ctx::None
         }
         _ => return Err(S3ErrorKind::InvalidParameter)
     };

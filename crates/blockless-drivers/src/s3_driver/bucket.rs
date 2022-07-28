@@ -181,3 +181,24 @@ pub(crate) async fn get_object(cfg: &str) -> Result<Vec<u8>, S3ErrorKind> {
     }
     Ok(Vec::from(resp.bytes()))
 }
+
+pub(crate) async fn delete_object(cfg: &str) -> Result<(), S3ErrorKind> {
+    let json = match json::parse(cfg) {
+        Ok(o) => o,
+        Err(_) => return Err(S3ErrorKind::InvalidParameter),
+    };
+    
+    let path = match json["path"].as_str() {
+        Some(s) => String::from(s),
+        None => return Err(S3ErrorKind::InvalidParameter),
+    };
+    let bucket = new_bucket(&json)?;
+    let resp = bucket.delete_object(path).await.map_err(|e| {
+        error!("{}", e);
+        S3ErrorKind::RequestError
+    })?;
+    if resp.status_code() != 200 {
+        return Err(S3ErrorKind::RequestError);
+    }
+    Ok(())
+}
