@@ -1,7 +1,7 @@
 use blockless_drivers::{CdylibDriver, DriverConetxt};
 use blockless_env;
 use log::{debug, error};
-use std::{env, path::Path};
+use std::{env, path::Path, string};
 pub use wasi_common::*;
 use wasmtime::*;
 use wasmtime_wasi::sync::WasiCtxBuilder;
@@ -13,7 +13,7 @@ pub struct ExitStatus {
     pub code: i32,
 }
 
-pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
+pub async fn blockless_run(b_conf: BlocklessConfig, _stdin: String) -> ExitStatus {
     //set the drivers root path, if not setting use exe file path.
     let drivers_root_path = b_conf
         .drivers_root_path_ref()
@@ -49,6 +49,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
     blockless_env::add_http_to_linker(&mut linker);
     blockless_env::add_ipfs_to_linker(&mut linker);
     blockless_env::add_s3_to_linker(&mut linker);
+    blockless_env::add_memory_to_linker(&mut linker);
     wasmtime_wasi::add_to_linker(&mut linker, |s| s).unwrap();
     let root_dir = b_conf
         .fs_root_path_ref()
@@ -106,13 +107,20 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
         });
     }
 
+    let wat = r#"(module (func (export "run") ))"#;
+    let wat_module = Module::new(
+        store.engine(),
+        wat,
+    ).unwrap();
+    linker.module(&mut store, "bls", &wat_module).unwrap();
+
     // Instantiate our module with the imports we've created, and run it.
     let module = Module::from_file(&engine, &wasm_file).unwrap();
     linker.module(&mut store, "", &module).unwrap();
     let inst = linker.instantiate_async(&mut store, &module).await.unwrap();
     let func = inst.get_typed_func::<(), (), _>(&mut store, ENTRY).unwrap();
     let exit_code = match func.call_async(&mut store, ()).await {
-        Err(ref t) => {
+        Err(ref t) => { 
             trap_info(t, store.fuel_consumed(), fuel.unwrap());
             t.i32_exit_status().unwrap_or(-1)
         }
