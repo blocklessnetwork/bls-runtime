@@ -35,6 +35,7 @@ pub struct BlocklessConfig {
     fs_root_path: Option<String>,
     drivers_root_path: Option<String>,
     stdout: Stdout,
+    stdin: String,
     limited_fuel: Option<u64>,
     limited_time: Option<u64>,
     limited_memory: Option<u64>,
@@ -85,6 +86,7 @@ impl BlocklessConfig {
             wasm_file: String::from(wasm_file),
             fs_root_path: None,
             stdout: Stdout::Inherit,
+            stdin: String::new(),
             //vm instruction limit.
             limited_fuel: None,
             limited_time: None,
@@ -111,6 +113,10 @@ impl BlocklessConfig {
         self.stdout = stdout
     }
 
+    pub fn stdin(&mut self, stdin: String) {
+        self.stdin = stdin
+    }
+
     pub fn drivers(&mut self, drvs: Vec<DriverConfig>) {
         self.drivers = drvs;
     }
@@ -118,6 +124,12 @@ impl BlocklessConfig {
     pub fn stdout_ref(&self) -> &Stdout {
         &self.stdout
     }
+
+
+    pub fn stdin_ref(&self) -> &String {
+        &self.stdin
+    }
+
 
     pub fn limited_time(&mut self, time: Option<u64>) {
         self.limited_time = time

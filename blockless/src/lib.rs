@@ -1,7 +1,7 @@
 use blockless_drivers::{CdylibDriver, DriverConetxt};
 use blockless_env;
 use log::{debug, error};
-use std::{env, path::Path};
+use std::{env, path::Path, string};
 pub use wasi_common::*;
 use wasmtime::*;
 use wasmtime_wasi::sync::WasiCtxBuilder;
@@ -49,6 +49,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
     blockless_env::add_http_to_linker(&mut linker);
     blockless_env::add_ipfs_to_linker(&mut linker);
     blockless_env::add_s3_to_linker(&mut linker);
+    blockless_env::add_memory_to_linker(&mut linker);
     wasmtime_wasi::add_to_linker(&mut linker, |s| s).unwrap();
     let root_dir = b_conf
         .fs_root_path_ref()
@@ -98,6 +99,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
     let fuel = b_conf.get_limited_fuel();
     let wasm_file: String = b_conf.wasm_file_ref().into();
     ctx.blockless_config = Some(b_conf);
+
     let mut store = Store::new(&engine, ctx);
     //set the fuel from the configure.
     if let Some(f) = fuel {
@@ -112,7 +114,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
     let inst = linker.instantiate_async(&mut store, &module).await.unwrap();
     let func = inst.get_typed_func::<(), (), _>(&mut store, ENTRY).unwrap();
     let exit_code = match func.call_async(&mut store, ()).await {
-        Err(ref t) => {
+        Err(ref t) => { 
             trap_info(t, store.fuel_consumed(), fuel.unwrap());
             t.i32_exit_status().unwrap_or(-1)
         }
