@@ -144,11 +144,15 @@ impl std::fmt::Display for S3ErrorKind {
 #[derive(Debug)]
 pub enum BlocklessMemoryErrorKind {
     InvalidHandle,
+    RuntimeError,
 }
+
 impl std::error::Error for BlocklessMemoryErrorKind {}
+
 impl std::fmt::Display for BlocklessMemoryErrorKind {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
+            &Self::RuntimeError => write!(f, "Runtime error"),
             &Self::InvalidHandle => write!(f, "Invalid Error"),
         }
     }
