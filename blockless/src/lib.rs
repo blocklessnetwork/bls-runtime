@@ -13,7 +13,7 @@ pub struct ExitStatus {
     pub code: i32,
 }
 
-pub async fn blockless_run(b_conf: BlocklessConfig, _stdin: String) -> ExitStatus {
+pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
     //set the drivers root path, if not setting use exe file path.
     let drivers_root_path = b_conf
         .drivers_root_path_ref()
@@ -99,6 +99,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig, _stdin: String) -> ExitStatu
     let fuel = b_conf.get_limited_fuel();
     let wasm_file: String = b_conf.wasm_file_ref().into();
     ctx.blockless_config = Some(b_conf);
+
     let mut store = Store::new(&engine, ctx);
     //set the fuel from the configure.
     if let Some(f) = fuel {
@@ -106,13 +107,6 @@ pub async fn blockless_run(b_conf: BlocklessConfig, _stdin: String) -> ExitStatu
             error!("add fuel error: {}", e);
         });
     }
-
-    let wat = r#"(module (func (export "run") ))"#;
-    let wat_module = Module::new(
-        store.engine(),
-        wat,
-    ).unwrap();
-    linker.module(&mut store, "bls", &wat_module).unwrap();
 
     // Instantiate our module with the imports we've created, and run it.
     let module = Module::from_file(&engine, &wasm_file).unwrap();

@@ -4,6 +4,7 @@ use config::CliConfig;
 use std::{env, io};
 use tokio::runtime::Builder;
 
+
 fn main() {
     let args = env::args().collect::<Vec<_>>();
     let path = args.iter().nth(1);
@@ -14,7 +15,10 @@ fn main() {
         eprintln!("usage: {} [path]\npath: configure file path", args[0]);
         return;
     }
-    let cfg = CliConfig::from_file(path.unwrap()).unwrap();
+
+    let mut cfg = CliConfig::from_file(path.unwrap()).unwrap();
+    cfg.0.stdin(std_buffer);
+
     let rt = Builder::new_current_thread()
         .enable_io()
         .enable_time()
@@ -23,6 +27,6 @@ fn main() {
     rt.block_on(async {
         let env = env_logger::Env::default();
         env_logger::init_from_env(env);
-        blockless_run(cfg.0, std_buffer).await;
+        blockless_run(cfg.0).await;
     });
 }

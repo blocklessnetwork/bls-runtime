@@ -1,4 +1,6 @@
 use std::{collections::HashMap, sync::Once};
+use bytes::Buf;
+
 use crate::{read_ext::ReadRemain, S3ErrorKind};
 
 pub struct VecResult {
@@ -37,24 +39,17 @@ impl ReadRemain for VecResult {
 }
 
 
-pub async fn read(handle: u32, buf: &mut [u8]) -> Result<u32, S3ErrorKind> {
-    let ctx = get_ctx().unwrap();
+pub async fn read(handle: u32, buf: &mut [u8], string: String) -> Result<u32, S3ErrorKind> {
 
-    let string = "foo";
-    
-    let mut ret = VecResult {
-        content: string.as_bytes().to_vec(),
-        read_point: string.as_bytes().to_vec().len(),
-    };
+    let bytes = string.as_bytes();
 
     if buf.len() == 0 {
         return Err(S3ErrorKind::InvalidParameter);
     }
-
-    Ok(ret.copy_remain(buf) as _)
     
-    // match ctx.get_mut(&handle) {
-    //     Some(S3Ctx::VecResult(resp)) =>,
-    //     _ => return Err(S3ErrorKind::InvalidHandle),
-    // }
+    for n in 0..(bytes.len()) {
+      buf[n] = bytes[n];
+    }
+
+    Ok(bytes.len() as u32)
 }
