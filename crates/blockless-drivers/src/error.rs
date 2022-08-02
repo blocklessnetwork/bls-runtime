@@ -145,6 +145,7 @@ impl std::fmt::Display for S3ErrorKind {
 pub enum BlocklessMemoryErrorKind {
     InvalidHandle,
     RuntimeError,
+    InvalidParameter
 }
 
 impl std::error::Error for BlocklessMemoryErrorKind {}
@@ -154,6 +155,7 @@ impl std::fmt::Display for BlocklessMemoryErrorKind {
         match self {
             &Self::RuntimeError => write!(f, "Runtime error"),
             &Self::InvalidHandle => write!(f, "Invalid Error"),
+            &Self::InvalidParameter => write!(f, "Invalid parameter"),
         }
     }
 }

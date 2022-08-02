@@ -9,7 +9,7 @@ fn main() {
     let args = env::args().collect::<Vec<_>>();
     let path = args.iter().nth(1);
     let mut std_buffer = String::new();
-    io::stdin().read_line(&mut std_buffer).unwrap();
+ 
 
     if path.is_none() {
         eprintln!("usage: {} [path]\npath: configure file path", args[0]);
@@ -17,7 +17,11 @@ fn main() {
     }
 
     let mut cfg = CliConfig::from_file(path.unwrap()).unwrap();
-    cfg.0.stdin(std_buffer);
+
+    if cfg.0.stdin_ref().is_empty() {
+        io::stdin().read_line(&mut std_buffer).unwrap();
+        cfg.0.stdin(std_buffer);
+    }
 
     let rt = Builder::new_current_thread()
         .enable_io()
