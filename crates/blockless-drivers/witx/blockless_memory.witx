@@ -6,6 +6,8 @@
     $invalid_handle
     ;;; Runtime error
     $runtime_error
+    ;;; Invalid parameter
+    $invalid_parameter
   )
 )
 

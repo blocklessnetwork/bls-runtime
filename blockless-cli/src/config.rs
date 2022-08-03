@@ -16,6 +16,7 @@ impl CliConfig {
             json_obj["drivers_root_path"].as_str().map(|s| s.into());
         let limited_fuel: Option<u64> = json_obj["limited_fuel"].as_u64();
         let limited_memory: Option<u64> = json_obj["limited_memory"].as_u64();
+        let stdin: Option<&str> = Some(json_obj["stdin"].as_str()).unwrap_or(None);
 
         let drvs = match json_obj["drivers"] {
             JsonValue::Array(ref drvs_cfg) => {
@@ -74,6 +75,11 @@ impl CliConfig {
         bc.drivers_root_path(drivers_root_path);
         bc.limited_fuel(limited_fuel);
         bc.limited_memory(limited_memory);
+        
+        if stdin.is_some() {
+            bc.stdin(stdin.unwrap().to_string());
+        }
+
         Ok(CliConfig(bc))
     }
 }

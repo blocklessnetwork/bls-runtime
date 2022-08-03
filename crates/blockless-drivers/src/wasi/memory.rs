@@ -16,6 +16,7 @@ wiggle::from_witx!({
           match e {
             BlocklessMemoryErrorKind::InvalidHandle => BlocklessMemoryError::InvalidHandle,
             BlocklessMemoryErrorKind::RuntimeError => BlocklessMemoryError::RuntimeError,
+            BlocklessMemoryErrorKind::InvalidParameter => BlocklessMemoryError::InvalidParameter,
           }
       }
   }
