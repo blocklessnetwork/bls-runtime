@@ -25,5 +25,10 @@
         (result $error (expected $num_bytes (error $blockless_memory_error)))
     )
 
+    (@interface func (export "env_var_read")
+        (param $body_buf $incoming_body_ptr)
+        (param $body_buf_len u32)
+        (result $error (expected $num_bytes (error $blockless_memory_error)))
+    )
 )
 
