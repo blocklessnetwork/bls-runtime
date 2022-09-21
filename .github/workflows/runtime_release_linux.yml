@@ -26,9 +26,6 @@ jobs:
     runs-on: ${{ matrix.runson }}
     steps:
       - uses: actions/checkout@v2
-        with:
-          repository: txlabs/blockless-runtime-environment
-          token: ${{ secrets.gh_pat }}
       - name: create Cross.toml
         run: |
           echo [target.aarch64-unknown-linux-gnu] > Cross.toml

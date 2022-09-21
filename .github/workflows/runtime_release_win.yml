@@ -22,9 +22,6 @@ jobs:
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v2
-        with:
-          repository: txlabs/blockless-runtime-environment
-          token: ${{ secrets.gh_pat }}
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
