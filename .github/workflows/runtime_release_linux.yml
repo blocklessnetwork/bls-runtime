@@ -1,0 +1,95 @@
+on:
+  release:
+    types: [created]
+  workflow_dispatch:
+
+name: Runtime Release Linux
+jobs:
+  blockless_runtime:
+    strategy:
+      matrix:
+        include:
+          - build: linux
+            os: linux-latest
+            rust: stable
+            runson: ubuntu-latest
+            target: x86_64-unknown-linux-gnu
+            arch: x86_64
+            cross: false
+          - build: linux_arm64
+            os: linux-latest
+            runson: self-hosted
+            rust: stable
+            target: aarch64-unknown-linux-gnu
+            arch: aarch64
+            cross: true
+    runs-on: ${{ matrix.runson }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          repository: txlabs/blockless-runtime-environment
+          token: ${{ secrets.gh_pat }}
+      - name: create Cross.toml
+        run: |
+          echo [target.aarch64-unknown-linux-gnu] > Cross.toml
+          echo "dockerfile = \"./Dockerfile\"" >> Cross.toml
+      - name: create Dockerfile
+        run: |
+          echo "FROM arm64v8/rust" > Dockerfile
+          echo "RUN dpkg --add-architecture arm64 && \\" >> Dockerfile
+          echo "apt-get update && \\" >> Dockerfile
+          echo "apt-get install --assume-yes build-essential" >> Dockerfile
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+      - name: Build runtime
+        uses: actions-rs/cargo@v1
+        with:
+          use-cross: ${{ matrix.cross }}
+          command: build
+          args: --release --all-features --target ${{ matrix.target }}
+      - name: Remove File
+        uses: JesseTG/rm@v1.0.3
+        with:
+          path: target/${{ matrix.target }}/release/.fingerprint
+      - name: Remove File
+        uses: JesseTG/rm@v1.0.3
+        with:
+          path: target/${{ matrix.target }}/release/examples
+      - name: Remove File
+        uses: JesseTG/rm@v1.0.3
+        with:
+          path: ttarget/${{ matrix.target }}/release/build
+      - name: Remove File
+        uses: JesseTG/rm@v1.0.3
+        with:
+          path: target/${{ matrix.target }}/release/incremental
+      - name: Remove File
+        uses: JesseTG/rm@v1.0.3
+        with:
+          path: target/${{ matrix.target }}/release/examples
+      - name: Remove File
+        uses: JesseTG/rm@v1.0.3
+        with:
+          path: target/${{ matrix.target }}/release/deps
+      - name: Archive Release
+        uses: thedoctor0/zip-release@main
+        with:
+          type: "tar"
+          filename: ../../../blockless-runtime.${{ matrix.os }}.${{ matrix.arch }}.tar.gz
+          directory: target/${{ matrix.target }}/release
+          path: .
+      - name: Get release
+        id: get_release
+        uses: bruceadams/get-release@v1.2.3
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: upload artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
+          asset_path: blockless-runtime.${{ matrix.os }}.${{ matrix.arch }}.tar.gz
+          asset_name: blockless-runtime.${{ matrix.os }}.${{ matrix.arch }}.tar.gz
+          asset_content_type: application/gzip

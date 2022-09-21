@@ -1,0 +1,79 @@
+on:
+  release:
+    types: [created]
+  workflow_dispatch:
+
+name: Runtime Release Win
+jobs:
+  blockless_runtime:
+    strategy:
+      matrix:
+        include:
+          - build: windows
+            os: windows-latest
+            rust: stable
+            target: x86_64-pc-windows-msvc
+            arch: x86_64
+          # - build: windows
+          #   os: windows-latest
+          #   rust: stable
+          #   target: aarch64-pc-windows-msvc
+          #   arch: aarch64
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v2
+        with:
+          repository: txlabs/blockless-runtime-environment
+          token: ${{ secrets.gh_pat }}
+      - uses: actions-rs/toolchain@v1
+        with:
+          toolchain: stable
+          target: ${{ matrix.target }}
+      - run: cargo build  --release --all-features --target ${{ matrix.target }}
+        env:
+          TARGET_AARCH64_UNKNOWN_LINUX_GNU_LINKER: gcc-10-aarch64-linux-gnu
+      - name: Remove File
+        uses: JesseTG/rm@v1.0.3
+        with:
+          path: target/${{ matrix.target }}/release/.fingerprint
+      - name: Remove File
+        uses: JesseTG/rm@v1.0.3
+        with:
+          path: target/${{ matrix.target }}/release/examples
+      - name: Remove File
+        uses: JesseTG/rm@v1.0.3
+        with:
+          path: ttarget/${{ matrix.target }}/release/build
+      - name: Remove File
+        uses: JesseTG/rm@v1.0.3
+        with:
+          path: target/${{ matrix.target }}/release/incremental
+      - name: Remove File
+        uses: JesseTG/rm@v1.0.3
+        with:
+          path: target/${{ matrix.target }}/release/examples
+      - name: Remove File
+        uses: JesseTG/rm@v1.0.3
+        with:
+          path: target/${{ matrix.target }}/release/deps
+      - name: Archive Release
+        uses: thedoctor0/zip-release@main
+        with:
+          type: "tar"
+          filename: ../../../blockless-runtime.${{ matrix.os }}.${{ matrix.arch }}.tar.gz
+          directory: target/${{ matrix.target }}/release
+          path: .
+      - name: Get release
+        id: get_release
+        uses: bruceadams/get-release@v1.2.3
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+      - name: upload artifact
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ github.token }}
+        with:
+          upload_url: ${{ steps.get_release.outputs.upload_url }}
+          asset_path: blockless-runtime.${{ matrix.os }}.${{ matrix.arch }}.tar.gz
+          asset_name: blockless-runtime.${{ matrix.os }}.${{ matrix.arch }}.tar.gz
+          asset_content_type: application/gzip
