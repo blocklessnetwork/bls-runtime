@@ -72,7 +72,9 @@ for the file permission the url is start with "file://", if you use "file:///", 
 
 ## How to run the app
 
+The runtime expects an `stdin` , and can also parse environment variables explictly by passing a `;` seperated list to the `BLS_LIST_VARS` variable. 
+
 ```bash
-$ cargo run PATH_OF_CONFIG
+$ "echo "FOO" | env THIS_IS_MY_VAR=FOO BLS_LIST_VARS=THIS_IS_MY_VAR ~/.bls/runtime/blockless-cli ./build/manifest.json"
 ```
 
