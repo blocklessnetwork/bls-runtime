@@ -1,0 +1,42 @@
+(typename $cgi_error
+  (enum (@witx tag u16)
+    ;;; Success
+    $success
+    ;;; Invalid handle
+    $invalid_handle
+    ;;; Runtime error
+    $runtime_error
+    ;;; Invalid parameter
+    $invalid_parameter
+  )
+)
+
+
+(typename $incoming_read_ptr (@witx pointer u8))
+(typename $incoming_write_ptr (@witx pointer u8))
+
+;;; Number of bytes 
+(typename $num_bytes u32)
+
+(typename $cgi_handle (handle))
+
+(module $blockless_cgi
+
+    (@interface func (export "cgi_open")
+        (param $param string)
+        (result $error (expected $cgi_handle (error $cgi_error)))
+    )
+    
+    (@interface func (export "cgi_read")
+        (param $buf $incoming_read_ptr)
+        (param $buf_len u32)
+        (result $error (expected $num_bytes (error $cgi_error)))
+    )
+
+    (@interface func (export "cgi_write")
+        (param $buf $incoming_write_ptr)
+        (param $buf_len u32)
+        (result $error (expected $num_bytes (error $cgi_error)))
+    )
+)
+

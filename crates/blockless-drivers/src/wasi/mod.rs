@@ -4,6 +4,7 @@ pub mod http;
 pub mod ipfs;
 pub mod s3;
 pub mod memory;
+pub mod cgi;
 use crate::ErrorKind;
 use crate::{Driver, DriverConetxt};
 pub use guest_ptr::ArrayTuple;

@@ -160,3 +160,23 @@ impl std::fmt::Display for BlocklessMemoryErrorKind {
     }
 }
 
+
+#[derive(Debug)]
+pub enum CgiErrorKind {
+    InvalidHandle,
+    RuntimeError,
+    InvalidParameter
+}
+
+impl std::error::Error for CgiErrorKind {}
+
+impl std::fmt::Display for CgiErrorKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            &Self::RuntimeError => write!(f, "Runtime error"),
+            &Self::InvalidHandle => write!(f, "Invalid Error"),
+            &Self::InvalidParameter => write!(f, "Invalid parameter"),
+        }
+    }
+}
+
