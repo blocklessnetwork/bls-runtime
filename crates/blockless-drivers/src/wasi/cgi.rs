@@ -44,7 +44,7 @@ impl blockless_cgi::BlocklessCgi for WasiCtx {
         &mut self,
         param: &GuestPtr<'a, str>,
     ) -> Result<types::CgiHandle, CgiErrorKind> {
-        Ok(1.into())
+        Ok(0.into())
     }
 
     async fn cgi_read<'a>(

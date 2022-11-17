@@ -1,6 +1,7 @@
 mod cdylib_driver;
 pub mod error;
 pub mod http_driver;
+pub mod cgi_driver;
 pub mod ipfs_driver;
 pub mod read_ext;
 pub mod s3_driver;
