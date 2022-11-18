@@ -96,7 +96,8 @@ pub(crate) async fn list(cfg: &str) -> Result<String, S3ErrorKind> {
             rs.prefix.as_ref().map(|prefix| {
                 obj["prefix"] = prefix.clone().into();
             });
-            let contents = rs.contents
+            let contents = rs
+                .contents
                 .iter()
                 .map(|c| {
                     let mut obj = json::JsonValue::new_object();
@@ -145,7 +146,7 @@ pub(crate) async fn put_object(cfg: &str, buf: &[u8]) -> Result<(), S3ErrorKind>
         Ok(o) => o,
         Err(_) => return Err(S3ErrorKind::InvalidParameter),
     };
-    
+
     let path = match json["path"].as_str() {
         Some(s) => String::from(s),
         None => return Err(S3ErrorKind::InvalidParameter),
@@ -166,7 +167,7 @@ pub(crate) async fn get_object(cfg: &str) -> Result<Vec<u8>, S3ErrorKind> {
         Ok(o) => o,
         Err(_) => return Err(S3ErrorKind::InvalidParameter),
     };
-    
+
     let path = match json["path"].as_str() {
         Some(s) => String::from(s),
         None => return Err(S3ErrorKind::InvalidParameter),
@@ -187,7 +188,7 @@ pub(crate) async fn delete_object(cfg: &str) -> Result<(), S3ErrorKind> {
         Ok(o) => o,
         Err(_) => return Err(S3ErrorKind::InvalidParameter),
     };
-    
+
     let path = match json["path"].as_str() {
         Some(s) => String::from(s),
         None => return Err(S3ErrorKind::InvalidParameter),

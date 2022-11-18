@@ -140,12 +140,11 @@ impl std::fmt::Display for S3ErrorKind {
     }
 }
 
-
 #[derive(Debug)]
 pub enum BlocklessMemoryErrorKind {
     InvalidHandle,
     RuntimeError,
-    InvalidParameter
+    InvalidParameter,
 }
 
 impl std::error::Error for BlocklessMemoryErrorKind {}
@@ -160,12 +159,11 @@ impl std::fmt::Display for BlocklessMemoryErrorKind {
     }
 }
 
-
 #[derive(Debug)]
 pub enum CgiErrorKind {
     InvalidHandle,
     RuntimeError,
-    InvalidParameter
+    InvalidParameter,
 }
 
 impl std::error::Error for CgiErrorKind {}
@@ -179,4 +177,3 @@ impl std::fmt::Display for CgiErrorKind {
         }
     }
 }
-

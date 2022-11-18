@@ -75,7 +75,7 @@ impl CliConfig {
         bc.drivers_root_path(drivers_root_path);
         bc.limited_fuel(limited_fuel);
         bc.limited_memory(limited_memory);
-        
+
         if stdin.is_some() {
             bc.stdin(stdin.unwrap().to_string());
         }

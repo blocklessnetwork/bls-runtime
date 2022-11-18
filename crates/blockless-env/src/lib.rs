@@ -27,7 +27,6 @@ linker_integration!({
     link_method: "add_s3_to_linker",
 });
 
-
 linker_integration!({
     witx: ["$BLOCKLESS_DRIVERS_ROOT/witx/blockless_memory.witx"],
     target: blockless_drivers::wasi::memory,

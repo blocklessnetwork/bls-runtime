@@ -125,11 +125,9 @@ impl BlocklessConfig {
         &self.stdout
     }
 
-
     pub fn stdin_ref(&self) -> &String {
         &self.stdin
     }
-
 
     pub fn limited_time(&mut self, time: Option<u64>) {
         self.limited_time = time

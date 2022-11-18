@@ -4,12 +4,10 @@ use config::CliConfig;
 use std::{env, io};
 use tokio::runtime::Builder;
 
-
 fn main() {
     let args = env::args().collect::<Vec<_>>();
     let path = args.iter().nth(1);
     let mut std_buffer = String::new();
- 
 
     if path.is_none() {
         eprintln!("usage: {} [path]\npath: configure file path", args[0]);

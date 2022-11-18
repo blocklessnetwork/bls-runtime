@@ -1,10 +1,10 @@
 #![allow(non_upper_case_globals)]
+pub mod cgi;
 pub mod guest_ptr;
 pub mod http;
 pub mod ipfs;
-pub mod s3;
 pub mod memory;
-pub mod cgi;
+pub mod s3;
 use crate::ErrorKind;
 use crate::{Driver, DriverConetxt};
 pub use guest_ptr::ArrayTuple;

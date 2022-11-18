@@ -63,7 +63,7 @@ pub async fn close(handle: u32) -> Result<(), S3ErrorKind> {
 
 pub async fn bucket_command(cmd: u16, params: &str) -> Result<u32, S3ErrorKind> {
     let content = match cmd {
-        1 =>  {
+        1 => {
             let json = bucket::create(params).await?;
             S3Ctx::VecResult(VecResult::new(json.as_bytes().to_vec()))
         }
@@ -79,13 +79,11 @@ pub async fn bucket_command(cmd: u16, params: &str) -> Result<u32, S3ErrorKind> 
             bucket::delete_object(params).await?;
             S3Ctx::None
         }
-        _ => return Err(S3ErrorKind::InvalidParameter)
+        _ => return Err(S3ErrorKind::InvalidParameter),
     };
-    
+
     let fd = increase_fd().unwrap();
-    get_ctx()
-        .unwrap()
-        .insert(fd, content);
+    get_ctx().unwrap().insert(fd, content);
     Ok(fd)
 }
 
