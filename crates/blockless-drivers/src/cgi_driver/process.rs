@@ -1,6 +1,6 @@
 use crate::CgiErrorKind;
 use log::debug;
-use tokio::process::{Child, Command};
+use tokio::{process::{Child, Command}, io::{AsyncReadExt, AsyncWriteExt}};
 
 pub struct CgiProcess {
     child: Option<Child>,
@@ -50,6 +50,54 @@ impl CgiProcess {
         })
     }
 
+    pub async fn child_stdout_read(&mut self, buf: &mut [u8]) -> Result<i32, CgiErrorKind> {
+        if self.child.is_some() {
+            let child = self.child.as_mut().unwrap();
+            if child.stdout.is_some() {
+                let stdout = child.stdout.as_mut().unwrap();
+                return stdout.read(buf).await.map(|i| i as i32).map_err(|e|  {
+                    debug!("error read stdout {}", e);
+                    CgiErrorKind::RuntimeError
+                });
+            } else {
+                return Ok(0)
+            }
+        }
+        Err(CgiErrorKind::InvalidHandle)
+    }
+
+    pub async fn child_stderr_read(&mut self, buf: &mut [u8]) -> Result<i32, CgiErrorKind> {
+        if self.child.is_some() {
+            let child = self.child.as_mut().unwrap();
+            if child.stderr.is_some() {
+                let stderr = child.stderr.as_mut().unwrap();
+                return stderr.read(buf).await.map(|i| i as i32).map_err(|e|  {
+                    debug!("error read stdout {}", e);
+                    CgiErrorKind::RuntimeError
+                });
+            } else {
+                return Ok(0)
+            }
+        }
+        Err(CgiErrorKind::InvalidHandle)
+    }
+
+    pub async fn child_stdin_write(&mut self, buf: &[u8]) -> Result<i32, CgiErrorKind> {
+        if self.child.is_some() {
+            let child = self.child.as_mut().unwrap();
+            if child.stderr.is_some() {
+                let stderr = child.stdin.as_mut().unwrap();
+                return stderr.write(buf).await.map(|i| i as i32).map_err(|e|  {
+                    debug!("error read stdout {}", e);
+                    CgiErrorKind::RuntimeError
+                });
+            } else {
+                return Ok(0)
+            }
+        }
+        Err(CgiErrorKind::InvalidHandle)
+    }
+
     pub async fn kill(&mut self) -> Result<(), CgiErrorKind> {
         if self.child.is_some() {
             return self
@@ -60,7 +108,7 @@ impl CgiProcess {
                 .await
                 .map_err(|_| CgiErrorKind::RuntimeError);
         }
-        Ok(())
+        Err(CgiErrorKind::InvalidHandle)
     }
 
     pub fn exec(&mut self) -> Result<(), CgiErrorKind> {
