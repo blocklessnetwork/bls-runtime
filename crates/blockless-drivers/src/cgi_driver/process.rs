@@ -72,7 +72,7 @@ impl CgiProcess {
             if child.stderr.is_some() {
                 let stderr = child.stderr.as_mut().unwrap();
                 return stderr.read(buf).await.map(|i| i as i32).map_err(|e|  {
-                    debug!("error read stdout {}", e);
+                    debug!("error read stderr {}", e);
                     CgiErrorKind::RuntimeError
                 });
             } else {

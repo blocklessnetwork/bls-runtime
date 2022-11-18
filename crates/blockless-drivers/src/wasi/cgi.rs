@@ -47,7 +47,7 @@ impl blockless_cgi::BlocklessCgi for WasiCtx {
         Ok(0.into())
     }
 
-    async fn cgi_read<'a>(
+    async fn cgi_stdout_read<'a>(
         &mut self,
         buf: &GuestPtr<'a, u8>,
         buf_len: u32,
@@ -55,7 +55,15 @@ impl blockless_cgi::BlocklessCgi for WasiCtx {
         Ok(0)
     }
 
-    async fn cgi_write<'a>(
+    async fn cgi_stderr_read<'a>(
+        &mut self,
+        buf: &GuestPtr<'a, u8>,
+        buf_len: u32,
+    ) -> Result<u32, CgiErrorKind> {
+        Ok(0)
+    }
+
+    async fn cgi_stdin_write<'a>(
         &mut self,
         buf: &GuestPtr<'a, u8>,
         buf_len: u32,
