@@ -50,12 +50,12 @@ impl CgiProcess {
         })
     }
 
-    pub async fn child_stdout_read(&mut self, buf: &mut [u8]) -> Result<i32, CgiErrorKind> {
+    pub async fn child_stdout_read(&mut self, buf: &mut [u8]) -> Result<u32, CgiErrorKind> {
         if self.child.is_some() {
             let child = self.child.as_mut().unwrap();
             if child.stdout.is_some() {
                 let stdout = child.stdout.as_mut().unwrap();
-                return stdout.read(buf).await.map(|i| i as i32).map_err(|e|  {
+                return stdout.read(buf).await.map(|i| i as u32).map_err(|e|  {
                     debug!("error read stdout {}", e);
                     CgiErrorKind::RuntimeError
                 });
@@ -66,12 +66,12 @@ impl CgiProcess {
         Err(CgiErrorKind::InvalidHandle)
     }
 
-    pub async fn child_stderr_read(&mut self, buf: &mut [u8]) -> Result<i32, CgiErrorKind> {
+    pub async fn child_stderr_read(&mut self, buf: &mut [u8]) -> Result<u32, CgiErrorKind> {
         if self.child.is_some() {
             let child = self.child.as_mut().unwrap();
             if child.stderr.is_some() {
                 let stderr = child.stderr.as_mut().unwrap();
-                return stderr.read(buf).await.map(|i| i as i32).map_err(|e|  {
+                return stderr.read(buf).await.map(|i| i as u32).map_err(|e|  {
                     debug!("error read stderr {}", e);
                     CgiErrorKind::RuntimeError
                 });
@@ -82,12 +82,12 @@ impl CgiProcess {
         Err(CgiErrorKind::InvalidHandle)
     }
 
-    pub async fn child_stdin_write(&mut self, buf: &[u8]) -> Result<i32, CgiErrorKind> {
+    pub async fn child_stdin_write(&mut self, buf: &[u8]) -> Result<u32, CgiErrorKind> {
         if self.child.is_some() {
             let child = self.child.as_mut().unwrap();
             if child.stderr.is_some() {
                 let stderr = child.stdin.as_mut().unwrap();
-                return stderr.write(buf).await.map(|i| i as i32).map_err(|e|  {
+                return stderr.write(buf).await.map(|i| i as u32).map_err(|e|  {
                     debug!("error read stdout {}", e);
                     CgiErrorKind::RuntimeError
                 });
