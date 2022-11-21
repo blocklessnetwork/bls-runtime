@@ -3,8 +3,10 @@ use log::error;
 use wasi_common::WasiCtx;
 use wiggle::GuestPtr;
 
+use crate::cgi_driver::{
+    child_stderr_read, child_stdin_write, child_stdout_read, command_and_exec,
+};
 use crate::CgiErrorKind;
-use crate::cgi_driver::{command_and_exec, child_stdin_write, child_stderr_read, child_stdout_read};
 
 wiggle::from_witx!({
     witx: ["$BLOCKLESS_DRIVERS_ROOT/witx/blockless_cgi.witx"],
