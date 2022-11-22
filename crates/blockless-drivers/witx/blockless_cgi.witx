@@ -47,5 +47,10 @@
         (param $buf_len u32)
         (result $error (expected $num_bytes (error $cgi_error)))
     )
+
+    (@interface func (export "cgi_close")
+        (param $handle $cgi_handle)
+        (result $error (expected (error $cgi_error)))
+    )
 )
 

@@ -4,7 +4,7 @@ use wasi_common::WasiCtx;
 use wiggle::GuestPtr;
 
 use crate::cgi_driver::{
-    child_stderr_read, child_stdin_write, child_stdout_read, command_and_exec,
+    self, child_stderr_read, child_stdin_write, child_stdout_read, command_and_exec,
 };
 use crate::CgiErrorKind;
 
@@ -101,5 +101,12 @@ impl blockless_cgi::BlocklessCgi for WasiCtx {
         })?;
         let buf = unsafe { std::slice::from_raw_parts(buf.as_ptr(), buf_len as _) };
         child_stdin_write(handle.into(), buf).await
+    }
+
+    async fn cgi_close(
+        &mut self,
+        handle: types::CgiHandle,
+    )  -> Result<(), CgiErrorKind>  {
+        cgi_driver::close(handle.into())
     }
 }

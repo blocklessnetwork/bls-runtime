@@ -1,3 +1,5 @@
+use std::process::Stdio;
+
 use crate::CgiErrorKind;
 use log::debug;
 use tokio::{process::{Child, Command}, io::{AsyncReadExt, AsyncWriteExt}};
@@ -113,6 +115,9 @@ impl CgiProcess {
 
     pub fn exec(&mut self) -> Result<(), CgiErrorKind> {
         let mut command = Command::new(&self.command);
+        command.stderr(Stdio::piped());
+        command.stdout(Stdio::piped());
+        command.stdin(Stdio::piped());
         command.kill_on_drop(true);
         command.args(self.args.iter());
         command.envs(self.envs.clone());

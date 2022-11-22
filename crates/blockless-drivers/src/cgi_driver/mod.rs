@@ -35,6 +35,14 @@ pub async fn command_and_exec(cmd: &str) -> Result<u32, CgiErrorKind> {
     Ok(handle)
 }
 
+pub fn close(handle: u32) -> Result<(), CgiErrorKind> {
+    let ctx = get_ctx().unwrap();
+    if ctx.remove(&handle).is_none() {
+        return Err(CgiErrorKind::InvalidHandle);
+    }
+    Ok(())
+}
+
 pub async fn child_stdin_write(handle: u32, buf: &[u8]) -> Result<u32, CgiErrorKind> {
     let ctx = get_ctx().unwrap();
     let cgi_process = match ctx.get_mut(&handle) {
