@@ -3,7 +3,7 @@
     "drivers_root_path": "/Users/join/Downloads", 
     "limited_fuel": 200000000,
     "limited_memory": 30,
-    "entry": "/Users/join/Downloads/blockless-sdk-assemblyscript/build/release.wasm",
+    "entry": "/Users/join/Downloads/sdk-assemblyscript/build/release.wasm",
     "permissions": [
         "https://demo.bls.dev/tokens",
         "file://a.go"

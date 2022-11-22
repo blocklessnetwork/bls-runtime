@@ -1,7 +1,7 @@
 use blockless_drivers::{CdylibDriver, DriverConetxt};
 use blockless_env;
 use log::{debug, error};
-use std::{env, path::Path, string};
+use std::{env, path::Path};
 pub use wasi_common::*;
 use wasmtime::*;
 use wasmtime_wasi::sync::WasiCtxBuilder;
@@ -50,6 +50,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
     blockless_env::add_ipfs_to_linker(&mut linker);
     blockless_env::add_s3_to_linker(&mut linker);
     blockless_env::add_memory_to_linker(&mut linker);
+    blockless_env::add_cgi_to_linker(&mut linker);
     wasmtime_wasi::add_to_linker(&mut linker, |s| s).unwrap();
     let root_dir = b_conf
         .fs_root_path_ref()
