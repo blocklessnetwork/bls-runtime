@@ -87,10 +87,10 @@ impl CgiProcess {
     pub async fn child_stdin_write(&mut self, buf: &[u8]) -> Result<u32, CgiErrorKind> {
         if self.child.is_some() {
             let child = self.child.as_mut().unwrap();
-            if child.stderr.is_some() {
-                let stderr = child.stdin.as_mut().unwrap();
-                return stderr.write(buf).await.map(|i| i as u32).map_err(|e|  {
-                    debug!("error read stdout {}", e);
+            if child.stdin.is_some() {
+                let stdin = child.stdin.as_mut().unwrap();
+                return stdin.write(buf).await.map(|i| i as u32).map_err(|e|  {
+                    debug!("error write stdin {}", e);
                     CgiErrorKind::RuntimeError
                 });
             } else {
