@@ -1,3 +1,5 @@
+#[cfg(features="builtin_http")]
+mod reqwest_driver;
 use std::ffi::OsStr;
 
 use dlopen::raw::Library;
