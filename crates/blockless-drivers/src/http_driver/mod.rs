@@ -1,4 +1,4 @@
-#[cfg(features="builtin_http")]
+#[cfg(features="builtins_http")]
 mod reqwest_driver;
 use std::ffi::OsStr;
 
