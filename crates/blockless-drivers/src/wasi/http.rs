@@ -1,5 +1,5 @@
 #![allow(non_upper_case_globals)]
-use crate::{get_http_driver, HttpErrorKind};
+use crate::{HttpErrorKind, http_driver};
 use log::error;
 use wasi_common::WasiCtx;
 use wiggle::GuestPtr;
@@ -92,6 +92,7 @@ impl wiggle::GuestErrorType for types::HttpError {
     }
 }
 
+
 #[wiggle::async_trait]
 impl blockless_http::BlocklessHttp for WasiCtx {
     async fn http_req<'a>(
@@ -99,7 +100,6 @@ impl blockless_http::BlocklessHttp for WasiCtx {
         url: &GuestPtr<'a, str>,
         opts: &GuestPtr<'a, str>,
     ) -> Result<(types::HttpHandle, types::CodeType), HttpErrorKind> {
-        let driver = get_http_driver().ok_or(HttpErrorKind::InvalidDriver)?;
         let url: &str = &url.as_str().map_err(|e| {
             error!("guest url error: {}", e);
             HttpErrorKind::Utf8Error
@@ -112,14 +112,12 @@ impl blockless_http::BlocklessHttp for WasiCtx {
             error!("guest options error: {}", e);
             HttpErrorKind::Utf8Error
         })?;
-        let (fd, code) = driver.http_req(url, opts)?;
+        let (fd, code) = http_driver::http_req(url, opts).await?;
         Ok((types::HttpHandle::from(fd), types::CodeType::from(code)))
     }
 
     async fn http_close(&mut self, handle: types::HttpHandle) -> Result<(), HttpErrorKind> {
-        let driver = get_http_driver().ok_or(HttpErrorKind::InvalidDriver)?;
-        driver.http_close(handle.into())?;
-        Ok(())
+        http_driver::http_close(handle.into()).await
     }
 
     async fn http_read_header<'a>(
@@ -129,14 +127,13 @@ impl blockless_http::BlocklessHttp for WasiCtx {
         buf: &GuestPtr<'a, u8>,
         buf_len: u32,
     ) -> Result<u32, HttpErrorKind> {
-        let driver = get_http_driver().ok_or(HttpErrorKind::InvalidDriver)?;
         let head: &str = &head.as_str().map_err(|e| {
             error!("guest head error: {}", e);
             HttpErrorKind::Utf8Error
         })?;
         let mut dest_buf = vec![0; buf_len as _];
         let buf = buf.clone();
-        let rs = driver.http_read_head(handle.into(), head.as_bytes(), &mut dest_buf[..])?;
+        let rs = http_driver::http_read_head(handle.into(), head, &mut dest_buf[..]).await?;
         buf.as_array(rs)
             .copy_from_slice(&dest_buf[0..rs as _])
             .map_err(|_| HttpErrorKind::MemoryAccessError)?;
@@ -149,10 +146,9 @@ impl blockless_http::BlocklessHttp for WasiCtx {
         buf: &GuestPtr<'a, u8>,
         buf_len: u32,
     ) -> Result<u32, HttpErrorKind> {
-        let driver = get_http_driver().ok_or(HttpErrorKind::InvalidDriver)?;
         let mut dest_buf = vec![0; buf_len as _];
         let buf = buf.clone();
-        let rs = driver.http_read_body(handle.into(), &mut dest_buf[..])?;
+        let rs = http_driver::http_read_body(handle.into(), &mut dest_buf[..]).await?;
         if rs > 0 {
             buf.as_array(rs)
                 .copy_from_slice(&dest_buf[0..rs as _])

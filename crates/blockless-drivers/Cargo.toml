@@ -7,6 +7,10 @@ keywords = ["blockless", "driver"]
 readme = "README.md"
 edition = "2021"
 
+[features]
+default = ["builtin_http"]
+builtin_http = []
+
 [dependencies]
 blockless-drivers-macro = {path = "macro"}
 wasmtime-wasi = "0.36.0"

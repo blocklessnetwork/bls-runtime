@@ -9,7 +9,7 @@ use crate::HttpErrorKind;
 use futures_core;
 use futures_core::Stream;
 
-type StreamInBox = Pin<Box<dyn Stream<Item = reqwest::Result<Bytes>>>>;
+type StreamInBox = Pin<Box<dyn Stream<Item = reqwest::Result<Bytes>> + Send >>;
 
 struct StreamState {
     stream: StreamInBox,
@@ -93,7 +93,7 @@ pub(crate) async fn http_req(
 }
 
 /// read from handle
-pub(crate) async fn http_read_head(
+pub(crate) fn http_read_head(
     fd: u32,
     head: &str,
 ) -> Result<String, HttpErrorKind> {
@@ -119,7 +119,8 @@ async fn stream_read(state: &mut StreamState, dest: &mut [u8]) -> usize {
     let read_call = |buffer: &mut Bytes, dest: &mut [u8]| -> usize {
         let remaining = buffer.remaining();
         if remaining > 0 {
-            buffer.copy_to_slice(dest);
+            let n = dest.len().min(remaining);
+            buffer.copy_to_slice(&mut dest[..n]);
         }
         if remaining >= dest.len() {
             return dest.len();
@@ -138,6 +139,9 @@ async fn stream_read(state: &mut StreamState, dest: &mut [u8]) -> usize {
                 }
                 if buffer.remaining() == 0 {
                     state.buffer.take();
+                }
+                if dest.len() == readn {
+                    return readn;
                 }
             }
             None => {
@@ -182,8 +186,9 @@ pub async fn http_read_body(
             ctx.insert(fd, HttpCtx::StreamState(stream_state));
             Ok(readn as u32)
         }
-        Some(HttpCtx::StreamState(ref mut stream_state)) => {
-            let readn = stream_read(stream_state, buf).await;
+        Some(HttpCtx::StreamState(mut stream_state)) => {
+            let readn = stream_read(&mut stream_state, buf).await;
+            ctx.insert(fd, HttpCtx::StreamState(stream_state));
             Ok(readn as u32)
         }
         None => return Err(HttpErrorKind::InvalidHandle),
@@ -196,5 +201,97 @@ pub(crate) fn http_close(fd: u32) -> Result<(), HttpErrorKind> {
     match ctx.remove(&fd) {
         Some(_) => Ok(()),
         None => Err(HttpErrorKind::InvalidHandle),
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use bytes::BytesMut;
+    use tokio::runtime::{Builder, Runtime};
+    use std::task::Poll;
+
+    struct TestStream(Vec<Bytes>);
+    
+    impl Stream for TestStream {
+        type Item = reqwest::Result<Bytes>;
+
+        fn poll_next(self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Option<Self::Item>> {
+            let s = self.get_mut().0.pop().map(|s| Ok(s));
+            Poll::Ready(s)
+        }
+        
+    }
+
+    fn get_runtime() -> Runtime {
+        let rt = Builder::new_current_thread()
+            .enable_all()
+            .build()
+            .unwrap();
+        return rt;
+    }
+
+    #[test]
+    fn test_stream_read_full() {
+        let rt = get_runtime();
+        rt.block_on(async move {
+            let data: &[u8] = &[1, 2, 3, 4, 5, 6];
+            let bytes = BytesMut::from(data);
+            let mut state = StreamState {
+                stream: Box::pin(TestStream(vec![bytes.freeze()])),
+                buffer: None,
+            };
+            let mut dest: [u8; 16] = [0; 16];
+            let n = stream_read(&mut state, &mut dest[..]).await;
+            assert!(n == data.len());
+            assert!(data == &dest[..n]);
+        });
+    }
+
+    #[test]
+    fn test_stream_read_2step() {
+        let rt = get_runtime();
+        rt.block_on(async move {
+            let data: &[u8] = &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,12];
+            let bytes = BytesMut::from(data);
+            let mut state = StreamState {
+                stream: Box::pin(TestStream(vec![bytes.freeze()])),
+                buffer: None,
+            };
+            let mut tmp: [u8; 8] = [0; 8];
+            let mut dest: Vec<u8> = Vec::new();
+            let mut total = stream_read(&mut state, &mut tmp[..]).await;
+            dest.extend(&tmp[..]);
+            let n = stream_read(&mut state, &mut tmp[..]).await;
+            dest.extend(&tmp[..n]);
+            total += n;
+            assert!(total == data.len());
+            assert!(data == &dest[..total]);
+        });
+    }
+
+    #[test]
+    fn test_stream_read_3step() {
+        let rt = get_runtime();
+        rt.block_on(async move {
+            let data: &[u8] = &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,12];
+            let data2: &[u8] = &[13, 14,15,16];
+            let mut state = StreamState {
+                stream: Box::pin(TestStream(vec![Bytes::from(data2), Bytes::from(data)])),
+                buffer: None,
+            };
+            let mut src: Vec<u8> = Vec::new();
+            src.extend(&data[..]);
+            src.extend(&data2[..]);
+            let mut tmp: [u8; 8] = [0; 8];
+            let mut dest: Vec<u8> = Vec::new();
+            let mut total = stream_read(&mut state, &mut tmp[..]).await;
+            dest.extend(&tmp[..]);
+            let n = stream_read(&mut state, &mut tmp[..]).await;
+            dest.extend(&tmp[..n]);
+            let n = stream_read(&mut state, &mut tmp[..]).await;
+            assert!(n == 0);
+            assert!(src == dest);
+        });
     }
 }
