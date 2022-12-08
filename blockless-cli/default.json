@@ -5,7 +5,7 @@
     "limited_memory": 30,
     "entry": "/Users/join/Downloads/sdk-assemblyscript/build/release.wasm",
     "permissions": [
-        "https://demo.bls.dev/tokens",
+        "http://httpbin.org/anything",
         "file://a.go"
     ]
 }

@@ -174,8 +174,7 @@ pub async fn http_read_body(
     buf: &mut [u8],
 ) -> Result<u32, HttpErrorKind> {
     let ctx = get_ctx().unwrap();
-    let mut http_ctx = ctx.remove(&fd);
-    match http_ctx {
+    match ctx.remove(&fd) {
         Some(HttpCtx::Response(resp)) => {
             let stream = Box::pin(resp.bytes_stream());
             let mut stream_state = StreamState {
