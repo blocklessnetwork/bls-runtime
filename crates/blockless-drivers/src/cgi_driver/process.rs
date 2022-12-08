@@ -106,6 +106,7 @@ impl CgiProcess {
     }
 
     /// kill the children process .
+    #[allow(unused)]
     pub async fn kill(&mut self) -> Result<(), CgiErrorKind> {
         if self.child.is_some() {
             return self
