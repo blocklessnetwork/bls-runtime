@@ -60,7 +60,7 @@ impl blockless_cgi::BlocklessCgi for WasiCtx {
     ) -> Result<types::CgiHandle, CgiErrorKind> {
         let root_path = self.blockless_config
             .as_ref()
-            .map(|c| c.cgi_drivers_root_path_ref())
+            .map(|c| c.drivers_root_path_ref())
             .flatten()
             .unwrap_or("cgi_drivers_root");
         cgi_directory_list_exec(root_path).await.map(|r| r.into())
