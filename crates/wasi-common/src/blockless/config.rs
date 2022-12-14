@@ -31,16 +31,17 @@ impl DriverConfig {
 }
 
 pub struct BlocklessConfig {
-    wasm_file: String,
-    fs_root_path: Option<String>,
-    drivers_root_path: Option<String>,
-    stdout: Stdout,
     stdin: String,
+    stdout: Stdout,
+    wasm_file: String,
     limited_fuel: Option<u64>,
     limited_time: Option<u64>,
     limited_memory: Option<u64>,
     drivers: Vec<DriverConfig>,
     permisions: Vec<Permission>,
+    fs_root_path: Option<String>,
+    extensions_path: Option<String>,
+    cgi_drivers_root_path: Option<String>,
     group_permisions: HashMap<String, Vec<Permission>>,
 }
 
@@ -73,12 +74,12 @@ impl BlocklessConfig {
         self.fs_root_path.as_ref().map(|x| x.as_str())
     }
 
-    pub fn drivers_root_path_ref(&self) -> Option<&str> {
-        self.drivers_root_path.as_ref().map(|x| x.as_str())
+    pub fn cgi_drivers_root_path_ref(&self) -> Option<&str> {
+        self.cgi_drivers_root_path.as_ref().map(|x| x.as_str())
     }
 
-    pub fn drivers_root_path(&mut self, r: Option<String>) {
-        self.drivers_root_path = r;
+    pub fn cgi_drivers_root_path(&mut self, r: Option<String>) {
+        self.cgi_drivers_root_path = r;
     }
 
     pub fn new(wasm_file: &str) -> BlocklessConfig {
@@ -92,7 +93,8 @@ impl BlocklessConfig {
             limited_time: None,
             //memory limit, 1 page = 64k.
             limited_memory: None,
-            drivers_root_path: None,
+            extensions_path: None,
+            cgi_drivers_root_path: None,
             drivers: Vec::new(),
             permisions: Default::default(),
             group_permisions: HashMap::new(),
@@ -115,6 +117,10 @@ impl BlocklessConfig {
 
     pub fn stdin(&mut self, stdin: String) {
         self.stdin = stdin
+    }
+
+    pub fn extensions_path(&mut self, extensions_path: Option<String>) {
+        self.extensions_path = extensions_path;
     }
 
     pub fn drivers(&mut self, drvs: Vec<DriverConfig>) {

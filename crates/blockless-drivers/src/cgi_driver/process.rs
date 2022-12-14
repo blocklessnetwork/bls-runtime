@@ -3,6 +3,8 @@ use std::process::Stdio;
 use crate::CgiErrorKind;
 use log::debug;
 use tokio::{process::{Child, Command}, io::{AsyncReadExt, AsyncWriteExt}};
+use json::JsonValue;
+use json::object::Object as JsonObject;
 
 pub struct CgiProcess {
     child: Option<Child>,
@@ -12,6 +14,7 @@ pub struct CgiProcess {
 }
 
 impl CgiProcess {
+
     pub fn new(cmd_with_params: &str) -> Result<Self, CgiErrorKind> {
         let obj = match json::parse(cmd_with_params) {
             Ok(o) => o,
@@ -130,4 +133,33 @@ impl CgiProcess {
         };
         Ok(())
     }
+}
+
+pub async fn cgi_directory_list_exec(path: &str) -> Result<String, CgiErrorKind> {
+    let mut read_dir = tokio::fs::read_dir(path)
+        .await
+        .map_err(|e| {
+            debug!("error read dir {}", e);
+            CgiErrorKind::RuntimeError
+        })?;
+    let mut entries: Vec<JsonValue> = Vec::new();
+    loop {
+        let entry = match read_dir.next_entry().await {
+            Ok(Some(e)) => e,
+            Ok(None) => break,
+            Err(e) => {
+                debug!("error read dir next entry {}", e);
+                return Err(CgiErrorKind::RuntimeError)
+            },
+        };
+        let fname: String = entry.file_name()
+            .to_str()
+            .unwrap_or("")
+            .into();
+        let mut json_obj = JsonObject::new();
+        json_obj.insert("fileName", JsonValue::String(fname));
+        entries.push(JsonValue::Object(json_obj));
+    }
+    let vals = JsonValue::Array(entries);
+    Ok(json::stringify(vals))
 }
