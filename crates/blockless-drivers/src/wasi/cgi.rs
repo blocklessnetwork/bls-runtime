@@ -57,8 +57,7 @@ impl blockless_cgi::BlocklessCgi for WasiCtx {
             .map(|c| c.drivers_root_path_ref())
             .flatten()
             .unwrap_or("cgi_drivers_root");
-        let fullpath = format!("{}/{}", &root_path, cmd);
-        command_and_exec(&fullpath).await.map(|r| r.into())
+        command_and_exec(root_path, cmd).await.map(|r| r.into())
     }
 
     async fn cgi_list_exec(

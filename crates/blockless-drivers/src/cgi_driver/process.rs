@@ -10,6 +10,7 @@ use tokio::{
 };
 
 pub struct CgiProcess {
+    root_path: String,
     child: Option<Child>,
     command: String,
     args: Vec<String>,
@@ -17,7 +18,7 @@ pub struct CgiProcess {
 }
 
 impl CgiProcess {
-    pub fn new(cmd_with_params: &str) -> Result<Self, CgiErrorKind> {
+    pub fn new(root_path: String, cmd_with_params: &str) -> Result<Self, CgiErrorKind> {
         let obj = match json::parse(cmd_with_params) {
             Ok(o) => o,
             Err(_) => return Err(CgiErrorKind::InvalidParameter),
@@ -51,6 +52,7 @@ impl CgiProcess {
         };
         Ok(Self {
             child: None,
+            root_path,
             command,
             args,
             envs,
@@ -119,7 +121,8 @@ impl CgiProcess {
     }
 
     pub fn exec(&mut self) -> Result<(), CgiErrorKind> {
-        let mut command = Command::new(&self.command);
+        let exec_file = format!("{}/{}", self.root_path, &self.command);
+        let mut command = Command::new(&exec_file);
         command.stderr(Stdio::piped());
         command.stdout(Stdio::piped());
         command.stdin(Stdio::piped());

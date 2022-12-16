@@ -59,9 +59,9 @@ pub async fn cgi_directory_list_read(handle: u32, buf: &mut [u8]) -> Result<u32,
     Ok(copyn as u32)
 }
 
-pub async fn command_and_exec(cmd: &str) -> Result<u32, CgiErrorKind> {
+pub async fn command_and_exec(root_path: &str, cmd: &str) -> Result<u32, CgiErrorKind> {
     let handle = increase_handle();
-    let mut cgi = CgiProcess::new(cmd)?;
+    let mut cgi = CgiProcess::new(root_path.into(), cmd)?;
     cgi.exec()?;
     get_ctx().map(|ctx| {
         ctx.insert(handle, CGICtx::Process(cgi));
