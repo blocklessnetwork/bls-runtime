@@ -42,17 +42,20 @@ pub async fn cgi_directory_list_exec(path: &str) -> Result<u32, CgiErrorKind> {
 
 pub async fn cgi_directory_list_read(handle: u32, buf: &mut [u8]) -> Result<u32, CgiErrorKind> {
     let ctx = get_ctx().unwrap();
-    let (vals, pos) = match ctx.get_mut(&handle) {
-        Some(CGICtx::DirectoryList((s, p))) => (s, *p),
+    let (vals, pos) = match ctx.remove(&handle) {
+        Some(CGICtx::DirectoryList((s, p))) => (s, p),
         _ => return Err(CgiErrorKind::InvalidHandle),
     };
     let rs = vals.as_bytes();
     let remaining = rs.len() - pos;
+    let copyn = remaining.min(buf.len());
     if remaining == 0 {
+        ctx.insert(handle, CGICtx::DirectoryList((vals, pos)));
         return Ok(0);
     }
-    let copyn = remaining.min(buf.len());
-    buf.copy_from_slice(&rs[pos..(pos+copyn)]);
+    
+    buf[0..copyn].copy_from_slice(&rs[pos..(pos+copyn)]);
+    ctx.insert(handle, CGICtx::DirectoryList((vals, pos+copyn)));
     Ok(copyn as u32)
 }
 

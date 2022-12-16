@@ -1,10 +1,13 @@
 use std::process::Stdio;
 
 use crate::CgiErrorKind;
-use log::debug;
-use tokio::{process::{Child, Command}, io::{AsyncReadExt, AsyncWriteExt}};
-use json::JsonValue;
 use json::object::Object as JsonObject;
+use json::JsonValue;
+use log::debug;
+use tokio::{
+    io::{AsyncReadExt, AsyncWriteExt},
+    process::{Child, Command},
+};
 
 pub struct CgiProcess {
     child: Option<Child>,
@@ -14,7 +17,6 @@ pub struct CgiProcess {
 }
 
 impl CgiProcess {
-
     pub fn new(cmd_with_params: &str) -> Result<Self, CgiErrorKind> {
         let obj = match json::parse(cmd_with_params) {
             Ok(o) => o,
@@ -60,12 +62,12 @@ impl CgiProcess {
             let child = self.child.as_mut().unwrap();
             if child.stdout.is_some() {
                 let stdout = child.stdout.as_mut().unwrap();
-                return stdout.read(buf).await.map(|i| i as u32).map_err(|e|  {
+                return stdout.read(buf).await.map(|i| i as u32).map_err(|e| {
                     debug!("error read stdout {}", e);
                     CgiErrorKind::RuntimeError
                 });
             } else {
-                return Ok(0)
+                return Ok(0);
             }
         }
         Err(CgiErrorKind::InvalidHandle)
@@ -76,12 +78,12 @@ impl CgiProcess {
             let child = self.child.as_mut().unwrap();
             if child.stderr.is_some() {
                 let stderr = child.stderr.as_mut().unwrap();
-                return stderr.read(buf).await.map(|i| i as u32).map_err(|e|  {
+                return stderr.read(buf).await.map(|i| i as u32).map_err(|e| {
                     debug!("error read stderr {}", e);
                     CgiErrorKind::RuntimeError
                 });
             } else {
-                return Ok(0)
+                return Ok(0);
             }
         }
         Err(CgiErrorKind::InvalidHandle)
@@ -92,12 +94,12 @@ impl CgiProcess {
             let child = self.child.as_mut().unwrap();
             if child.stdin.is_some() {
                 let stdin = child.stdin.as_mut().unwrap();
-                return stdin.write(buf).await.map(|i| i as u32).map_err(|e|  {
+                return stdin.write(buf).await.map(|i| i as u32).map_err(|e| {
                     debug!("error write stdin {}", e);
                     CgiErrorKind::RuntimeError
                 });
             } else {
-                return Ok(0)
+                return Ok(0);
             }
         }
         Err(CgiErrorKind::InvalidHandle)
@@ -136,12 +138,10 @@ impl CgiProcess {
 }
 
 pub async fn cgi_directory_list_exec(path: &str) -> Result<String, CgiErrorKind> {
-    let mut read_dir = tokio::fs::read_dir(path)
-        .await
-        .map_err(|e| {
-            debug!("error read dir {}", e);
-            CgiErrorKind::RuntimeError
-        })?;
+    let mut read_dir = tokio::fs::read_dir(path).await.map_err(|e| {
+        debug!("error read dir {}", e);
+        CgiErrorKind::RuntimeError
+    })?;
     let mut entries: Vec<JsonValue> = Vec::new();
     loop {
         let entry = match read_dir.next_entry().await {
@@ -149,16 +149,18 @@ pub async fn cgi_directory_list_exec(path: &str) -> Result<String, CgiErrorKind>
             Ok(None) => break,
             Err(e) => {
                 debug!("error read dir next entry {}", e);
-                return Err(CgiErrorKind::RuntimeError)
-            },
+                return Err(CgiErrorKind::RuntimeError);
+            }
         };
-        let fname: String = entry.file_name()
-            .to_str()
-            .unwrap_or("")
-            .into();
-        let mut json_obj = JsonObject::new();
-        json_obj.insert("fileName", JsonValue::String(fname));
-        entries.push(JsonValue::Object(json_obj));
+        
+        let fname: String = entry.file_name().to_str().unwrap_or("").into();
+        
+        let is_file = entry.metadata().await.map_or(false, |m| m.is_file());
+        if is_file {
+            let mut json_obj = JsonObject::new();
+            json_obj.insert("fileName", JsonValue::String(fname));
+            entries.push(JsonValue::Object(json_obj));
+        }
     }
     let vals = JsonValue::Array(entries);
     Ok(json::stringify(vals))
