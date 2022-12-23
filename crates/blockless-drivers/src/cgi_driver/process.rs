@@ -18,6 +18,8 @@ pub struct CgiProcess {
 }
 
 impl CgiProcess {
+    
+    /// create a CgiProcess with arguments and envriment variables .
     pub fn new(root_path: String, cmd_with_params: &str) -> Result<Self, CgiErrorKind> {
         let obj = match json::parse(cmd_with_params) {
             Ok(o) => o,
@@ -59,6 +61,7 @@ impl CgiProcess {
         })
     }
 
+    /// read bytes from the stdout .
     pub async fn child_stdout_read(&mut self, buf: &mut [u8]) -> Result<u32, CgiErrorKind> {
         if self.child.is_some() {
             let child = self.child.as_mut().unwrap();
@@ -75,6 +78,7 @@ impl CgiProcess {
         Err(CgiErrorKind::InvalidHandle)
     }
 
+    /// read bytes from the stderr .
     pub async fn child_stderr_read(&mut self, buf: &mut [u8]) -> Result<u32, CgiErrorKind> {
         if self.child.is_some() {
             let child = self.child.as_mut().unwrap();
@@ -91,6 +95,7 @@ impl CgiProcess {
         Err(CgiErrorKind::InvalidHandle)
     }
 
+    /// write buf bytes to the stdin .
     pub async fn child_stdin_write(&mut self, buf: &[u8]) -> Result<u32, CgiErrorKind> {
         if self.child.is_some() {
             let child = self.child.as_mut().unwrap();
@@ -107,6 +112,8 @@ impl CgiProcess {
         Err(CgiErrorKind::InvalidHandle)
     }
 
+    /// kill the children process .
+    #[allow(unused)]
     pub async fn kill(&mut self) -> Result<(), CgiErrorKind> {
         if self.child.is_some() {
             return self
@@ -120,6 +127,7 @@ impl CgiProcess {
         Err(CgiErrorKind::InvalidHandle)
     }
 
+    /// the extern to exec the command with the arguments and envoriment variables .
     pub fn exec(&mut self) -> Result<(), CgiErrorKind> {
         let exec_file = format!("{}/{}", self.root_path, &self.command);
         let mut command = Command::new(&exec_file);

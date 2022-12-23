@@ -7,6 +7,10 @@ keywords = ["blockless", "driver"]
 readme = "README.md"
 edition = "2021"
 
+[features]
+default = ["builtin_http"]
+builtin_http = []
+
 [dependencies]
 blockless-drivers-macro = {path = "macro"}
 wasmtime-wasi = "0.36.0"
@@ -25,6 +29,8 @@ wasi-cap-std-sync = {path = "../wasi-common/cap-std-sync"}
 wasi-common = {path = "../wasi-common"}
 url = "2.2"
 rust-s3 = "0.32.0"
+futures-core = "0.3.25"
+futures-util = "0.3.25"
 
 
 [dependencies.lazy_static]

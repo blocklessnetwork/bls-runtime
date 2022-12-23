@@ -116,7 +116,8 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
     let func = inst.get_typed_func::<(), (), _>(&mut store, ENTRY).unwrap();
     let exit_code = match func.call_async(&mut store, ()).await {
         Err(ref t) => {
-            trap_info(t, store.fuel_consumed(), fuel.unwrap());
+            let fuel = fuel.unwrap_or(0);
+            trap_info(t, store.fuel_consumed(), fuel);
             t.i32_exit_status().unwrap_or(-1)
         }
         Ok(_) => {
