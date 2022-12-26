@@ -22,10 +22,23 @@
 
 (module $blockless_cgi
 
+    (@interface func (export "cgi_list_exec")
+        (result $error (expected $cgi_handle (error $cgi_error)))
+    )
+
+    (@interface func (export "cgi_list_read")
+        (param $handle $cgi_handle)
+        (param $buf $incoming_read_ptr)
+        (param $buf_len u32)
+        (result $error (expected $num_bytes (error $cgi_error)))
+    )
+
     (@interface func (export "cgi_open")
         (param $param string)
         (result $error (expected $cgi_handle (error $cgi_error)))
     )
+
+    
     
     (@interface func (export "cgi_stdout_read")
         (param $handle $cgi_handle)

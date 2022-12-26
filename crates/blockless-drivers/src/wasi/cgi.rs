@@ -4,7 +4,7 @@ use wasi_common::WasiCtx;
 use wiggle::GuestPtr;
 
 use crate::cgi_driver::{
-    self, child_stderr_read, child_stdin_write, child_stdout_read, command_and_exec,
+    self, child_stderr_read, child_stdin_write, child_stdout_read, command_and_exec,cgi_directory_list_exec, cgi_directory_list_read
 };
 use crate::CgiErrorKind;
 
@@ -52,7 +52,40 @@ impl blockless_cgi::BlocklessCgi for WasiCtx {
             error!("command error: {}", e);
             CgiErrorKind::InvalidParameter
         })?;
-        command_and_exec(cmd).await.map(|r| r.into())
+        let root_path = self.blockless_config
+            .as_ref()
+            .map(|c| c.drivers_root_path_ref())
+            .flatten()
+            .unwrap_or("cgi_drivers_root");
+        command_and_exec(root_path, cmd).await.map(|r| r.into())
+    }
+
+    async fn cgi_list_exec(
+        &mut self
+    ) -> Result<types::CgiHandle, CgiErrorKind> {
+        let root_path = self.blockless_config
+            .as_ref()
+            .map(|c| c.drivers_root_path_ref())
+            .flatten()
+            .unwrap_or("cgi_drivers_root");
+        cgi_directory_list_exec(root_path).await.map(|r| r.into())
+    }
+
+    async fn cgi_list_read<'a>(
+        &mut self,
+        handle: types::CgiHandle,
+        buf: &GuestPtr<'a, u8>,
+        buf_len: u32,
+    ) -> Result<u32, CgiErrorKind> {
+        let mut dest_buf = vec![0; buf_len as _];
+        let buf = buf.clone();
+        let rs = cgi_directory_list_read(handle.into(), &mut dest_buf[..]).await?;
+        if rs > 0 {
+            buf.as_array(rs)
+                .copy_from_slice(&dest_buf[0..rs as _])
+                .map_err(|_| CgiErrorKind::RuntimeError)?;
+        }
+        Ok(rs)
     }
 
     async fn cgi_stdout_read<'a>(
