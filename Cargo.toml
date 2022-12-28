@@ -11,3 +11,19 @@ members = [
 
 [patch.crates-io]
 wasi-common = {path = "crates/wasi-common"}
+
+[workspace.dependencies]
+wasmtime = "2.0.2"
+wasmtime-wasi = "2.0.2"
+anyhow = "1.0.22"
+wiggle = "2.0.2"
+cap-std = "0.26.0"
+cap-fs-ext = "0.26.0"
+cap-time-ext = "0.26.0"
+cap-rand = "0.26.0"
+tracing = "0.1.19"
+io-lifetimes = "0.7.0"
+rustix = "0.35.10"
+thiserror = "1.0"
+wasi-common = { path = "crates/wasi-common"}
+wasi-cap-std-sync = { path = "crates/wasi-common/cap-std-sync"}

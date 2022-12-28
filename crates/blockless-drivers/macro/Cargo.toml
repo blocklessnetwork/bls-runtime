@@ -13,7 +13,7 @@ test = false
 
 
 [dependencies]
-wiggle-generate = { version = "=0.36.0" }
+wiggle-generate = { version = "=2.0.2" }
 quote = "1.0"
 syn = { version = "1.0", features = ["full"] }
 proc-macro2 = "1.0"

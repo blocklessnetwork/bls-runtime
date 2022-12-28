@@ -16,7 +16,7 @@ use io_lifetimes::{AsFd, BorrowedFd};
 #[cfg(windows)]
 use io_lifetimes::{AsHandle, BorrowedHandle};
 use wasi_common::{
-    file::{FdFlags, FileType, Filestat, WasiFile},
+    file::{FdFlags, FileType, WasiFile},
     Error, ErrorExt,
 };
 
@@ -48,7 +48,7 @@ impl WasiFile for Stdin {
         }
     }
     async fn read_vectored<'a>(&mut self, bufs: &mut [io::IoSliceMut<'a>]) -> Result<u64, Error> {
-        let n = self.0.as_filelike_view::<File>().read_vectored(bufs)?;
+        let n = (&*self.0.as_filelike_view::<File>()).read_vectored(bufs)?;
         Ok(n.try_into().map_err(|_| Error::range())?)
     }
     async fn read_vectored_at<'a>(
@@ -126,21 +126,8 @@ macro_rules! wasi_file_write_impl {
             async fn get_fdflags(&mut self) -> Result<FdFlags, Error> {
                 Ok(FdFlags::APPEND)
             }
-            async fn get_filestat(&mut self) -> Result<Filestat, Error> {
-                let meta = self.0.as_filelike_view::<File>().metadata()?;
-                Ok(Filestat {
-                    device_id: 0,
-                    inode: 0,
-                    filetype: self.get_filetype().await?,
-                    nlink: 0,
-                    size: meta.len(),
-                    atim: meta.accessed().ok(),
-                    mtim: meta.modified().ok(),
-                    ctim: meta.created().ok(),
-                })
-            }
             async fn write_vectored<'a>(&mut self, bufs: &[io::IoSlice<'a>]) -> Result<u64, Error> {
-                let n = self.0.as_filelike_view::<File>().write_vectored(bufs)?;
+                let n = (&*self.0.as_filelike_view::<File>()).write_vectored(bufs)?;
                 Ok(n.try_into().map_err(|c| Error::range().context(c))?)
             }
             async fn write_vectored_at<'a>(

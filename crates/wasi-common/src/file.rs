@@ -25,6 +25,26 @@ pub trait WasiFile: Send + Sync {
         Err(Error::badf())
     }
 
+    async fn sock_recv<'a>(
+        &mut self,
+        _ri_data: &mut [std::io::IoSliceMut<'a>],
+        _ri_flags: RiFlags,
+    ) -> Result<(u64, RoFlags), Error> {
+        Err(Error::badf())
+    }
+
+    async fn sock_send<'a>(
+        &mut self,
+        _si_data: &[std::io::IoSlice<'a>],
+        _si_flags: SiFlags,
+    ) -> Result<u64, Error> {
+        Err(Error::badf())
+    }
+
+    async fn sock_shutdown(&mut self, _how: SdFlags) -> Result<(), Error> {
+        Err(Error::badf())
+    }
+
     async fn datasync(&mut self) -> Result<(), Error> {
         Ok(())
     }
@@ -146,6 +166,31 @@ bitflags! {
 }
 
 bitflags! {
+    pub struct SdFlags: u32 {
+        const RD = 0b1;
+        const WR = 0b10;
+    }
+}
+
+bitflags! {
+    pub struct SiFlags: u32 {
+    }
+}
+
+bitflags! {
+    pub struct RiFlags: u32 {
+        const RECV_PEEK    = 0b1;
+        const RECV_WAITALL = 0b10;
+    }
+}
+
+bitflags! {
+    pub struct RoFlags: u32 {
+        const RECV_DATA_TRUNCATED = 0b1;
+    }
+}
+
+bitflags! {
     pub struct OFlags: u32 {
         const CREATE    = 0b1;
         const DIRECTORY = 0b10;
@@ -193,7 +238,16 @@ impl FileEntry {
         if self.caps.contains(caps) {
             Ok(())
         } else {
-            Err(Error::not_capable().context(format!("desired {:?}, has {:?}", caps, self.caps,)))
+            let missing = caps & !self.caps;
+            let err = if missing.intersects(FileCaps::READ | FileCaps::WRITE) {
+                // `EBADF` is a little surprising here because it's also used
+                // for unknown-file-descriptor errors, but it's what POSIX uses
+                // in this situation.
+                Error::badf()
+            } else {
+                Error::perm()
+            };
+            Err(err.context(format!("desired rights {:?}, has {:?}", caps, self.caps)))
         }
     }
 
