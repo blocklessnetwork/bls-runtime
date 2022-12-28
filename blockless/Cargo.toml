@@ -12,7 +12,7 @@ wasi-common = {workspace = true}
 wasmtime = {workspace = true}
 wasmtime-wasi = {workspace = true}
 cap-std = {workspace = true}
-blockless-drivers = {path = "../crates/blockless-drivers"}
+blockless-drivers = {workspace = true}
 blockless-env = {path = "../crates/blockless-env"}
 anyhow = {workspace = true}
 log = "0.4"

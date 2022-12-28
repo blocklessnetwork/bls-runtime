@@ -25,5 +25,6 @@ tracing = "0.1.19"
 io-lifetimes = "0.7.0"
 rustix = "0.35.10"
 thiserror = "1.0"
-wasi-common = { path = "crates/wasi-common"}
-wasi-cap-std-sync = { path = "crates/wasi-common/cap-std-sync"}
+wasi-common = {path = "crates/wasi-common"}
+wasi-cap-std-sync = {path = "crates/wasi-common/cap-std-sync"}
+blockless-drivers = {path = "crates/blockless-drivers"}

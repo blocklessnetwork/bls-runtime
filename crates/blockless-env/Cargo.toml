@@ -9,7 +9,7 @@ edition = "2021"
 
 [dependencies]
 wasi-common = {workspace = true}
-blockless-drivers = {path = "../blockless-drivers"}
+blockless-drivers = {workspace = true}
 
 [dependencies.blockless-drivers-macro]
 path = "../blockless-drivers/macro"
