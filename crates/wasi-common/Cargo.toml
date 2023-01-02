@@ -1,6 +1,6 @@
 [package]
 name = "wasi-common"
-version = "0.36.0"
+version = "2.0.2"
 description = "WASI implementation in Rust"
 keywords = ["webassembly", "wasm"]
 readme = "README.md"
@@ -9,16 +9,16 @@ edition = "2021"
 links = "wasi-common-19"
 
 [dependencies]
-anyhow = "1.0"
-thiserror = "1.0"
-wiggle = { default-features = false, version = "0.36.0" }
+anyhow = {workspace = true}
+thiserror = {workspace = true}
+wiggle = { default-features = false, workspace = true}
 tracing = "0.1.19"
-cap-std = "0.24.1"
-cap-rand = "0.24.1"
+cap-std = {workspace = true}
+cap-rand = {workspace = true}
 bitflags = "1.2"
 
 [target.'cfg(unix)'.dependencies]
-rustix = "0.33.5"
+rustix = {workspace = true}
 
 [target.'cfg(windows)'.dependencies]
 io-extras = "0.13.2"
