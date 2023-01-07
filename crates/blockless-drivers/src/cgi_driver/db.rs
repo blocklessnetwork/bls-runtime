@@ -1,6 +1,27 @@
 use anyhow::Result;
 use rusqlite::Connection;
 
+#[derive(Clone, Copy)]
+pub(crate) enum ExtensionMetaStatus {
+    Normal = 0,
+    Invalid = -1,
+}
+
+impl Default for ExtensionMetaStatus {
+    fn default() -> Self {
+        ExtensionMetaStatus::Normal
+    }
+}
+
+impl From<i32> for ExtensionMetaStatus {
+    fn from(value: i32) -> Self {
+        match value {
+            0 => ExtensionMetaStatus::Normal,
+            -1|_ => ExtensionMetaStatus::Normal,
+        }
+    }
+}
+
 #[derive(Default)]
 pub(crate) struct ExtensionMeta {
     pub id: i32,
@@ -8,7 +29,7 @@ pub(crate) struct ExtensionMeta {
     pub description: String,
     pub alias: String,
     pub path: String,
-    pub status: i8,
+    pub status: ExtensionMetaStatus,
 }
 
 struct DB {
@@ -49,7 +70,7 @@ impl DB {
                 let md5 = row.get(2)?; 
                 let path = row.get(3)?; 
                 let description = row.get(4)?; 
-                let status = row.get(5)?; 
+                let status = row.get::<usize, i32>(5)?.into(); 
                 Ok(ExtensionMeta {
                     id,
                     alias,
@@ -73,7 +94,7 @@ impl DB {
         "#;
         self.connect.execute(
             insert_sql,
-            (&meta.alias, &meta.md5, &meta.path, &meta.description, &meta.status),
+            (&meta.alias, &meta.md5, &meta.path, &meta.description, meta.status as i32),
         )?;
         Ok(())
     }
