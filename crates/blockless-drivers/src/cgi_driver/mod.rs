@@ -1,6 +1,8 @@
 mod process;
 mod db;
 
+use db::DB;
+
 use std::{collections::HashMap, sync::Once};
 
 use process::CgiProcess;
@@ -28,6 +30,26 @@ fn increase_handle() -> u32 {
     unsafe {
         MAX_HANDLE += 1;
         MAX_HANDLE
+    }
+}
+
+fn get_db(path: &str) -> Option<&mut DB> {
+    static mut DB: Option<DB> = None;
+    static DB_ONCE: Once = Once::new();
+    DB_ONCE.call_once(|| {
+        unsafe {
+            let db = DB::new(path).ok();
+            DB = db.map(|mut db| 
+                if db.create_schema().is_ok() {
+                    Some(db)
+                } else {
+                    None
+                }
+            ).flatten();
+        }
+    });
+    unsafe {
+        DB.as_mut()
     }
 }
 

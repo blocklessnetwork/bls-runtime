@@ -32,7 +32,7 @@ pub(crate) struct ExtensionMeta {
     pub status: ExtensionMetaStatus,
 }
 
-struct DB {
+pub(crate) struct DB {
     connect: Connection,
 }
 
