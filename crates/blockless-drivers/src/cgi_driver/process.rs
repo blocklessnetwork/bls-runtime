@@ -1,13 +1,41 @@
-use std::process::Stdio;
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+    process::Stdio,
+    sync::Once, ffi::OsString,
+};
 
 use crate::CgiErrorKind;
 use json::object::Object as JsonObject;
 use json::JsonValue;
-use log::debug;
+use log::{debug, error};
 use tokio::{
+    fs::File,
     io::{AsyncReadExt, AsyncWriteExt},
     process::{Child, Command},
 };
+
+use super::db::{ExtensionMeta, DB, ExtensionMetaStatus};
+
+fn get_db(path: impl AsRef<Path>) -> Option<&'static mut DB> {
+    static mut DB: Option<DB> = None;
+    static DB_ONCE: Once = Once::new();
+    DB_ONCE.call_once(|| unsafe {
+        let db = DB::new(path)
+            .map_err(|e| error!("error open db {}", e))
+            .ok();
+        DB = db
+            .map(|mut db| {
+                if db.create_schema().is_ok() {
+                    Some(db)
+                } else {
+                    None
+                }
+            })
+            .flatten();
+    });
+    unsafe { DB.as_mut() }
+}
 
 pub struct CgiProcess {
     root_path: String,
@@ -18,7 +46,6 @@ pub struct CgiProcess {
 }
 
 impl CgiProcess {
-    
     /// create a CgiProcess with arguments and envriment variables .
     pub fn new(root_path: String, cmd_with_params: &str) -> Result<Self, CgiErrorKind> {
         let obj = match json::parse(cmd_with_params) {
@@ -148,6 +175,91 @@ impl CgiProcess {
     }
 }
 
+/// get db file name from path.
+fn get_db_file_name(path: &str) -> PathBuf {
+    const DB_NAME: &str = ".extsdb";
+    let path = Path::new(path);
+    path.join(DB_NAME)
+}
+
+fn list_extensions_from_db(path: &str) -> (Vec<i32>, HashMap<String, ExtensionMeta>) {
+    let db_file_name = get_db_file_name(path);
+    let db = get_db(db_file_name);
+    //load the metas from db
+    //the ids in db will use for delete the invalid extension.
+    db.map(|db| {
+        let exts = db
+            .list_extensions()
+            .map_err(|e| error!("error list extensions: {}", e))
+            .unwrap_or_default();
+        let mut exts_metas = HashMap::new();
+        let mut ids_in_db = Vec::new();
+        for mut ext in exts.into_iter() {
+            ids_in_db.push(ext.id);
+            ext.status = ExtensionMetaStatus::Invalid;
+            exts_metas.insert(ext.file_name.clone(), ext);
+        }
+        (ids_in_db, exts_metas)
+    })
+    .unwrap_or_default()
+}
+
+async fn file_md5(path: impl AsRef<Path>) -> anyhow::Result<md5::Digest> {
+    let mut file = File::open(path).await?;
+    let mut buf = [0u8; 4096];
+    let mut md5_ctx = md5::Context::new();
+    loop {
+        let rn = file.read(&mut buf).await?;
+        if rn == 0 {
+            break;
+        }
+        md5_ctx.consume(&buf[..rn]);
+    }
+    Ok(md5_ctx.compute())
+}
+
+async fn get_file_meta(file_name: &str) -> anyhow::Result<ExtensionMeta> {
+    let mut command = Command::new(&file_name);
+    command.args(&["--ext_verify"]);
+    let child = command.output().await?;
+    let val = std::str::from_utf8(&child.stdout[..])?;
+    //TODO: parse output json
+    Ok(ExtensionMeta {
+        ..Default::default()
+    })
+}
+
+async fn list_cgi_directory(
+    path: impl AsRef<Path>, 
+    meta_db: &mut HashMap<String, ExtensionMeta>,
+) -> anyhow::Result<Vec<ExtensionMeta>> {
+    let mut read_dir = tokio::fs::read_dir(path).await?;
+    let mut rs = Vec::new();
+    loop {
+        let entry = read_dir.next_entry().await?;
+        let entry = match entry {
+            Some(e) => e,
+            None => break,
+        };
+        let file_name = entry.file_name();
+        let md5 = file_md5(&file_name).await?;
+        let md5 = format!("{:02x}", md5);
+        let file_name: String = entry.file_name().to_str().unwrap_or("").into();
+        match meta_db.get_mut(&file_name) {
+            Some(meta) => {
+                if meta.md5 != md5 {
+                    meta.md5 = md5;
+                }
+                meta.status = ExtensionMetaStatus::UPDATE;
+            },
+            None => {
+                
+            },
+        }
+    }
+    Ok(rs)
+}
+
 pub async fn cgi_directory_list_exec(path: &str) -> Result<String, CgiErrorKind> {
     let mut read_dir = tokio::fs::read_dir(path).await.map_err(|e| {
         debug!("error read dir {}", e);
@@ -163,9 +275,7 @@ pub async fn cgi_directory_list_exec(path: &str) -> Result<String, CgiErrorKind>
                 return Err(CgiErrorKind::RuntimeError);
             }
         };
-        
         let fname: String = entry.file_name().to_str().unwrap_or("").into();
-        
         let is_file = entry.metadata().await.map_or(false, |m| m.is_file());
         if is_file {
             let mut json_obj = JsonObject::new();
@@ -175,4 +285,16 @@ pub async fn cgi_directory_list_exec(path: &str) -> Result<String, CgiErrorKind>
     }
     let vals = JsonValue::Array(entries);
     Ok(json::stringify(vals))
+}
+
+#[cfg(test)]
+mod test {
+    use super::*;
+    use tempdir;
+
+    #[test]
+    fn test_extensions_file() {
+        let temp_dir = tempdir::TempDir::new("drivers-test");
+        temp_dir.map(|dir| {});
+    }
 }

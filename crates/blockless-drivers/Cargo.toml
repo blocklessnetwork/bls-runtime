@@ -32,6 +32,10 @@ rust-s3 = "0.32.0"
 futures-core = "0.3.25"
 futures-util = "0.3.25"
 rusqlite = "0.28"
+md5 = "0.7.0"
+
+[dev-dependencies]
+tempdir = "0.3.7"
 
 
 [dependencies.lazy_static]
@@ -39,7 +43,7 @@ version = "1.4.0"
 
 [dependencies.tokio]
 version = "1"
-features = ["net", "process"]
+features = ["net", "process", "fs"]
 
 [dependencies.blockless-multiaddr]
 path = "../blockless-multiaddr"
