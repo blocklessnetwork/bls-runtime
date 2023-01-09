@@ -15,7 +15,7 @@ use tokio::{
     process::{Child, Command},
 };
 
-use super::db::{ExtensionMeta, DB, ExtensionMetaStatus};
+use super::db::{ExtensionMeta, ExtensionMetaStatus, DB};
 
 fn get_db(path: impl AsRef<Path>) -> Option<&'static mut DB> {
     static mut DB: Option<DB> = None;
@@ -182,7 +182,7 @@ fn get_db_file_name(path: &str) -> PathBuf {
     path.join(DB_NAME)
 }
 
-fn list_extensions_from_db(path: &str) -> (Vec<i32>, HashMap<String, ExtensionMeta>) {
+fn list_extensions_from_db(path: &str) -> HashMap<String, ExtensionMeta> {
     let db_file_name = get_db_file_name(path);
     let db = get_db(db_file_name);
     //load the metas from db
@@ -193,13 +193,11 @@ fn list_extensions_from_db(path: &str) -> (Vec<i32>, HashMap<String, ExtensionMe
             .map_err(|e| error!("error list extensions: {}", e))
             .unwrap_or_default();
         let mut exts_metas = HashMap::new();
-        let mut ids_in_db = Vec::new();
         for mut ext in exts.into_iter() {
-            ids_in_db.push(ext.id);
             ext.status = ExtensionMetaStatus::Invalid;
             exts_metas.insert(ext.file_name.clone(), ext);
         }
-        (ids_in_db, exts_metas)
+        exts_metas
     })
     .unwrap_or_default()
 }
@@ -239,27 +237,28 @@ async fn get_file_meta(file_name: &str) -> anyhow::Result<Option<ExtensionMeta>>
     let md5: String = match json["md5"].as_str() {
         Some(md5) => md5.into(),
         None => {
-            //TODO: next step will embed the md5 value into file.
+            //TODO: next step the file must be embed the md5
+            //value and output with the verify command.
             let file_md5 = file_md5(file_name).await?;
-            format!("{:x}", file_md5)
-        },
+            format!("{:02x}", file_md5)
+        }
     };
     let description: String = match json["description"].as_str() {
         Some(d) => d.into(),
         None => return Ok(None),
     };
-    
+    let file_name = file_name.into();
     Ok(Some(ExtensionMeta {
         md5,
         alias,
+        file_name,
         description,
-        file_name: file_name.into(),
         ..Default::default()
     }))
 }
 
 async fn list_cgi_directory(
-    path: impl AsRef<Path>, 
+    path: impl AsRef<Path>,
     meta_db: &mut HashMap<String, ExtensionMeta>,
 ) -> anyhow::Result<Vec<ExtensionMeta>> {
     let mut read_dir = tokio::fs::read_dir(path).await?;
@@ -279,41 +278,31 @@ async fn list_cgi_directory(
                 if meta.md5 != md5 {
                     meta.md5 = md5;
                 }
+                //update sqlite with normal status, there is update status just for flags.
                 meta.status = ExtensionMetaStatus::UPDATE;
-            },
+            }
             None => {
-                
-            },
+                let file_meta = get_file_meta(&file_name).await?;
+                if let Some(file_meta) = file_meta {
+                    rs.push(file_meta);
+                }
+            }
         }
     }
     Ok(rs)
 }
 
 pub async fn cgi_directory_list_exec(path: &str) -> Result<String, CgiErrorKind> {
-    let mut read_dir = tokio::fs::read_dir(path).await.map_err(|e| {
-        debug!("error read dir {}", e);
-        CgiErrorKind::RuntimeError
-    })?;
-    let mut entries: Vec<JsonValue> = Vec::new();
-    loop {
-        let entry = match read_dir.next_entry().await {
-            Ok(Some(e)) => e,
-            Ok(None) => break,
-            Err(e) => {
-                debug!("error read dir next entry {}", e);
-                return Err(CgiErrorKind::RuntimeError);
-            }
-        };
-        let fname: String = entry.file_name().to_str().unwrap_or("").into();
-        let is_file = entry.metadata().await.map_or(false, |m| m.is_file());
-        if is_file {
-            let mut json_obj = JsonObject::new();
-            json_obj.insert("fileName", JsonValue::String(fname));
-            entries.push(JsonValue::Object(json_obj));
-        }
-    }
-    let vals = JsonValue::Array(entries);
-    Ok(json::stringify(vals))
+    let mut meta_maps = list_extensions_from_db(path);
+    let mut metas = list_cgi_directory(path, &mut meta_maps)
+        .await
+        .map_err(|e| {
+            error!("error list_cgi_directory: {}", e);
+            CgiErrorKind::InvalidExtension
+        })?;
+    meta_maps.into_values().map(|v| metas.push(v));
+    
+    Ok("".into())
 }
 
 #[cfg(test)]
