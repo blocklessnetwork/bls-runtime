@@ -45,7 +45,7 @@ impl DB {
         Ok(Self { connect })
     }
 
-    pub(crate) fn create_schema(self: &mut DB) -> Result<()> {
+    pub(crate) fn create_schema(&mut self) -> Result<()> {
         let schema_sql = r#"
             create table if not exists extension_meta (
                 id INTEGER PRIMARY KEY,
@@ -61,7 +61,7 @@ impl DB {
         Ok(())
     }
 
-    pub(crate) fn list_extensions(self: &mut DB) -> Result<Vec<ExtensionMeta>> {
+    pub(crate) fn list_extensions(&self) -> Result<Vec<ExtensionMeta>> {
         let query_sql = r#"
             select id, alias, md5, file_name, description, status
             from extension_meta where status = 0;
@@ -87,7 +87,12 @@ impl DB {
             .map(|rows| rows.filter_map(|row| row.ok()).collect::<Vec<_>>())?)
     }
 
-    pub(crate) fn save_extension_meta(self: &mut DB, meta: &ExtensionMeta) -> Result<()> {
+    pub(crate) fn save_extensions(&mut self, exts: &Vec<ExtensionMeta>) -> Result<()> {
+
+        Ok(())
+    }
+
+    pub(crate) fn save_extension_meta(&mut self, meta: &ExtensionMeta) -> Result<()> {
         let insert_sql = r#"
             insert into 
             extension_meta(alias, md5, file_name, description, status)
