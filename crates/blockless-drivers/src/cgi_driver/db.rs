@@ -91,7 +91,7 @@ impl DB {
         let insert_sql = r#"
             insert into 
             extension_meta(alias, md5, file_name, description, status)
-            values(?1,?2,?3,?4,?5,?6);
+            values(?1,?2,?3,?4,?5);
         "#;
         self.connect.execute(
             insert_sql,
