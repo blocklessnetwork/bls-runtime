@@ -2,7 +2,7 @@ use std::{
     collections::HashMap,
     path::{Path, PathBuf},
     process::Stdio,
-    sync::Once, ffi::OsString,
+    sync::Once,
 };
 
 use crate::CgiErrorKind;
@@ -218,15 +218,44 @@ async fn file_md5(path: impl AsRef<Path>) -> anyhow::Result<md5::Digest> {
     Ok(md5_ctx.compute())
 }
 
-async fn get_file_meta(file_name: &str) -> anyhow::Result<ExtensionMeta> {
+async fn get_file_meta(file_name: &str) -> anyhow::Result<Option<ExtensionMeta>> {
     let mut command = Command::new(&file_name);
     command.args(&["--ext_verify"]);
     let child = command.output().await?;
     let val = std::str::from_utf8(&child.stdout[..])?;
-    //TODO: parse output json
-    Ok(ExtensionMeta {
+    //parse output json like {"alias":"xxx", "md5":"xxxx", "desciption":"xxxxx", "is_cgi": true}
+    let json = json::parse(val.trim())?;
+    let is_cgi = match json["is_cgi"].as_bool() {
+        Some(b) => b,
+        None => return Ok(None),
+    };
+    if is_cgi != true {
+        return Ok(None);
+    }
+    let alias = match json["alias"].as_str() {
+        Some(b) => b.into(),
+        None => return Ok(None),
+    };
+    let md5: String = match json["md5"].as_str() {
+        Some(md5) => md5.into(),
+        None => {
+            //TODO: next step will embed the md5 value into file.
+            let file_md5 = file_md5(file_name).await?;
+            format!("{:x}", file_md5)
+        },
+    };
+    let description: String = match json["description"].as_str() {
+        Some(d) => d.into(),
+        None => return Ok(None),
+    };
+    
+    Ok(Some(ExtensionMeta {
+        md5,
+        alias,
+        description,
+        file_name: file_name.into(),
         ..Default::default()
-    })
+    }))
 }
 
 async fn list_cgi_directory(
