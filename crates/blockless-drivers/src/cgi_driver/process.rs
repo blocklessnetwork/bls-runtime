@@ -327,9 +327,18 @@ async fn cgi_directory_list_extensions(path: &str) -> Result<Vec<ExtensionMeta>,
     Ok(metas)
 }
 
+/// The CGI must support "--ext_verify" paramter, the runtime will be call with the parameter.
 pub async fn cgi_directory_list_exec(path: &str) -> Result<String, CgiErrorKind> {
     let exts = cgi_directory_list_extensions(path).await?;
-    Ok("".into())
+    let exts: Vec<JsonValue> = exts.into_iter().map(|ext| {
+        let mut json_obj = JsonObject::new();
+        json_obj.insert("fileName", JsonValue::String(ext.file_name));
+        json_obj.insert("alias", JsonValue::String(ext.alias));
+        json_obj.insert("md5", JsonValue::String(ext.md5));
+        JsonValue::Object(json_obj)
+    }).collect();
+    let vals = JsonValue::Array(exts);
+    Ok(json::stringify(vals))
 }
 
 #[cfg(test)]
@@ -357,6 +366,7 @@ mod test {
                 .mode(0o770)
                 .open(test_extension)
                 .unwrap();
+            //The CGI must support "--ext_verify" paramter
             let script = format!(r#"#!/usr/bin/env sh 
             echo '{{"alias":"{}", "description":"eeeeee", "is_cgi":true}}'"#, 
             filename);
