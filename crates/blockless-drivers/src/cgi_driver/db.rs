@@ -90,8 +90,8 @@ impl DB {
     pub(crate) fn save_extensions(&mut self, exts: &Vec<ExtensionMeta>) -> Result<()> {
         for meta in exts.iter() {
             match meta.status {
-                ExtensionMetaStatus::Normal => self.update_extension_meta(meta),
-                ExtensionMetaStatus::UPDATE => self.save_extension_meta(meta),
+                ExtensionMetaStatus::Normal => self.insert_extension_meta(meta),
+                ExtensionMetaStatus::UPDATE => self.update_extension_meta(meta),
                 ExtensionMetaStatus::Invalid => self.delete_extension_meta(meta),
             }?;
         }
@@ -130,7 +130,7 @@ impl DB {
         Ok(())
     }
 
-    pub(crate) fn save_extension_meta(&mut self, meta: &ExtensionMeta) -> Result<()> {
+    pub(crate) fn insert_extension_meta(&mut self, meta: &ExtensionMeta) -> Result<()> {
         let insert_sql = r#"
             insert into 
             extension_meta(alias, md5, file_name, description, status)
@@ -172,7 +172,7 @@ mod test {
             description: description.clone(),
             ..Default::default()
         };
-        db.save_extension_meta(&meta)?;
+        db.insert_extension_meta(&meta)?;
         let rs = db.list_extensions()?;
         assert!(rs.len() == 1);
         assert_eq!(rs[0].id, 1);

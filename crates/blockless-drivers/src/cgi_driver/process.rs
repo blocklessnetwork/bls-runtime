@@ -310,7 +310,9 @@ async fn cgi_directory_list_extensions(path: &str) -> Result<Vec<ExtensionMeta>,
             error!("error list_cgi_directory: {}", e);
             CgiErrorKind::InvalidExtension
         })?;
-    let _ = meta_maps.into_values().map(|v| metas.push(v));
+    for val in meta_maps.into_values() {
+        metas.push(val);
+    }
 
     match get_db(path).map(|db| {
         db.save_extensions(&metas).map_err(|e| {
@@ -377,7 +379,11 @@ mod test {
             assert!(exts[0].alias == "f1");
             assert!(exts[0].description == "eeeeee");
             assert!(exts[0].file_name == "f1");
-            _test_extensions_file(&temp_dir, "f2").await.unwrap(); 
+            let exts = _test_extensions_file(&temp_dir, "f2").await.unwrap(); 
+            assert!(exts.len() == 2);
+            assert!(exts[0].alias == "f1" || exts[0].alias == "f2");
+            assert!(exts[0].description == "eeeeee");
+            assert!(exts[0].file_name == "f1" || exts[0].file_name == "f2");
             drop(drop_dir);
         });
     }
