@@ -88,7 +88,45 @@ impl DB {
     }
 
     pub(crate) fn save_extensions(&mut self, exts: &Vec<ExtensionMeta>) -> Result<()> {
+        for meta in exts.iter() {
+            match meta.status {
+                ExtensionMetaStatus::Normal => self.update_extension_meta(meta),
+                ExtensionMetaStatus::UPDATE => self.save_extension_meta(meta),
+                ExtensionMetaStatus::Invalid => self.delete_extension_meta(meta),
+            }?;
+        }
+        Ok(())
+    }
 
+    pub(crate) fn delete_extension_meta(&mut self, meta: &ExtensionMeta) -> Result<()> {
+        let update_sql = r#"
+            delete extension_meta
+            where id = ?1
+        "#;
+        self.connect.execute(
+            update_sql,
+            (
+                &meta.id,
+            )
+        )?;
+        Ok(())
+    }
+
+    pub(crate) fn update_extension_meta(&mut self, meta: &ExtensionMeta) -> Result<()> {
+        let update_sql = r#"
+            update extension_meta
+            set alias=?1, md5=?2, description=?3
+            where file_name = ?4
+        "#;
+        self.connect.execute(
+            update_sql,
+            (
+                &meta.alias,
+                &meta.md5,
+                &meta.description,
+                &meta.file_name,
+            )
+        )?;
         Ok(())
     }
 

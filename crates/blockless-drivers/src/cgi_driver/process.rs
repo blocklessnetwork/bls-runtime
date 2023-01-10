@@ -15,6 +15,8 @@ use tokio::{
     process::{Child, Command},
 };
 
+const DB_NAME: &str = ".extsdb";
+
 use super::db::{ExtensionMeta, ExtensionMetaStatus, DB};
 
 fn get_db(path: impl AsRef<Path>) -> Option<&'static mut DB> {
@@ -177,7 +179,7 @@ impl CgiProcess {
 
 /// get db file name from path.
 fn get_db_file_name(path: &str) -> PathBuf {
-    const DB_NAME: &str = ".extsdb";
+    
     let path = Path::new(path);
     path.join(DB_NAME)
 }
@@ -216,8 +218,8 @@ async fn file_md5(path: impl AsRef<Path>) -> anyhow::Result<md5::Digest> {
     Ok(md5_ctx.compute())
 }
 
-async fn get_file_meta(file_name: &str) -> anyhow::Result<Option<ExtensionMeta>> {
-    let mut command = Command::new(&file_name);
+async fn get_file_meta(file_path: &str) -> anyhow::Result<Option<ExtensionMeta>> {
+    let mut command = Command::new(file_path);
     command.args(&["--ext_verify"]);
     let child = command.output().await?;
     let val = std::str::from_utf8(&child.stdout[..])?;
@@ -239,7 +241,7 @@ async fn get_file_meta(file_name: &str) -> anyhow::Result<Option<ExtensionMeta>>
         None => {
             //TODO: next step the file must be embed the md5
             //value and output with the verify command.
-            let file_md5 = file_md5(file_name).await?;
+            let file_md5 = file_md5(file_path).await?;
             format!("{:02x}", file_md5)
         }
     };
@@ -247,11 +249,9 @@ async fn get_file_meta(file_name: &str) -> anyhow::Result<Option<ExtensionMeta>>
         Some(d) => d.into(),
         None => return Ok(None),
     };
-    let file_name = file_name.into();
     Ok(Some(ExtensionMeta {
         md5,
         alias,
-        file_name,
         description,
         ..Default::default()
     }))
@@ -270,7 +270,15 @@ async fn list_cgi_directory(
             None => break,
         };
         let file_name = entry.file_name();
-        let md5 = file_md5(&file_name).await?;
+        if file_name == DB_NAME {
+            continue;
+        }
+        let meta_data = entry.metadata().await?;
+        if !meta_data.is_file() {
+            continue;
+        }
+        let full_path = entry.path();
+        let md5 = file_md5(&full_path).await?;
         let md5 = format!("{:02x}", md5);
         let file_name: String = entry.file_name().to_str().unwrap_or("").into();
         match meta_db.get_mut(&file_name) {
@@ -282,9 +290,11 @@ async fn list_cgi_directory(
                 meta.status = ExtensionMetaStatus::UPDATE;
             }
             None => {
-                let file_meta = get_file_meta(&file_name).await?;
-                if let Some(file_meta) = file_meta {
-                    rs.push(file_meta);
+                let fpath: &str = full_path.as_os_str().to_str().unwrap();
+                let extend_meta = get_file_meta(fpath).await?;
+                if let Some(mut extend_meta) = extend_meta {
+                    extend_meta.file_name = file_name;
+                    rs.push(extend_meta);
                 }
             }
         }
@@ -292,7 +302,7 @@ async fn list_cgi_directory(
     Ok(rs)
 }
 
-pub async fn cgi_directory_list_exec(path: &str) -> Result<String, CgiErrorKind> {
+async fn cgi_directory_list_extensions(path: &str) -> Result<Vec<ExtensionMeta>, CgiErrorKind> {
     let mut meta_maps = list_extensions_from_db(path);
     let mut metas = list_cgi_directory(path, &mut meta_maps)
         .await
@@ -300,8 +310,23 @@ pub async fn cgi_directory_list_exec(path: &str) -> Result<String, CgiErrorKind>
             error!("error list_cgi_directory: {}", e);
             CgiErrorKind::InvalidExtension
         })?;
-    meta_maps.into_values().map(|v| metas.push(v));
-    
+    let _ = meta_maps.into_values().map(|v| metas.push(v));
+
+    match get_db(path).map(|db| {
+        db.save_extensions(&metas).map_err(|e| {
+            error!("save extensions error {}", e);
+            CgiErrorKind::InvalidExtension
+        })
+    }) {
+        Some(Ok(v)) => v,
+        Some(Err(e)) => return Err(e),
+        None => return Err(CgiErrorKind::RuntimeError),
+    };
+    Ok(metas)
+}
+
+pub async fn cgi_directory_list_exec(path: &str) -> Result<String, CgiErrorKind> {
+    let exts = cgi_directory_list_extensions(path).await?;
     Ok("".into())
 }
 
@@ -309,10 +334,50 @@ pub async fn cgi_directory_list_exec(path: &str) -> Result<String, CgiErrorKind>
 mod test {
     use super::*;
     use tempdir;
+    use tokio_test;
+    use std::{fs, io::Write, os::unix::prelude::OpenOptionsExt};
+    struct DropDir {
+        path: PathBuf
+    }
 
+    impl Drop for DropDir {
+        fn drop(&mut self) {
+            let _ = fs::remove_file(&self.path);
+        }
+    }
+
+    async fn _test_extensions_file() -> anyhow::Result<()> {
+        let temp_dir = tempdir::TempDir::new("drivers-test").unwrap();
+        let drop_dir = DropDir{
+            path: temp_dir.path().to_path_buf()
+        };
+        let test_extension = temp_dir.path().join("test");
+        {
+            let mut file = fs::OpenOptions::new()
+                .create(true)
+                .write(true)
+                .mode(0o770)
+                .open(test_extension)
+                .unwrap();
+            file.write_all(br#"#!/usr/bin/env sh
+            echo '{"alias":"alias1", "description":"eeeeee", "is_cgi":true}'
+            "#)?;
+        }
+        let path = temp_dir.path().to_str().unwrap();
+        let exts = cgi_directory_list_extensions(path).await?;
+        drop(drop_dir);
+        assert!(exts.len() == 1);
+        assert!(exts[0].alias == "alias1");
+        assert!(exts[0].description == "eeeeee");
+        assert!(exts[0].file_name == "test");
+        Ok(())
+    }
+
+    
     #[test]
-    fn test_extensions_file() {
-        let temp_dir = tempdir::TempDir::new("drivers-test");
-        temp_dir.map(|dir| {});
+    fn test_extensions_file()  {
+        tokio_test::block_on(async {
+            _test_extensions_file().await.unwrap(); 
+        });
     }
 }
