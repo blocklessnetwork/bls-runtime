@@ -333,7 +333,7 @@ pub async fn cgi_directory_list_exec(path: &str) -> Result<String, CgiErrorKind>
 #[cfg(test)]
 mod test {
     use super::*;
-    use tempdir;
+    use tempdir::{self, TempDir};
     use tokio_test;
     use std::{fs, io::Write, os::unix::prelude::OpenOptionsExt};
     struct DropDir {
@@ -346,12 +346,8 @@ mod test {
         }
     }
 
-    async fn _test_extensions_file() -> anyhow::Result<()> {
-        let temp_dir = tempdir::TempDir::new("drivers-test").unwrap();
-        let drop_dir = DropDir{
-            path: temp_dir.path().to_path_buf()
-        };
-        let test_extension = temp_dir.path().join("test");
+    async fn _test_extensions_file(temp_dir: &TempDir,filename: &str) -> anyhow::Result<Vec<ExtensionMeta>> {
+        let test_extension = temp_dir.path().join(filename);
         {
             let mut file = fs::OpenOptions::new()
                 .create(true)
@@ -359,25 +355,30 @@ mod test {
                 .mode(0o770)
                 .open(test_extension)
                 .unwrap();
-            file.write_all(br#"#!/usr/bin/env sh
-            echo '{"alias":"alias1", "description":"eeeeee", "is_cgi":true}'
-            "#)?;
+            let script = format!(r#"#!/usr/bin/env sh 
+            echo '{{"alias":"{}", "description":"eeeeee", "is_cgi":true}}'"#, 
+            filename);
+            file.write_all(script.as_bytes())?;
         }
         let path = temp_dir.path().to_str().unwrap();
         let exts = cgi_directory_list_extensions(path).await?;
-        drop(drop_dir);
-        assert!(exts.len() == 1);
-        assert!(exts[0].alias == "alias1");
-        assert!(exts[0].description == "eeeeee");
-        assert!(exts[0].file_name == "test");
-        Ok(())
+        Ok(exts)
     }
-
     
     #[test]
     fn test_extensions_file()  {
         tokio_test::block_on(async {
-            _test_extensions_file().await.unwrap(); 
+            let temp_dir = tempdir::TempDir::new("drivers-test").unwrap();
+            let drop_dir = DropDir{
+                path: temp_dir.path().to_path_buf()
+            };
+            let exts = _test_extensions_file(&temp_dir, "f1").await.unwrap(); 
+            assert!(exts.len() == 1);
+            assert!(exts[0].alias == "f1");
+            assert!(exts[0].description == "eeeeee");
+            assert!(exts[0].file_name == "f1");
+            _test_extensions_file(&temp_dir, "f2").await.unwrap(); 
+            drop(drop_dir);
         });
     }
 }
