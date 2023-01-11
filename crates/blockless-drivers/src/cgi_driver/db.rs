@@ -20,7 +20,8 @@ impl From<i32> for ExtensionMetaStatus {
     fn from(value: i32) -> Self {
         match value {
             0 => ExtensionMetaStatus::Normal,
-            -1 | _ => ExtensionMetaStatus::Normal,
+            1 => ExtensionMetaStatus::UPDATE,
+            -1 | _ => ExtensionMetaStatus::Invalid,
         }
     }
 }
