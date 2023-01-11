@@ -2,7 +2,7 @@ use std::{
     collections::HashMap,
     path::{Path, PathBuf},
     process::Stdio,
-    sync::Once,
+    sync::{ Mutex, MutexGuard},
 };
 
 use crate::CgiErrorKind;
@@ -19,15 +19,17 @@ const DB_NAME: &str = ".extsdb";
 
 use super::db::{ExtensionMeta, ExtensionMetaStatus, DB};
 
-fn get_db(path: impl AsRef<Path>) -> Option<&'static mut DB> {
-    static mut DB: Option<DB> = None;
-    static DB_ONCE: Once = Once::new();
-    DB_ONCE.call_once(|| unsafe {
-        let db = DB::new(path)
+
+fn get_db(path: impl AsRef<Path>) -> MutexGuard<'static, Option<DB>> {
+    static mut DB: Mutex<Option<DB>> = Mutex::new(None);
+    unsafe {
+        let mut db = DB.lock().unwrap();
+        if db.is_none() {
+            db.replace( DB::new(path)
             .map_err(|e| error!("error open db {}", e))
-            .ok();
-        DB = db
-            .map(|mut db| {
+            .ok().unwrap());
+            db.as_mut()
+                .map(|db| {
                 if db.create_schema().is_ok() {
                     Some(db)
                 } else {
@@ -35,8 +37,9 @@ fn get_db(path: impl AsRef<Path>) -> Option<&'static mut DB> {
                 }
             })
             .flatten();
-    });
-    unsafe { DB.as_mut() }
+        }
+        db
+    }
 }
 
 pub struct CgiProcess {
@@ -186,10 +189,10 @@ fn get_db_file_name(path: &str) -> PathBuf {
 
 fn list_extensions_from_db(path: &str) -> HashMap<String, ExtensionMeta> {
     let db_file_name = get_db_file_name(path);
-    let db = get_db(db_file_name);
+    let mut db = get_db(db_file_name);
     //load the metas from db
     //the ids in db will use for delete the invalid extension.
-    db.map(|db| {
+    db.as_mut().map(|db| {
         let exts = db
             .list_extensions()
             .map_err(|e| error!("error list extensions: {}", e))
@@ -204,6 +207,7 @@ fn list_extensions_from_db(path: &str) -> HashMap<String, ExtensionMeta> {
     .unwrap_or_default()
 }
 
+/// get the file md5 summary
 async fn file_md5(path: impl AsRef<Path>) -> anyhow::Result<md5::Digest> {
     let mut file = File::open(path).await?;
     let mut buf = [0u8; 4096];
@@ -218,6 +222,7 @@ async fn file_md5(path: impl AsRef<Path>) -> anyhow::Result<md5::Digest> {
     Ok(md5_ctx.compute())
 }
 
+/// get file meta from execute output with the parameter "--ext_verify".
 async fn get_file_meta(file_path: &str) -> anyhow::Result<Option<ExtensionMeta>> {
     let mut command = Command::new(file_path);
     command.args(&["--ext_verify"]);
@@ -313,8 +318,8 @@ async fn cgi_directory_list_extensions(path: &str) -> Result<Vec<ExtensionMeta>,
     for val in meta_maps.into_values() {
         metas.push(val);
     }
-
-    match get_db(path).map(|db| {
+    let mut db = get_db(path);
+    match db.as_mut().map(|db| {
         db.save_extensions(&metas).map_err(|e| {
             error!("save extensions error {}", e);
             CgiErrorKind::InvalidExtension
