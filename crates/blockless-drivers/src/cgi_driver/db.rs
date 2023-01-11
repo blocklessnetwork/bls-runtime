@@ -101,12 +101,13 @@ impl DB {
     pub(crate) fn delete_extension_meta(&mut self, meta: &ExtensionMeta) -> Result<()> {
         let update_sql = r#"
             delete extension_meta
-            where id = ?1
+            where id = ?1 and file_name=?2
         "#;
         self.connect.execute(
             update_sql,
             (
                 &meta.id,
+                &meta.file_name,
             )
         )?;
         Ok(())
