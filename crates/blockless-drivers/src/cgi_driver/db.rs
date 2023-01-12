@@ -52,7 +52,7 @@ impl DB {
                 id INTEGER PRIMARY KEY,
                 alias TEXT NOT NULL UNIQUE,
                 md5 TEXT NOT NULL,
-                file_name TEXT NOT NULL,
+                filename TEXT NOT NULL,
                 status INTEGER DEFAULT 0,
                 description TEXT NOT NULL
             );
@@ -64,7 +64,7 @@ impl DB {
 
     pub(crate) fn get_extension_by_alias(&self, alias: &str) -> Result<ExtensionMeta> {
         let query_sql = r#"
-            select id, alias, md5, file_name, description, status
+            select id, alias, md5, filename, description, status
             from extension_meta where status = 0 and alias=?1;
         "#;
         Ok(self.connect.query_row(query_sql, &[alias], |row| {
@@ -87,7 +87,7 @@ impl DB {
 
     pub(crate) fn list_extensions(&self) -> Result<Vec<ExtensionMeta>> {
         let query_sql = r#"
-            select id, alias, md5, file_name, description, status
+            select id, alias, md5, filename, description, status
             from extension_meta where status = 0;
         "#;
         let mut stmt = self.connect.prepare(query_sql)?;
@@ -125,7 +125,7 @@ impl DB {
     pub(crate) fn delete_extension_meta(&mut self, meta: &ExtensionMeta) -> Result<()> {
         let update_sql = r#"
             delete extension_meta
-            where id = ?1 and file_name=?2
+            where id = ?1 and filename=?2
         "#;
         self.connect.execute(
             update_sql,
@@ -141,7 +141,7 @@ impl DB {
         let update_sql = r#"
             update extension_meta
             set alias=?1, md5=?2, description=?3
-            where file_name = ?4
+            where filename = ?4
         "#;
         self.connect.execute(
             update_sql,
@@ -158,7 +158,7 @@ impl DB {
     pub(crate) fn insert_extension_meta(&mut self, meta: &ExtensionMeta) -> Result<()> {
         let insert_sql = r#"
             insert into 
-            extension_meta(alias, md5, file_name, description, status)
+            extension_meta(alias, md5, filename, description, status)
             values(?1,?2,?3,?4,?5);
         "#;
         self.connect.execute(

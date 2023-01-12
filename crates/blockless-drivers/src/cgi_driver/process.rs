@@ -14,6 +14,8 @@ use tokio::{
     io::{AsyncReadExt, AsyncWriteExt},
     process::{Child, Command},
 };
+#[cfg(target_family="unix")]
+use std::os::unix::prelude::MetadataExt;
 
 const DB_NAME: &str = ".extsdb";
 
@@ -287,6 +289,10 @@ async fn list_cgi_directory(
         if !meta_data.is_file() {
             continue;
         }
+        #[cfg(target_family="unix")]
+        if meta_data.mode()&0o001 == 0  {
+            continue;
+        }
         let full_path = entry.path();
         let md5 = file_md5(&full_path).await?;
         let md5 = format!("{:02x}", md5);
@@ -345,6 +351,7 @@ pub async fn cgi_directory_list_exec(path: &str) -> Result<String, CgiErrorKind>
         json_obj.insert("fileName", JsonValue::String(ext.file_name));
         json_obj.insert("alias", JsonValue::String(ext.alias));
         json_obj.insert("md5", JsonValue::String(ext.md5));
+        json_obj.insert("description", JsonValue::String(ext.description));
         JsonValue::Object(json_obj)
     }).collect();
     let vals = JsonValue::Array(exts);
@@ -358,7 +365,7 @@ fn get_command_with_alias(
 ) -> Option<ExtensionMeta> {
     get_db(path).as_mut().map(|db| {
         db.get_extension_by_alias(alias)
-            .map_err(|e| error!("error {}", e))
+            .map_err(|e| error!("error get_extension_by_alias {}", e))
             .ok()
     }).flatten()
 }
