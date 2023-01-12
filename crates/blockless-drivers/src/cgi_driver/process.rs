@@ -363,11 +363,16 @@ fn get_command_with_alias(
     path: &str, 
     alias: &str,
 ) -> Option<ExtensionMeta> {
-    get_db(path).as_mut().map(|db| {
+    match get_db(path).as_mut().map(|db| {
         db.get_extension_by_alias(alias)
-            .map_err(|e| error!("error get_extension_by_alias {}", e))
-            .ok()
-    }).flatten()
+    }) {
+        Some(Ok(s)) => s,
+        Some(Err(e)) => {
+            error!("error get_extension_by_alias: {}", e);
+            None
+        },
+        None => None,
+    }
 }
 
 

@@ -1,7 +1,7 @@
 use std::path::Path;
 
 use anyhow::Result;
-use rusqlite::Connection;
+use rusqlite::{Connection, OptionalExtension};
 
 #[derive(Clone, Copy)]
 pub(crate) enum ExtensionMetaStatus {
@@ -62,7 +62,7 @@ impl DB {
         Ok(())
     }
 
-    pub(crate) fn get_extension_by_alias(&self, alias: &str) -> Result<ExtensionMeta> {
+    pub(crate) fn get_extension_by_alias(&self, alias: &str) -> Result<Option<ExtensionMeta>> {
         let query_sql = r#"
             select id, alias, md5, filename, description, status
             from extension_meta where status = 0 and alias=?1;
@@ -82,7 +82,7 @@ impl DB {
                 file_name,
                 description,
             })
-        })?)
+        }).optional()?)
     }
 
     pub(crate) fn list_extensions(&self) -> Result<Vec<ExtensionMeta>> {
@@ -206,11 +206,13 @@ mod test {
         assert_eq!(rs[0].file_name, file_name);
         assert_eq!(rs[0].alias, alias);
         let rs = db.get_extension_by_alias(&alias)?;
-        assert_eq!(rs.id, 1);
-        assert_eq!(rs.description, description);
-        assert_eq!(rs.md5, md5);
-        assert_eq!(rs.file_name, file_name);
-        assert_eq!(rs.alias, alias);
+        rs.map(|rs| {
+            assert_eq!(rs.id, 1);
+            assert_eq!(rs.description, description);
+            assert_eq!(rs.md5, md5);
+            assert_eq!(rs.file_name, file_name);
+            assert_eq!(rs.alias, alias);
+        });
         Ok(())
     }
 }
