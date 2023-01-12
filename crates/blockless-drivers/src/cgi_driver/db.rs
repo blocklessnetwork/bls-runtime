@@ -50,7 +50,7 @@ impl DB {
         let schema_sql = r#"
             create table if not exists extension_meta (
                 id INTEGER PRIMARY KEY,
-                alias TEXT NOT NULL,
+                alias TEXT NOT NULL UNIQUE,
                 md5 TEXT NOT NULL,
                 file_name TEXT NOT NULL,
                 status INTEGER DEFAULT 0,
@@ -60,6 +60,29 @@ impl DB {
         "#;
         self.connect.execute(schema_sql, ())?;
         Ok(())
+    }
+
+    pub(crate) fn get_extension_by_alias(&self, alias: &str) -> Result<ExtensionMeta> {
+        let query_sql = r#"
+            select id, alias, md5, file_name, description, status
+            from extension_meta where status = 0 and alias=?1;
+        "#;
+        Ok(self.connect.query_row(query_sql, &[alias], |row| {
+            let id = row.get(0)?;
+            let alias = row.get(1)?;
+            let md5 = row.get(2)?;
+            let file_name = row.get(3)?;
+            let description = row.get(4)?;
+            let status = row.get::<usize, i32>(5)?.into();
+            Ok(ExtensionMeta {
+                id,
+                md5,
+                alias,
+                status,
+                file_name,
+                description,
+            })
+        })?)
     }
 
     pub(crate) fn list_extensions(&self) -> Result<Vec<ExtensionMeta>> {
@@ -182,6 +205,12 @@ mod test {
         assert_eq!(rs[0].md5, md5);
         assert_eq!(rs[0].file_name, file_name);
         assert_eq!(rs[0].alias, alias);
+        let rs = db.get_extension_by_alias(&alias)?;
+        assert_eq!(rs.id, 1);
+        assert_eq!(rs.description, description);
+        assert_eq!(rs.md5, md5);
+        assert_eq!(rs.file_name, file_name);
+        assert_eq!(rs.alias, alias);
         Ok(())
     }
 }

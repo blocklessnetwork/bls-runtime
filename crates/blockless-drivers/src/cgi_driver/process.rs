@@ -61,6 +61,12 @@ impl CgiProcess {
             Some(s) => String::from(s),
             None => return Err(CgiErrorKind::InvalidParameter),
         };
+
+        let command = match get_command_with_alias(&root_path, &command) {
+            Some(c) => c.file_name,
+            None => return Err(CgiErrorKind::InvalidExtension)
+        };
+
         let args = match obj["args"] {
             json::JsonValue::Array(ref args) => args
                 .iter()
@@ -182,7 +188,6 @@ impl CgiProcess {
 
 /// get db file name from path.
 fn get_db_file_name(path: &str) -> PathBuf {
-    
     let path = Path::new(path);
     path.join(DB_NAME)
 }
@@ -345,6 +350,19 @@ pub async fn cgi_directory_list_exec(path: &str) -> Result<String, CgiErrorKind>
     let vals = JsonValue::Array(exts);
     Ok(json::stringify(vals))
 }
+
+
+fn get_command_with_alias(
+    path: &str, 
+    alias: &str,
+) -> Option<ExtensionMeta> {
+    get_db(path).as_mut().map(|db| {
+        db.get_extension_by_alias(alias)
+            .map_err(|e| error!("error {}", e))
+            .ok()
+    }).flatten()
+}
+
 
 #[cfg(test)]
 mod test {
