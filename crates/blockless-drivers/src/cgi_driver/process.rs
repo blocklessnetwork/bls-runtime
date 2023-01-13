@@ -414,7 +414,7 @@ mod test {
     
     #[test]
     fn test_extensions_file()  {
-        #[cgf(target_family="unix")]
+        #[cfg(target_family="unix")]
         tokio_test::block_on(async {
             let temp_dir = tempdir::TempDir::new("drivers-test").unwrap();
             let drop_dir = DropDir{
