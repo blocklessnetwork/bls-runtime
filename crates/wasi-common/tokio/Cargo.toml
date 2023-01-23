@@ -11,16 +11,16 @@ edition = "2021"
 include = ["src/**/*", "LICENSE" ]
 
 [dependencies]
-wasi-common = { path = "../", version = "=0.36.0" }
-wasi-cap-std-sync = { path = "../cap-std-sync", version = "=0.36.0" }
-wiggle = { path = "../../wiggle", version = "=0.36.0" }
+wasi-common = {workspace = true}
+wasi-cap-std-sync = {workspace = true}
+wiggle = {workspace = true}
 tokio = { version = "1.8.0", features = [ "rt", "fs", "time", "io-util", "net", "io-std", "rt-multi-thread"] }
-cap-std = "0.24.1"
-anyhow = "1"
-io-lifetimes = { version = "0.5.0", default-features = false }
+cap-std = {workspace = true}
+anyhow = {workspace = true}
+io-lifetimes = { workspace = true, default-features = false }
 
 [target.'cfg(unix)'.dependencies]
-rustix = "0.33.5"
+rustix = "0.35.10"
 
 [target.'cfg(windows)'.dependencies]
 winapi = "0.3"
@@ -30,5 +30,5 @@ io-extras = "0.13.0"
 [dev-dependencies]
 tempfile = "3.1.0"
 tokio = { version = "1.8.0", features = [ "macros" ] }
-anyhow = "1"
-cap-tempfile = "0.24.1"
+anyhow = {workspace = true}
+cap-tempfile = {workspace = true}

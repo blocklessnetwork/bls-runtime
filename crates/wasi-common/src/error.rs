@@ -28,7 +28,8 @@ pub use anyhow::{Context, Error};
 /// Internal error type for the `wasi-common` crate.
 /// Contains variants of the WASI `$errno` type are added according to what is actually used internally by
 /// the crate. Not all values are represented presently.
-#[derive(Debug, thiserror::Error)]
+#[derive(Copy, Clone, Debug, PartialEq, Eq, thiserror::Error)]
+#[non_exhaustive]
 pub enum ErrorKind {
     /// Errno::WouldBlk: Would block
     #[error("WouldBlk: Would block")]
@@ -72,6 +73,9 @@ pub enum ErrorKind {
     /// Errno::Spipe: Invalid seek
     #[error("Spipe: Invalid seek")]
     Spipe,
+    /// Errno::Perm: Permission denied
+    #[error("Permission denied")]
+    Perm,
     /// Errno::NotCapable: Not capable
     #[error("Not capable")]
     NotCapable,
@@ -92,7 +96,7 @@ pub trait ErrorExt {
     fn overflow() -> Self;
     fn range() -> Self;
     fn seek_pipe() -> Self;
-    fn not_capable() -> Self;
+    fn perm() -> Self;
 }
 
 impl ErrorExt for Error {
@@ -138,7 +142,7 @@ impl ErrorExt for Error {
     fn seek_pipe() -> Self {
         ErrorKind::Spipe.into()
     }
-    fn not_capable() -> Self {
-        ErrorKind::NotCapable.into()
+    fn perm() -> Self {
+        ErrorKind::Perm.into()
     }
 }
