@@ -3,7 +3,7 @@ use std::path::Path;
 use anyhow::Result;
 use rusqlite::{Connection, OptionalExtension};
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub(crate) enum ExtensionMetaStatus {
     Normal = 0,
     UPDATE = 1,

@@ -332,7 +332,7 @@ async fn cgi_directory_list_extensions(path: &str) -> Result<Vec<ExtensionMeta>,
     let mut db = get_db(path);
     match db.as_mut().map(|db| {
         db.save_extensions(&metas).map_err(|e| {
-            error!("save extensions error {}", e);
+            error!("save extensions error: {}", e);
             CgiErrorKind::InvalidExtension
         })
     }) {
@@ -340,6 +340,14 @@ async fn cgi_directory_list_extensions(path: &str) -> Result<Vec<ExtensionMeta>,
         Some(Err(e)) => return Err(e),
         None => return Err(CgiErrorKind::RuntimeError),
     };
+    let metas = metas.into_iter()
+        .filter(|meta| {
+            match meta.status {
+                ExtensionMetaStatus::Invalid => false,
+                _ => true,
+            }
+        })
+        .collect::<Vec<_>>();
     Ok(metas)
 }
 
