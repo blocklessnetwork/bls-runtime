@@ -1,4 +1,5 @@
 mod process;
+mod db;
 
 use std::{collections::HashMap, sync::Once};
 
@@ -62,6 +63,7 @@ pub async fn cgi_directory_list_read(handle: u32, buf: &mut [u8]) -> Result<u32,
 pub async fn command_and_exec(root_path: &str, cmd: &str) -> Result<u32, CgiErrorKind> {
     let handle = increase_handle();
     let mut cgi = CgiProcess::new(root_path.into(), cmd)?;
+
     cgi.exec()?;
     get_ctx().map(|ctx| {
         ctx.insert(handle, CGICtx::Process(cgi));

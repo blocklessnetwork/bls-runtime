@@ -22,6 +22,7 @@ impl From<CgiErrorKind> for types::CgiError {
             CgiErrorKind::InvalidHandle => CgiError::InvalidHandle,
             CgiErrorKind::InvalidParameter => CgiError::InvalidParameter,
             CgiErrorKind::RuntimeError => CgiError::RuntimeError,
+            CgiErrorKind::InvalidExtension => CgiError::InvalidExtension,
         }
     }
 }

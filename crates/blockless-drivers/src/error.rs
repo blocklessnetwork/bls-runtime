@@ -164,6 +164,7 @@ pub enum CgiErrorKind {
     InvalidHandle,
     RuntimeError,
     InvalidParameter,
+    InvalidExtension,
 }
 
 impl std::error::Error for CgiErrorKind {}
@@ -174,6 +175,7 @@ impl std::fmt::Display for CgiErrorKind {
             &Self::RuntimeError => write!(f, "Runtime error"),
             &Self::InvalidHandle => write!(f, "Invalid Error"),
             &Self::InvalidParameter => write!(f, "Invalid parameter"),
+            &Self::InvalidExtension => write!(f, "Invalid extension"),
         }
     }
 }
