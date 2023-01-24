@@ -284,7 +284,7 @@ mod test {
             src.extend(&data2[..]);
             let mut tmp: [u8; 8] = [0; 8];
             let mut dest: Vec<u8> = Vec::new();
-            let mut total = stream_read(&mut state, &mut tmp[..]).await;
+            let _ = stream_read(&mut state, &mut tmp[..]).await;
             dest.extend(&tmp[..]);
             let n = stream_read(&mut state, &mut tmp[..]).await;
             dest.extend(&tmp[..n]);
