@@ -13,8 +13,9 @@ impl CliConfig {
         let json_obj = json::parse(file)?;
         let fs_root_path: Option<String> = json_obj["fs_root_path"].as_str().map(|s| s.into());
         let drivers_root_path: Option<String> =
-            json_obj["drivers_root_path"].as_str().map(|s| s.into());
+            json_obj["drivers_root_path"].as_str().map(|s| s.to_string());
         let limited_fuel: Option<u64> = json_obj["limited_fuel"].as_u64();
+        let runtime_logger = json_obj["runtime_logger"].as_str().map(|s| s.to_string());
         let limited_memory: Option<u64> = json_obj["limited_memory"].as_u64();
         let extensions_path: Option<String> = json_obj["extensions_path"].as_str().map(|s| s.into());
         let stdin: Option<&str> = Some(json_obj["stdin"].as_str()).unwrap_or(None);
@@ -74,6 +75,7 @@ impl CliConfig {
         bc.fs_root_path(fs_root_path);
         bc.drivers(drvs);
         bc.permisions(perms);
+        bc.runtime_logger(runtime_logger);
         bc.drivers_root_path(drivers_root_path);
         bc.limited_fuel(limited_fuel);
         bc.limited_memory(limited_memory);

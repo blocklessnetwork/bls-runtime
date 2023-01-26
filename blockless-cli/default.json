@@ -1,6 +1,7 @@
 {
     "fs_root_path": "/Users/join/Downloads", 
     "drivers_root_path": "/Users/join/Downloads", 
+    "runtime_logger": "runtime.log", 
     "limited_fuel": 200000000,
     "limited_memory": 30,
     "entry": "/Users/join/Downloads/sdk-assemblyscript/build/release.wasm",
