@@ -2,7 +2,31 @@ mod config;
 use blockless::blockless_run;
 use config::CliConfig;
 use std::{env, io};
+use env_logger::Target;
 use tokio::runtime::Builder;
+use log::{error, info};
+use std::fs;
+
+fn logger_init(cfg: &CliConfig) {
+    let rt_logger = cfg.0.runtime_logger_ref();
+    let mut builder = env_logger::Builder::from_default_env();
+    builder.filter_level(log::LevelFilter::Info);
+    let target = match rt_logger {
+        None => Target::default(),
+        Some(f) => {
+            builder.is_test(true);
+            let file = fs::OpenOptions::new()
+                .append(true)
+                .create(true)
+                .write(true)
+                .open(f)
+                .unwrap();
+            Target::Pipe(Box::new(file))
+        },
+    };
+    builder.target(target);
+    builder.init();
+}
 
 fn main() {
     let args = env::args().collect::<Vec<_>>();
@@ -15,7 +39,7 @@ fn main() {
     }
 
     let mut cfg = CliConfig::from_file(path.unwrap()).unwrap();
-
+    logger_init(&cfg);
     if cfg.0.stdin_ref().is_empty() {
         io::stdin().read_line(&mut std_buffer).unwrap();
         cfg.0.stdin(std_buffer);
@@ -27,8 +51,13 @@ fn main() {
         .build()
         .unwrap();
     rt.block_on(async {
-        let env = env_logger::Env::default();
-        env_logger::init_from_env(env);
-        blockless_run(cfg.0).await;
+        info!("The wasm app start.");
+        std::panic::set_hook(Box::new(|panic_info| {
+            error!("{}", panic_info.to_string());
+            eprintln!("The wasm app crash, please check the log file for detail messages.");
+        }));
+        let exit_code = blockless_run(cfg.0).await;
+        println!("The wasm execute finish, the exit code: {}", exit_code.code);
+        info!("The wasm execute finish, the exit code: {}", exit_code.code);
     });
 }
