@@ -1,4 +1,7 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 use crate::Permission;
 
@@ -40,6 +43,7 @@ pub struct BlocklessConfig {
     drivers: Vec<DriverConfig>,
     permisions: Vec<Permission>,
     fs_root_path: Option<String>,
+    runtime_logger: Option<String>,
     extensions_path: Option<String>,
     drivers_root_path: Option<String>,
     group_permisions: HashMap<String, Vec<Permission>>,
@@ -54,10 +58,13 @@ impl BlocklessConfig {
         self.fs_root_path = r;
     }
 
+    pub fn runtime_logger(&mut self, l: Option<String>) {
+        self.runtime_logger = l;
+    }
+
     pub fn permisions_ref(&self) -> &Vec<Permission> {
         &self.permisions
     }
-
     pub fn permisions(&mut self, perms: Vec<Permission>) {
         let mut g_perms: HashMap<String, Vec<_>> = HashMap::new();
         perms.iter().for_each(|p| {
@@ -71,11 +78,11 @@ impl BlocklessConfig {
     }
 
     pub fn fs_root_path_ref(&self) -> Option<&str> {
-        self.fs_root_path.as_ref().map(|x| x.as_str())
+        self.fs_root_path.as_ref().map(String::as_ref)
     }
 
     pub fn drivers_root_path_ref(&self) -> Option<&str> {
-        self.drivers_root_path.as_ref().map(|x| x.as_str())
+        self.drivers_root_path.as_ref().map(String::as_ref)
     }
 
     pub fn drivers_root_path(&mut self, r: Option<String>) {
@@ -84,7 +91,6 @@ impl BlocklessConfig {
 
     pub fn new(wasm_file: &str) -> BlocklessConfig {
         Self {
-            wasm_file: String::from(wasm_file),
             fs_root_path: None,
             stdout: Stdout::Inherit,
             stdin: String::new(),
@@ -98,6 +104,8 @@ impl BlocklessConfig {
             drivers: Vec::new(),
             permisions: Default::default(),
             group_permisions: HashMap::new(),
+            wasm_file: String::from(wasm_file),
+            runtime_logger: None,
         }
     }
 
@@ -117,6 +125,16 @@ impl BlocklessConfig {
 
     pub fn stdin(&mut self, stdin: String) {
         self.stdin = stdin
+    }
+
+    /// the runtime log file name, if the value is None
+    /// the runtime log will ouput to Stdout.
+    /// the file is in fs_root_path
+    pub fn runtime_logger_ref(&self) -> Option<PathBuf> {
+        self.fs_root_path
+            .as_ref()
+            .zip(self.runtime_logger.as_ref())
+            .map(|f| Path::new(f.0).join(f.1))
     }
 
     pub fn extensions_path(&mut self, extensions_path: Option<String>) {

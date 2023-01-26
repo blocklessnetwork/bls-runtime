@@ -1,5 +1,6 @@
 {
     "fs_root_path": "/Users/join/Downloads", 
+    "runtime_logger": "runtime.log",
     "drivers_root_path": "/Users/join/Downloads", 
     "limited_fuel": 200000000,
     "limited_memory": 30,
