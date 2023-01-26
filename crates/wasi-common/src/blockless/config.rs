@@ -1,4 +1,7 @@
-use std::collections::HashMap;
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
 
 use crate::Permission;
 
@@ -75,11 +78,11 @@ impl BlocklessConfig {
     }
 
     pub fn fs_root_path_ref(&self) -> Option<&str> {
-        self.fs_root_path.as_ref().map(|x| x.as_str())
+        self.fs_root_path.as_ref().map(String::as_ref)
     }
 
     pub fn drivers_root_path_ref(&self) -> Option<&str> {
-        self.drivers_root_path.as_ref().map(|x| x.as_str())
+        self.drivers_root_path.as_ref().map(String::as_ref)
     }
 
     pub fn drivers_root_path(&mut self, r: Option<String>) {
@@ -127,8 +130,11 @@ impl BlocklessConfig {
     /// the runtime log file name, if the value is None
     /// the runtime log will ouput to Stdout.
     /// the file is in fs_root_path
-    pub fn get_runtime_logger(&self) -> Option<&str> {
-        self.runtime_logger.as_ref().map(String::as_ref)
+    pub fn runtime_logger_ref(&self) -> Option<PathBuf> {
+        self.fs_root_path
+            .as_ref()
+            .zip(self.runtime_logger.as_ref())
+            .map(|f| Path::new(f.0).join(f.1))
     }
 
     pub fn extensions_path(&mut self, extensions_path: Option<String>) {
