@@ -4,6 +4,27 @@ use std::{
     path::{Path, PathBuf},
 };
 
+pub enum LoggerLevel {
+    INFO,
+    WARN,
+    DEBUG,
+    ERROR,
+    TRACE,
+}
+
+impl From<&str> for LoggerLevel {
+
+    fn from(value: &str) -> Self {
+        match value {
+            "debug"|"DEBUG" => LoggerLevel::DEBUG,
+            "info"|"INFO" => LoggerLevel::INFO,
+            "warn"|"WARN" => LoggerLevel::WARN,
+            "trace"|"TRACE" => LoggerLevel::TRACE,
+            "error"|"ERROR" => LoggerLevel::ERROR,
+            _ => LoggerLevel::INFO,
+        }
+    }
+}
 
 pub enum Stdout {
     //no stdout.
@@ -44,6 +65,7 @@ pub struct BlocklessConfig {
     permisions: Vec<Permission>,
     fs_root_path: Option<String>,
     runtime_logger: Option<String>,
+    runtime_logger_level: LoggerLevel,
     extensions_path: Option<String>,
     drivers_root_path: Option<String>,
     group_permisions: HashMap<String, Vec<Permission>>,
@@ -52,6 +74,14 @@ pub struct BlocklessConfig {
 impl BlocklessConfig {
     pub fn wasm_file_ref(&self) -> &str {
         &self.wasm_file
+    }
+
+    pub fn runtime_logger_level_ref(&self) -> &LoggerLevel {
+        &self.runtime_logger_level
+    }
+
+    pub fn runtime_logger_level(&mut self, level: LoggerLevel) {
+        self.runtime_logger_level = level;
     }
 
     pub fn fs_root_path(&mut self, r: Option<String>) {
@@ -107,6 +137,7 @@ impl BlocklessConfig {
             drivers: Vec::new(),
             permisions: Default::default(),
             group_permisions: HashMap::new(),
+            runtime_logger_level: LoggerLevel::INFO,
         }
     }
 
