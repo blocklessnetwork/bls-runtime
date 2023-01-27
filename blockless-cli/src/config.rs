@@ -2,7 +2,6 @@ use anyhow::Result;
 use blockless::{self, LoggerLevel};
 use blockless::{BlocklessConfig, DriverConfig, MultiAddr, Permission};
 use json::{self, JsonValue};
-use log::LevelFilter;
 use std::fs;
 
 pub(crate) struct CliConfig(pub(crate) BlocklessConfig);
