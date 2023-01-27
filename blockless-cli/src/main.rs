@@ -1,16 +1,26 @@
 mod config;
-use blockless::blockless_run;
+use blockless::{blockless_run, LoggerLevel};
 use config::CliConfig;
 use std::{env, io};
 use env_logger::Target;
 use tokio::runtime::Builder;
-use log::{error, info};
+use log::{error, info, LevelFilter};
 use std::fs;
+
+
 
 fn logger_init(cfg: &CliConfig) {
     let rt_logger = cfg.0.runtime_logger_ref();
     let mut builder = env_logger::Builder::from_default_env();
-    builder.filter_level(log::LevelFilter::Info);
+    let rt_logger_level = cfg.0.runtime_logger_level_ref();
+    let filter_level = match *rt_logger_level {
+        LoggerLevel::INFO => LevelFilter::Info,
+        LoggerLevel::WARN => LevelFilter::Warn,
+        LoggerLevel::DEBUG => LevelFilter::Debug,
+        LoggerLevel::ERROR => LevelFilter::Error,
+        LoggerLevel::TRACE => LevelFilter::Trace,
+    };
+    builder.filter_level(filter_level);
     let target = match rt_logger {
         None => Target::default(),
         Some(f) => {
@@ -24,6 +34,7 @@ fn logger_init(cfg: &CliConfig) {
             Target::Pipe(Box::new(file))
         },
     };
+
     builder.target(target);
     builder.init();
 }

@@ -1,25 +1,28 @@
 use anyhow::Result;
-use blockless;
+use blockless::{self, LoggerLevel};
 use blockless::{BlocklessConfig, DriverConfig, MultiAddr, Permission};
 use json::{self, JsonValue};
 use std::fs;
 
 pub(crate) struct CliConfig(pub(crate) BlocklessConfig);
 
+
 impl CliConfig {
     pub fn from_file(path: &str) -> Result<Self> {
         let values = fs::read(path)?;
         let file = std::str::from_utf8(&values)?;
         let json_obj = json::parse(file)?;
-        let fs_root_path: Option<String> = json_obj["fs_root_path"].as_str().map(|s| s.into());
+        let fs_root_path: Option<String> = json_obj["fs_root_path"].as_str().map(String::from);
         let drivers_root_path: Option<String> =
-            json_obj["drivers_root_path"].as_str().map(|s| s.to_string());
+            json_obj["drivers_root_path"].as_str().map(String::from);
         let limited_fuel: Option<u64> = json_obj["limited_fuel"].as_u64();
-        let runtime_logger = json_obj["runtime_logger"].as_str().map(|s| s.to_string());
+        let runtime_logger = json_obj["runtime_logger"].as_str().map(String::from);
+        let runtime_logger_level = json_obj["runtime_logger_level"].as_str().map(LoggerLevel::from);
         let limited_memory: Option<u64> = json_obj["limited_memory"].as_u64();
-        let extensions_path: Option<String> = json_obj["extensions_path"].as_str().map(|s| s.into());
+        let extensions_path: Option<String> = json_obj["extensions_path"].as_str().map(String::from);
         let stdin: Option<&str> = Some(json_obj["stdin"].as_str()).unwrap_or(None);
-
+        let stdout: Option<String> = json_obj["stdout"].as_str().map(String::from);
+        
         let drvs = match json_obj["drivers"] {
             JsonValue::Array(ref drvs_cfg) => {
                 let cfgs: Vec<DriverConfig> = drvs_cfg
@@ -74,6 +77,10 @@ impl CliConfig {
         bc.extensions_path(extensions_path);
         bc.fs_root_path(fs_root_path);
         bc.drivers(drvs);
+        stdout.map(|filename: String| {
+            bc.stdout(blockless::Stdout::FileName(filename));
+        });
+        runtime_logger_level.map(|l| bc.runtime_logger_level(l));
         bc.permisions(perms);
         bc.runtime_logger(runtime_logger);
         bc.drivers_root_path(drivers_root_path);
