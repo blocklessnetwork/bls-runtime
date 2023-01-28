@@ -12,6 +12,7 @@ blockless = {path = "../blockless"}
 anyhow = {workspace = true}
 json = "0.12"
 tokio = {version = "1", features = ["rt", "net"]}
-
+log = "0.4.17"
 [dependencies.env_logger]
 version = "0.8"
+

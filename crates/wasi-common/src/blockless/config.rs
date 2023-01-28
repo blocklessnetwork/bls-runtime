@@ -1,6 +1,30 @@
-use std::collections::HashMap;
-
 use crate::Permission;
+use std::{
+    collections::HashMap,
+    path::{Path, PathBuf},
+};
+
+pub enum LoggerLevel {
+    INFO,
+    WARN,
+    DEBUG,
+    ERROR,
+    TRACE,
+}
+
+impl From<&str> for LoggerLevel {
+
+    fn from(value: &str) -> Self {
+        match value {
+            "debug"|"DEBUG" => LoggerLevel::DEBUG,
+            "info"|"INFO" => LoggerLevel::INFO,
+            "warn"|"WARN" => LoggerLevel::WARN,
+            "trace"|"TRACE" => LoggerLevel::TRACE,
+            "error"|"ERROR" => LoggerLevel::ERROR,
+            _ => LoggerLevel::INFO,
+        }
+    }
+}
 
 pub enum Stdout {
     //no stdout.
@@ -40,6 +64,8 @@ pub struct BlocklessConfig {
     drivers: Vec<DriverConfig>,
     permisions: Vec<Permission>,
     fs_root_path: Option<String>,
+    runtime_logger: Option<String>,
+    runtime_logger_level: LoggerLevel,
     extensions_path: Option<String>,
     drivers_root_path: Option<String>,
     group_permisions: HashMap<String, Vec<Permission>>,
@@ -50,6 +76,14 @@ impl BlocklessConfig {
         &self.wasm_file
     }
 
+    pub fn runtime_logger_level_ref(&self) -> &LoggerLevel {
+        &self.runtime_logger_level
+    }
+
+    pub fn runtime_logger_level(&mut self, level: LoggerLevel) {
+        self.runtime_logger_level = level;
+    }
+
     pub fn fs_root_path(&mut self, r: Option<String>) {
         self.fs_root_path = r;
     }
@@ -58,6 +92,10 @@ impl BlocklessConfig {
         &self.permisions
     }
 
+    pub fn runtime_logger(&mut self, l: Option<String>) {
+        self.runtime_logger = l;
+    }
+    
     pub fn permisions(&mut self, perms: Vec<Permission>) {
         let mut g_perms: HashMap<String, Vec<_>> = HashMap::new();
         perms.iter().for_each(|p| {
@@ -71,11 +109,11 @@ impl BlocklessConfig {
     }
 
     pub fn fs_root_path_ref(&self) -> Option<&str> {
-        self.fs_root_path.as_ref().map(|x| x.as_str())
+        self.fs_root_path.as_ref().map(String::as_ref)
     }
 
     pub fn drivers_root_path_ref(&self) -> Option<&str> {
-        self.drivers_root_path.as_ref().map(|x| x.as_str())
+        self.drivers_root_path.as_ref().map(String::as_ref)
     }
 
     pub fn drivers_root_path(&mut self, r: Option<String>) {
@@ -95,9 +133,11 @@ impl BlocklessConfig {
             limited_memory: None,
             extensions_path: None,
             drivers_root_path: None,
+            runtime_logger: None,
             drivers: Vec::new(),
             permisions: Default::default(),
             group_permisions: HashMap::new(),
+            runtime_logger_level: LoggerLevel::INFO,
         }
     }
 
@@ -113,6 +153,16 @@ impl BlocklessConfig {
     /// if root_path is not setting, the stdout file will use Inherit
     pub fn stdout(&mut self, stdout: Stdout) {
         self.stdout = stdout
+    }
+
+    /// the runtime log file name, if the value is None
+    /// the runtime log will ouput to Stdout.
+    /// the file is in fs_root_path
+    pub fn runtime_logger_ref(&self) -> Option<PathBuf> {
+        self.fs_root_path
+            .as_ref()
+            .zip(self.runtime_logger.as_ref())
+            .map(|f| Path::new(f.0).join(f.1))
     }
 
     pub fn stdin(&mut self, stdin: String) {

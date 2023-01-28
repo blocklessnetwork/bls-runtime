@@ -71,6 +71,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
                 let mut file_opts = std::fs::File::options();
                 file_opts.create(true);
                 file_opts.append(true);
+                file_opts.write(true);
 
                 if let Some(f) = file_opts.open(file_name).ok().map(|file| {
                     let file = cap_std::fs::File::from_std(file);
