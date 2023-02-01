@@ -66,7 +66,12 @@ pub(crate) async fn http_req(
 
     // build the headers from the options json  
     let mut headers = reqwest::header::HeaderMap::new();
-    let header_obj = &json["headers"];
+    let header_value = &json["headers"];
+    let header_obj = match json::parse(header_value.as_str().unwrap()) {
+        Ok(o) => o,
+        Err(_) => return Err(HttpErrorKind::RequestError),
+    };
+
     if header_obj.is_object() {
         for (key, value) in header_obj.entries() {
             headers.insert(
