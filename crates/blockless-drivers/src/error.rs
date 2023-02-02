@@ -46,6 +46,7 @@ pub enum HttpErrorKind {
     InvalidEncoding,
     InvalidUrl,
     RequestError,
+    HeadersValidationError,
     RuntimeError,
     TooManySessions,
     PermissionDeny,
@@ -70,6 +71,7 @@ impl std::fmt::Display for HttpErrorKind {
             &Self::RuntimeError => write!(f, "Runtime error"),
             &Self::TooManySessions => write!(f, "Too many sessions"),
             &Self::PermissionDeny => write!(f, "Permision deny."),
+            &Self::HeadersValidationError => write!(f, "Headers are malformed."),
         }
     }
 }

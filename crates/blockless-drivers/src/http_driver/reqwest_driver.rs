@@ -63,7 +63,24 @@ pub(crate) async fn http_req(
     let read_timeout = json["readTimeout"]
         .as_u64()
         .map(|s| Duration::from_secs(s));
-    
+
+    // build the headers from the options json  
+    let mut headers = reqwest::header::HeaderMap::new();
+    let header_value = &json["headers"];
+    let header_obj = match json::parse(header_value.as_str().unwrap()) {
+        Ok(o) => o,
+        Err(_) => return Err(HttpErrorKind::HeadersValidationError),
+    };
+
+    if header_obj.is_object() {
+        for (key, value) in header_obj.entries() {
+            headers.insert(
+                reqwest::header::HeaderName::from_bytes(key.as_bytes()).unwrap(),
+                reqwest::header::HeaderValue::from_str(value.as_str().unwrap()).unwrap()
+            );
+        }
+    }
+
     let mut client_builder = reqwest::ClientBuilder::new();
     if connect_timeout.is_some() {
         client_builder = client_builder.connect_timeout(connect_timeout.unwrap());
@@ -79,6 +96,7 @@ pub(crate) async fn http_req(
         _ => return Err(HttpErrorKind::RequestError),
     };
     let resp = req_builder
+        .headers(headers)
         .send()
         .await
         .map_err(|e| {
