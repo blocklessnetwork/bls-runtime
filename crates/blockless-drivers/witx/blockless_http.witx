@@ -30,6 +30,8 @@
     $invalid_driver
     ;;;permision deny
     $permission_deny
+    ;;;malformed headers
+    $headers_validation_error
   )
 )
 ;;; Handles for the HTTP extensions

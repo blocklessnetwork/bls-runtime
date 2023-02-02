@@ -69,7 +69,7 @@ pub(crate) async fn http_req(
     let header_value = &json["headers"];
     let header_obj = match json::parse(header_value.as_str().unwrap()) {
         Ok(o) => o,
-        Err(_) => return Err(HttpErrorKind::RequestError),
+        Err(_) => return Err(HttpErrorKind::HeadersValidationError),
     };
 
     if header_obj.is_object() {
