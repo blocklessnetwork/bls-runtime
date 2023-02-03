@@ -31,7 +31,13 @@ rustix = {workspace = true}
 [target.'cfg(windows)'.dependencies]
 winapi = "0.3"
 lazy_static = "1.4"
-io-extras = "0.13.0"
+io-extras = "0.15.0"
+
+[target.'cfg(windows)'.dependencies.windows-sys]
+workspace = true
+features = [
+    "Win32_Foundation",
+]
 
 [dev-dependencies]
 tempfile = "3.1.0"
