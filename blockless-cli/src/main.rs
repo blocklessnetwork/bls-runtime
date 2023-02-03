@@ -68,7 +68,6 @@ fn main() {
             eprintln!("The wasm app crash, please check the log file for detail messages.");
         }));
         let exit_code = blockless_run(cfg.0).await;
-        println!("The wasm execute finish, the exit code: {}", exit_code.code);
         info!("The wasm execute finish, the exit code: {}", exit_code.code);
     });
 }
