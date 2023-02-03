@@ -30,5 +30,3 @@ wasi-cap-std-sync = {path = "crates/wasi-common/cap-std-sync"}
 blockless-drivers = {path = "crates/blockless-drivers"}
 windows-sys = "0.36.0"
 
-[target.'cfg(windows)'.dev-dependencies]
-windows-sys = { workspace = true, features = ["Win32_System_Memory"] }
