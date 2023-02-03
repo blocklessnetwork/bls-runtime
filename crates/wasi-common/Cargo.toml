@@ -21,8 +21,14 @@ bitflags = "1.2"
 rustix = {workspace = true}
 
 [target.'cfg(windows)'.dependencies]
-io-extras = "0.13.2"
-winapi = "0.3"
+io-extras = "0.15.0"
+
+[target.'cfg(windows)'.dependencies.windows-sys]
+workspace = true
+features = [
+    "Win32_Foundation",
+    "Win32_Networking_WinSock",
+]
 
 [badges]
 maintenance = { status = "actively-developed" }
