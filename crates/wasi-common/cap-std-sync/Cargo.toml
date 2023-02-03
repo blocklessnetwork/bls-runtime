@@ -26,11 +26,11 @@ io-lifetimes = { workspace = true, default-features = false }
 is-terminal = "0.3.0"
 
 [target.'cfg(unix)'.dependencies]
-rustix = {workspace = true}
+rustix = { workspace = true, features = ["fs"] }
 
 [target.'cfg(windows)'.dependencies]
-winapi = "0.3"
-lazy_static = "1.4"
+once_cell = { workspace = true }
+rustix = { workspace = true, features = ["net"] }
 io-extras = "0.15.0"
 
 [target.'cfg(windows)'.dependencies.windows-sys]
