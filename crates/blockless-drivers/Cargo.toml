@@ -31,8 +31,12 @@ url = "2.2"
 rust-s3 = "0.32.0"
 futures-core = "0.3.25"
 futures-util = "0.3.25"
-rusqlite = "0.28"
 md5 = "0.7.0"
+
+[dependencies.rusqlite]
+version = "0.28"
+features = ["bundled"]
+
 
 [dev-dependencies]
 tempdir = "0.3.7"
