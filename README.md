@@ -4,26 +4,26 @@
 
 ## Features
 
-The runtime is depeneded on wasm implements. so it have follow features of wasm.
+The runtime is built on WebAssembly (Wasm) technology and therefore has the following features:
 
-- Fast. Built on the optimizing code generator to quickly generate high-quality machine code. runtime is also optimized for cases such as efficient instantiation, low-overhead transitions between the embedder and wasm, and scalability of concurrent instances.
+- Speed: It is built with an optimizing code generator to generate high-quality machine code quickly. The runtime is also optimized for efficient instantiation, low-overhead transitions between the embedder and Wasm, and scalability of concurrent instances.
 
-- Extends. Run standard bytecode programs compiled from C/C++, Rust, Swift, AssemblyScript, or Kotlin source code. It also supports mixing of those languages (e.g., to use Rust to implement a JavaScript API).
+- Compatibility: It supports running standard bytecode programs compiled from various programming languages such as C/C++, Rust, Swift, AssemblyScript, or Kotlin. It also supports mixing these languages (e.g. using Rust to implement a JavaScript API).
 
-- Configurable. Support configure file to provide many options such as further means of restricting WebAssembly beyond its basic guarantees such as its CPU , Memory consumption and etc.
+- Customizability: The runtime provides a configurable file to offer various options such as additional restrictions on WebAssembly beyond its basic guarantees, including CPU and memory consumption.
 
 
-## How to build
-1. Install the rust with rustup, please visit the site 'https://rustup.rs/'.
+## Building the Project
+1. Install Rust by visiting the website 'https://rustup.rs/'
 
-2. Use follow command for build the project.
+2. Run the following command to build the project:
 ```
 $ cargo build
 ```
 
-## Language Support
+## Supported Languages
 
-You can use a variety of different languages write the app of blockless :
+Blockless supports a variety of programming languages including:
 
 - [Go] - Tiny Go support.
 - [Rust] - Blockless crate.
@@ -38,41 +38,49 @@ You can use a variety of different languages write the app of blockless :
 
 ```json
 {
-    "fs_root_path": "/opt/blockless/app",
-    "limited_fuel": 1000,
-    "limited_memory": 20,
-    "entry": "/opt/blockless/app/main.wasi",
+    "fs_root_path": "/Users/join/Downloads", 
+    "drivers_root_path": "/Users/join/Downloads", 
+    "runtime_logger": "runtime.log", 
+    "limited_fuel": 200000000,
+    "limited_memory": 30,
+    "entry": "/Users/join/Downloads/sdk-assemblyscript/build/release.wasm",
     "permissions": [
-        "https://blockless-website.vercel.app"
-        "file://test.txt"
+        "http://httpbin.org/anything",
+        "file://a.go"
     ]
 }
+
+
 ```
 
-- fs_root_path: the app root file system path, when it opened, the app will use the file system. it's the "/" in app
+- `fs_root_path`: The root file system path of the app. When the app is opened, it will use this file system as its "/".
 
-- limited_fuel: the limited of instructions, in the example the instructions is 1000, if the app is running out of the limited will be interruptted, like follow:
+- `limited_fuel`: The limit of instructions the app can execute. In the example, the limit is 200000000. If the app exceeds the limit, it will be interrupted and the following message will be displayed:
 
 ```log
 [2022-06-07T22:12:47Z ERROR blockless] All fuel is consumed, the app exited, fuel consumed 2013, Max Fuel is 2000.
 ```
 
-- limited_memory: the max size of memory, in the example the max memory is 20 pages, 1 page is 64k, so the app only use 20*64k physical memory.
+- `limited_memory`: The maximum size of memory that the app can use. In the example, the maximum is 20 pages, where each page is 64k. So, the app can only use 20 * 64k of physical memory.
 
-- entry: the entry funcion file of app. please see the example of the app.
+- `entry`: The entry function file of the app. Please refer to the app example for more information.
 
-- permissions: the resources permissions, app can't use the resources out of the permission list. if you use the resources that are not in permissions list, the app will get the error code of "Permission Deny". if you panic in your app, you will get the error like follow example.
+- `permissions`: a list of resources that the app is allowed to access. If the app tries to access a resource that is not in this list, it will receive a "Permission Deny" error. If the app panics, the log will show the following message:
 
 ```log
 panic: Permission deny
 [2022-06-09T02:12:39Z ERROR blockless] Fuel 137607:200000000. wasm trap: wasm `unreachable` instruction executed
 ```
 
+- `runtime_logger`: Specifies the path to the log file for the runtime environment. In the example above, all log output will be written to the file /path/to/log/file.log.
+
+- `drivers_root_path`: Specifies the root path for the drivers used by the runtime environment. In the example above, the drivers will be stored in the directory /path/to/drivers.
+
 for the file permission the url is start with "file://", if you use "file:///", should not work.
 
-## How to run the app
+## Using the runtime from the command line
 
-The runtime expects an `stdin` , and can also parse environment variables explictly by passing a `;` seperated list to the `BLS_LIST_VARS` variable. 
+The runtime requires an input from stdin and also accepts environment variables passed as a list separated by ; through the BLS_LIST_VARS variable. Here's an example of how to run the app:
 
 ```bash
 $ "echo "FOO" | env THIS_IS_MY_VAR=FOO BLS_LIST_VARS=THIS_IS_MY_VAR ~/.bls/runtime/blockless-cli ./build/manifest.json"
