@@ -57,6 +57,12 @@ pub(crate) async fn http_req(
         Some(s) => String::from(s),
         None => return Err(HttpErrorKind::RequestError),
     };
+
+    let mut body = None;
+    if let Some(b) = json["body"].as_str() {
+        body = Some(b.to_string());
+    }
+
     let connect_timeout = json["connectTimeout"]
         .as_u64()
         .map(|s| Duration::from_secs(s));
@@ -97,6 +103,7 @@ pub(crate) async fn http_req(
     };
     let resp = req_builder
         .headers(headers)
+        .body(body.unwrap_or_default())
         .send()
         .await
         .map_err(|e| {
