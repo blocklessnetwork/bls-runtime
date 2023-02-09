@@ -22,6 +22,7 @@ impl CliConfig {
         let extensions_path: Option<String> = json_obj["extensions_path"].as_str().map(String::from);
         let stdin: Option<&str> = Some(json_obj["stdin"].as_str()).unwrap_or(None);
         let stdout: Option<String> = json_obj["stdout"].as_str().map(String::from);
+        let debug_info: Option<bool> = json_obj["debug_info"].as_bool();
         
         let drvs = match json_obj["drivers"] {
             JsonValue::Array(ref drvs_cfg) => {
@@ -80,6 +81,8 @@ impl CliConfig {
         stdout.map(|filename: String| {
             bc.stdout(blockless::Stdout::FileName(filename));
         });
+        // the set debug mode
+        debug_info.map(|b| bc.debug_info(b));
         runtime_logger_level.map(|l| bc.runtime_logger_level(l));
         bc.permisions(perms);
         bc.runtime_logger(runtime_logger);

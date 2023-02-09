@@ -26,6 +26,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
     DriverConetxt::init_built_in_drivers(drivers_root_path);
 
     let mut conf = Config::new();
+    conf.debug_info(b_conf.get_debug_info());
     conf.async_support(true);
     if let Some(_) = b_conf.get_limited_fuel() {
         //fuel is enable.

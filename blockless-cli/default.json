@@ -4,6 +4,7 @@
     "runtime_logger": "runtime.log", 
     "limited_fuel": 200000000,
     "limited_memory": 30,
+    "debug_info": false,
     "entry": "/Users/join/Downloads/sdk-assemblyscript/build/release.wasm",
     "permissions": [
         "http://httpbin.org/anything",
