@@ -57,6 +57,7 @@ impl DriverConfig {
 pub struct BlocklessConfig {
     stdin: String,
     stdout: Stdout,
+    debug_info: bool,
     wasm_file: String,
     limited_fuel: Option<u64>,
     limited_time: Option<u64>,
@@ -72,6 +73,15 @@ pub struct BlocklessConfig {
 }
 
 impl BlocklessConfig {
+
+    pub fn get_debug_info(&self) -> bool {
+        self.debug_info
+    }
+
+    pub fn debug_info(&mut self, b: bool) {
+        self.debug_info = b
+    }
+
     pub fn wasm_file_ref(&self) -> &str {
         &self.wasm_file
     }
@@ -122,6 +132,7 @@ impl BlocklessConfig {
 
     pub fn new(wasm_file: &str) -> BlocklessConfig {
         Self {
+            debug_info: false,
             wasm_file: String::from(wasm_file),
             fs_root_path: None,
             stdout: Stdout::Inherit,
