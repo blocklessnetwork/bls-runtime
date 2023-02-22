@@ -1,13 +1,17 @@
 mod config;
 use blockless::{blockless_run, LoggerLevel};
 use config::CliConfig;
+use anyhow::Result;
 use std::{env, io};
 use env_logger::Target;
 use tokio::runtime::Builder;
 use log::{error, info, LevelFilter};
 use std::fs;
-
-
+use std::path::Path;
+use rust_car::{
+    reader::{self, CarReader},
+    utils::ipld_write
+};
 
 fn logger_init(cfg: &CliConfig) {
     let rt_logger = cfg.0.runtime_logger_ref();
@@ -39,6 +43,30 @@ fn logger_init(cfg: &CliConfig) {
     builder.init();
 }
 
+fn load_cli_config(conf_path: &str) -> Result<CliConfig> {
+    let ext = Path::new(conf_path).extension();
+    let cfg = ext.map(|ext| ext.to_str().map(str::to_ascii_lowercase)).flatten();
+    let cli_config = match cfg {
+        Some(ref f) if f == "car" => {
+            let file = fs::OpenOptions::new()
+                .read(true)
+                .open(f)?;
+            let mut car_reader = reader::new_v1(file)?;
+            let cid = car_reader.search_file_cid("config.json").ok();
+            match cid {
+                Some(c) => {
+                    let mut data = Vec::new();
+                    ipld_write(&mut car_reader, c, &mut data)?;
+                    Some(CliConfig::from_data(data))
+                }
+                None => None,
+            }
+        },
+        _ => None,
+    };
+    cli_config.unwrap_or_else(|| CliConfig::from_file(conf_path))
+}
+
 fn main() {
     let args = env::args().collect::<Vec<_>>();
     let path = args.iter().nth(1);
@@ -48,8 +76,8 @@ fn main() {
         eprintln!("usage: {} [path]\npath: configure file path", args[0]);
         return;
     }
-
-    let mut cfg = CliConfig::from_file(path.unwrap()).unwrap();
+    let path = path.unwrap();
+    let mut cfg = load_cli_config(path).unwrap();
     logger_init(&cfg);
     if cfg.0.stdin_ref().is_empty() {
         io::stdin().read_line(&mut std_buffer).unwrap();

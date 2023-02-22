@@ -8,10 +8,9 @@ pub(crate) struct CliConfig(pub(crate) BlocklessConfig);
 
 
 impl CliConfig {
-    pub fn from_file(path: &str) -> Result<Self> {
-        let values = fs::read(path)?;
-        let file = std::str::from_utf8(&values)?;
-        let json_obj = json::parse(file)?;
+
+    fn from_json_string(json_string: &str) -> Result<Self> {
+        let json_obj = json::parse(json_string)?;
         let fs_root_path: Option<String> = json_obj["fs_root_path"].as_str().map(String::from);
         let drivers_root_path: Option<String> =
             json_obj["drivers_root_path"].as_str().map(String::from);
@@ -93,7 +92,17 @@ impl CliConfig {
         if stdin.is_some() {
             bc.stdin(stdin.unwrap().to_string());
         }
-
         Ok(CliConfig(bc))
+    }
+
+    pub fn from_data(data: Vec<u8>) -> Result<Self> {
+        let json_string = std::str::from_utf8(&data[..])?;
+        Self::from_json_string(json_string)
+    }
+
+    pub fn from_file(path: &str) -> Result<Self> {
+        let values = fs::read(path)?;
+        let json_string = std::str::from_utf8(&values)?;
+        Self::from_json_string(json_string)
     }
 }
