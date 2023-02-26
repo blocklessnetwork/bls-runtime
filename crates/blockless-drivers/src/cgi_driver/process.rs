@@ -30,15 +30,13 @@ fn get_db(path: impl AsRef<Path>) -> MutexGuard<'static, Option<DB>> {
             db.replace( DB::new(path)
             .map_err(|e| error!("error open db {}", e))
             .ok().unwrap());
-            db.as_mut()
-                .map(|db| {
+            db.as_mut().and_then(|db| {
                 if db.create_schema().is_ok() {
                     Some(db)
                 } else {
                     None
                 }
-            })
-            .flatten();
+            });
         }
         db
     }

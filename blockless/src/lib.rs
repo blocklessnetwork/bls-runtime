@@ -55,12 +55,11 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
     wasmtime_wasi::add_to_linker(&mut linker, |s| s).unwrap();
     let root_dir = b_conf
         .fs_root_path_ref()
-        .map(|path| {
+        .and_then(|path| {
             std::fs::File::open(path)
                 .ok()
                 .map(|path| wasmtime_wasi::Dir::from_std_file(path))
-        })
-        .flatten();
+        });
     let mut builder = WasiCtxBuilder::new().inherit_args().unwrap();
     //stdout file process for setting.
     match b_conf.stdout_ref() {
@@ -90,7 +89,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
         &Stdout::Inherit => {
             builder = builder.inherit_stdout();
         }
-        Stdout::Null => {}
+        &Stdout::Null => {}
     }
     if let Some(d) = root_dir {
         builder = builder.preopened_dir(d, "/").unwrap();

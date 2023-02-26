@@ -45,7 +45,7 @@ fn logger_init(cfg: &CliConfig) {
 
 fn load_cli_config(conf_path: &str) -> Result<CliConfig> {
     let ext = Path::new(conf_path).extension();
-    let cfg = ext.map(|ext| ext.to_str().map(str::to_ascii_lowercase)).flatten();
+    let cfg = ext.and_then(|ext| ext.to_str().map(str::to_ascii_lowercase));
     let cli_config = match cfg {
         Some(ref f) if f == "car" => {
             let file = fs::OpenOptions::new()
