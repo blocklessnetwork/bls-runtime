@@ -2,7 +2,7 @@ mod config;
 use blockless::{blockless_run, LoggerLevel};
 use config::CliConfig;
 use anyhow::Result;
-use std::{env, io};
+use std::{env::{self, VarError}, io};
 use env_logger::Target;
 use tokio::runtime::Builder;
 use log::{error, info, LevelFilter};
@@ -43,6 +43,26 @@ fn logger_init(cfg: &CliConfig) {
     builder.init();
 }
 
+struct EnvVar {
+    pub name: String,
+    pub value: String,
+}
+
+fn env_variables() -> Result<Vec<EnvVar>> {
+    let mut vars = Vec::new();
+    match std::env::var("ENV_ROOT_PATH") {
+        Ok(s) => {
+            vars.push(EnvVar {
+                name: "ENV_ROOT_PATH".to_string(),
+                value: s,
+            });
+        },
+        Err(VarError::NotPresent) => {},
+        Err(e) => return Err(e.into()),
+    }
+    Ok(vars)
+}
+
 fn load_cli_config(conf_path: &str) -> Result<CliConfig> {
     let ext = Path::new(conf_path).extension();
     let cfg = ext.and_then(|ext| ext.to_str().map(str::to_ascii_lowercase));
@@ -52,15 +72,15 @@ fn load_cli_config(conf_path: &str) -> Result<CliConfig> {
                 .read(true)
                 .open(f)?;
             let mut car_reader = reader::new_v1(file)?;
-            let cid = car_reader.search_file_cid("config.json").ok();
-            match cid {
-                Some(c) => {
-                    let mut data = Vec::new();
-                    ipld_write(&mut car_reader, c, &mut data)?;
-                    Some(CliConfig::from_data(data))
-                }
-                None => None,
+            let cid = car_reader.search_file_cid("config.json")?;
+            let mut data = Vec::new();
+            ipld_write(&mut car_reader, cid, &mut data)?;
+            let mut raw_json = String::from_utf8(data)?;
+            let vars = env_variables()?;
+            for var in vars {
+                raw_json = raw_json.replace(&var.name, &var.value);
             }
+            Some(CliConfig::from_data(raw_json.into()))
         },
         _ => None,
     };
