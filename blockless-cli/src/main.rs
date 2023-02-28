@@ -53,7 +53,7 @@ fn env_variables() -> Result<Vec<EnvVar>> {
     match std::env::var("ENV_ROOT_PATH") {
         Ok(s) => {
             vars.push(EnvVar {
-                name: "ENV_ROOT_PATH".to_string(),
+                name: "$ENV_ROOT_PATH".to_string(),
                 value: s,
             });
         },
@@ -61,6 +61,22 @@ fn env_variables() -> Result<Vec<EnvVar>> {
         Err(e) => return Err(e.into()),
     }
     Ok(vars)
+}
+
+fn load_from_car<T>(file: T) -> Result<CliConfig>
+where
+    T: std::io::Read + std::io::Seek
+{
+    let mut car_reader = reader::new_v1(file)?;
+    let cid = car_reader.search_file_cid("config.json")?;
+    let mut data = Vec::new();
+    ipld_write(&mut car_reader, cid, &mut data)?;
+    let mut raw_json = String::from_utf8(data)?;
+    let vars = env_variables()?;
+    for var in vars {
+        raw_json = raw_json.replace(&var.name, &var.value);
+    }
+    CliConfig::from_data(raw_json.into())
 }
 
 fn load_cli_config(conf_path: &str) -> Result<CliConfig> {
@@ -71,16 +87,7 @@ fn load_cli_config(conf_path: &str) -> Result<CliConfig> {
             let file = fs::OpenOptions::new()
                 .read(true)
                 .open(f)?;
-            let mut car_reader = reader::new_v1(file)?;
-            let cid = car_reader.search_file_cid("config.json")?;
-            let mut data = Vec::new();
-            ipld_write(&mut car_reader, cid, &mut data)?;
-            let mut raw_json = String::from_utf8(data)?;
-            let vars = env_variables()?;
-            for var in vars {
-                raw_json = raw_json.replace(&var.name, &var.value);
-            }
-            Some(CliConfig::from_data(raw_json.into()))
+            Some(load_from_car(file))
         },
         _ => None,
     };
@@ -118,4 +125,51 @@ fn main() {
         let exit_code = blockless_run(cfg.0).await;
         info!("The wasm execute finish, the exit code: {}", exit_code.code);
     });
+}
+
+
+mod test {
+    #![allow(unused)]
+    use rust_car::{
+        Ipld,
+        header::CarHeader,
+        writer::{self as  car_writer, CarWriter}, unixfs::{UnixFs, Link}, codec::Encoder
+    };
+    use super::*;
+
+    #[test]
+    fn test_load_from_car() {
+        let mut buf = Vec::new();
+        let mut write_car = || {
+            let output = std::io::Cursor::new(&mut buf);
+            let mut writer = car_writer::new_v1_default_roots(output).unwrap();
+            let data = br#"{
+                "fs_root_path": "$ENV_ROOT_PATH", 
+                "drivers_root_path": "$ENV_ROOT_PATH/drivers", 
+                "runtime_logger": "runtime.log", 
+                "limited_fuel": 200000000,
+                "limited_memory": 30,
+                "debug_info": false,
+                "entry": "release.wasm",
+                "permissions": [
+                    "http://httpbin.org/anything",
+                    "file://a.go"
+                ]
+            }"#.to_vec();
+            let d_len = data.len();
+            let f_cid = writer.write_ipld(Ipld::Bytes(data)).unwrap();
+            let mut unixfs = UnixFs::new_directory();
+            unixfs.add_link(Link::new(f_cid, "config.json".to_string(), d_len as _));
+            let root_cid = writer.write_ipld(unixfs.encode().unwrap());
+            writer.rewrite_header(CarHeader::new_v1(vec![root_cid.unwrap()])).unwrap();
+            writer.flush().unwrap();
+        };
+        write_car();
+        let current_path = std::env::current_dir().unwrap();
+        std::env::set_var("ENV_ROOT_PATH", "target");
+        let input = std::io::Cursor::new(&mut buf);
+        let cfg = load_from_car(input).unwrap();
+        assert_eq!(cfg.0.fs_root_path_ref(), Some("target"));
+        assert_eq!(cfg.0.drivers_root_path_ref(), Some("target/drivers"));
+    }
 }
