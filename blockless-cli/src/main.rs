@@ -2,7 +2,7 @@ mod config;
 use blockless::{blockless_run, LoggerLevel};
 use config::CliConfig;
 use anyhow::Result;
-use std::{env::{self, VarError}, io};
+use std::{env::{self, VarError}, io, fs::File};
 use env_logger::Target;
 use tokio::runtime::Builder;
 use log::{error, info, LevelFilter};
@@ -10,7 +10,7 @@ use std::fs;
 use std::path::Path;
 use rust_car::{
     reader::{self, CarReader},
-    utils::ipld_write
+    utils::{ipld_write, extract_ipld}
 };
 
 fn logger_init(cfg: &CliConfig) {
@@ -63,20 +63,31 @@ fn env_variables() -> Result<Vec<EnvVar>> {
     Ok(vars)
 }
 
-fn load_from_car<T>(file: T) -> Result<CliConfig>
+fn load_from_car<T>(car_reader: &mut T) -> Result<CliConfig>
 where
-    T: std::io::Read + std::io::Seek
+    T: CarReader
 {
-    let mut car_reader = reader::new_v1(file)?;
     let cid = car_reader.search_file_cid("config.json")?;
     let mut data = Vec::new();
-    ipld_write(&mut car_reader, cid, &mut data)?;
+    ipld_write(car_reader, cid, &mut data)?;
     let mut raw_json = String::from_utf8(data)?;
     let vars = env_variables()?;
     for var in vars {
         raw_json = raw_json.replace(&var.name, &var.value);
     }
-    CliConfig::from_data(raw_json.into())
+    let cli_cfg = CliConfig::from_data(raw_json.into())?;
+    Ok(cli_cfg)
+}
+
+fn load_extract_from_car(f: File) -> Result<CliConfig> {
+    let mut reader = reader::new_v1(f)?;
+    let cfg = load_from_car(&mut reader)?;
+    let header = reader.header();
+    let rootfs = cfg.0.fs_root_path_ref().expect("root path must be config in car file");
+    for rcid in header.roots() {
+        extract_ipld(&mut reader, rcid, Some(rootfs))?;
+    }
+    Ok(cfg)
 }
 
 fn load_cli_config(conf_path: &str) -> Result<CliConfig> {
@@ -87,7 +98,7 @@ fn load_cli_config(conf_path: &str) -> Result<CliConfig> {
             let file = fs::OpenOptions::new()
                 .read(true)
                 .open(f)?;
-            Some(load_from_car(file))
+            Some(load_extract_from_car(file))
         },
         _ => None,
     };
@@ -133,7 +144,9 @@ mod test {
     use rust_car::{
         Ipld,
         header::CarHeader,
-        writer::{self as  car_writer, CarWriter}, unixfs::{UnixFs, Link}, codec::Encoder
+        writer::{self as  car_writer, CarWriter}, 
+        unixfs::{UnixFs, Link}, 
+        codec::Encoder
     };
     use super::*;
 
@@ -150,7 +163,21 @@ mod test {
                 "limited_fuel": 200000000,
                 "limited_memory": 30,
                 "debug_info": false,
-                "entry": "release.wasm",
+                "entry": "release",
+                "modules": [
+                    {
+                        "file": "lib.wasm",
+                        "name": "lib",
+                        "type": "module",
+                        "md5": "d41d8cd98f00b204e9800998ecf8427e"
+                    },
+                    {
+                        "file": "release.wasm",
+                        "name": "release",
+                        "type": "entry",
+                        "md5": "d41d8cd98f00b204e9800998ecf8427e"
+                    }
+                ],
                 "permissions": [
                     "http://httpbin.org/anything",
                     "file://a.go"
@@ -168,8 +195,10 @@ mod test {
         let current_path = std::env::current_dir().unwrap();
         std::env::set_var("ENV_ROOT_PATH", "target");
         let input = std::io::Cursor::new(&mut buf);
-        let cfg = load_from_car(input).unwrap();
+        let mut car_reader = reader::new_v1(input).unwrap();
+        let cfg = load_from_car(&mut car_reader).unwrap();
         assert_eq!(cfg.0.fs_root_path_ref(), Some("target"));
         assert_eq!(cfg.0.drivers_root_path_ref(), Some("target/drivers"));
+        assert!(matches!(cfg.0.wasm_file_module(), Some(_)));
     }
 }
