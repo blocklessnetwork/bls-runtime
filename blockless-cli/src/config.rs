@@ -67,7 +67,7 @@ impl CliConfig {
                 modules_cfg.iter().map(|c| {
                     let name = c["name"].as_str().map(String::from).unwrap_or_default();
                     let file = c["file"].as_str().map(String::from).unwrap_or_default();
-                    let module_type = c["module_type"].as_str().map(|s| {
+                    let module_type = c["type"].as_str().map(|s| {
                         ModuleType::from_str(s)
                     })
                     .unwrap_or(ModuleType::Module);

@@ -2,7 +2,7 @@ mod config;
 use blockless::{blockless_run, LoggerLevel};
 use config::CliConfig;
 use anyhow::Result;
-use std::{env::{self, VarError}, io, fs::File};
+use std::{env, io, fs::File, path::PathBuf};
 use env_logger::Target;
 use tokio::runtime::Builder;
 use log::{error, info, LevelFilter};
@@ -48,16 +48,23 @@ struct EnvVar {
     pub value: String,
 }
 
-fn env_variables() -> Result<Vec<EnvVar>> {
+fn env_variables(cid: String) -> Result<Vec<EnvVar>> {
     let mut vars = Vec::new();
     match std::env::var("ENV_ROOT_PATH") {
         Ok(s) => {
+            let env_root = s.clone();
+            let path: PathBuf = s.into();
+            let root_path = path.join(cid);
+            let path: String = root_path.to_str().unwrap_or_default().into();
+            vars.push(EnvVar { 
+                name: "$ROOT".to_string(), 
+                value: path,
+            });
             vars.push(EnvVar {
                 name: "$ENV_ROOT_PATH".to_string(),
-                value: s,
+                value: env_root,
             });
         },
-        Err(VarError::NotPresent) => {},
         Err(e) => return Err(e.into()),
     }
     Ok(vars)
@@ -71,7 +78,8 @@ where
     let mut data = Vec::new();
     ipld_write(car_reader, cid, &mut data)?;
     let mut raw_json = String::from_utf8(data)?;
-    let vars = env_variables()?;
+    let roots = car_reader.header().roots();
+    let vars = env_variables(roots[0].to_string())?;
     for var in vars {
         raw_json = raw_json.replace(&var.name, &var.value);
     }
@@ -168,13 +176,13 @@ mod test {
                 "entry": "release",
                 "modules": [
                     {
-                        "file": "lib.wasm",
+                        "file": "$ROOT/lib.wasm",
                         "name": "lib",
                         "type": "module",
                         "md5": "d41d8cd98f00b204e9800998ecf8427e"
                     },
                     {
-                        "file": "release.wasm",
+                        "file": "$ROOT/release.wasm",
                         "name": "release",
                         "type": "entry",
                         "md5": "d41d8cd98f00b204e9800998ecf8427e"
@@ -198,12 +206,14 @@ mod test {
         std::env::set_var("ENV_ROOT_PATH", "target");
         let input = std::io::Cursor::new(&mut buf);
         let mut car_reader = reader::new_v1(input).unwrap();
+        let root_cid = car_reader.header().roots()[0];
         let cfg = load_from_car(&mut car_reader).unwrap();
         assert_eq!(cfg.0.fs_root_path_ref(), Some("target"));
         assert_eq!(cfg.0.drivers_root_path_ref(), Some("target/drivers"));
         assert!(matches!(cfg.0.wasm_file_module(), Some(_)));
         if let Some(c) = cfg.0.wasm_file_module() {
             assert!(matches!(c.module_type, ModuleType::Entry));
+            assert_eq!(c.file, format!("target/{}/release.wasm", root_cid.to_string()));
         }
     }
 }

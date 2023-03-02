@@ -54,7 +54,7 @@ impl DriverConfig {
     }
 }
 
-#[derive(Copy, Clone)]
+#[derive(Copy, Clone, Debug)]
 pub enum ModuleType {
     Module,
     Entry,
@@ -71,6 +71,7 @@ impl ModuleType {
 
 }
 
+#[derive(Debug)]
 pub struct BlocklessModule {
     pub module_type: ModuleType,
     pub name: String,
