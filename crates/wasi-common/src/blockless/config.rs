@@ -71,7 +71,7 @@ impl ModuleType {
 
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct BlocklessModule {
     pub module_type: ModuleType,
     pub name: String,

@@ -99,6 +99,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
     load_driver(drivers);
     let fuel = b_conf.get_limited_fuel();
     let wasm_file: String = b_conf.wasm_file_ref().into();
+    let is_carfile = b_conf.is_carfile();
     ctx.blockless_config = Some(b_conf);
 
     let mut store = Store::new(&engine, ctx);
@@ -109,10 +110,15 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
         });
     }
 
-    // Instantiate our module with the imports we've created, and run it.
-    let module = Module::from_file(&engine, &wasm_file).unwrap();
-    linker.module(&mut store, "", &module).unwrap();
-    let inst = linker.instantiate_async(&mut store, &module).await.unwrap();
+    let inst = if is_carfile {
+        let module = link_modules(&mut linker, &mut store).unwrap();
+        linker.instantiate_async(&mut store, &module).await.unwrap()
+    } else {
+        // Instantiate our module with the imports we've created, and run it.
+        let module = Module::from_file(&engine, &wasm_file).unwrap();
+        linker.module(&mut store, "", &module).unwrap();
+        linker.instantiate_async(&mut store, &module).await.unwrap()
+    };
     let func = inst.get_typed_func::<(), (), _>(&mut store, ENTRY).unwrap();
     let exit_code = match func.call_async(&mut store, ()).await {
         Err(ref t) => {
@@ -129,6 +135,25 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
         fuel: store.fuel_consumed(),
         code: exit_code,
     }
+}
+
+
+fn link_modules(linker: &mut Linker<WasiCtx>, store: &mut Store<WasiCtx>) -> Option<Module> {
+    let cfg = store.data().blockless_config.as_ref().unwrap();
+    let modules: Vec<BlocklessModule> = cfg.modules_ref().iter().map(|m| (*m).clone()).collect();
+    
+    modules.iter().map(|m| {
+        let (m_name, is_entry) = match m.module_type {
+            ModuleType::Entry => ("", true),
+            ModuleType::Module => (m.name.as_str(), false),
+        };
+        let module = Module::from_file(store.engine(), &m.file).unwrap();
+        linker.module(store.as_context_mut(), m_name, &module).unwrap();
+        (module, is_entry)
+    })
+    .filter(|(_, is_entry)| *is_entry)
+    .nth(0)
+    .map(|(module, _)| module)
 }
 
 fn load_driver(cfs: &[DriverConfig]) {
