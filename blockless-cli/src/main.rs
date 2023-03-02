@@ -75,7 +75,8 @@ where
     for var in vars {
         raw_json = raw_json.replace(&var.name, &var.value);
     }
-    let cli_cfg = CliConfig::from_data(raw_json.into())?;
+    let mut cli_cfg = CliConfig::from_data(raw_json.into())?;
+    cli_cfg.0.set_is_carfile(true);
     Ok(cli_cfg)
 }
 
@@ -141,6 +142,7 @@ fn main() {
 
 mod test {
     #![allow(unused)]
+    use blockless::ModuleType;
     use rust_car::{
         Ipld,
         header::CarHeader,
@@ -200,5 +202,8 @@ mod test {
         assert_eq!(cfg.0.fs_root_path_ref(), Some("target"));
         assert_eq!(cfg.0.drivers_root_path_ref(), Some("target/drivers"));
         assert!(matches!(cfg.0.wasm_file_module(), Some(_)));
+        if let Some(c) = cfg.0.wasm_file_module() {
+            assert!(matches!(c.module_type, ModuleType::Entry));
+        }
     }
 }

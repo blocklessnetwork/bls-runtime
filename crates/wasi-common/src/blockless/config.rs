@@ -81,6 +81,7 @@ pub struct BlocklessConfig {
     stdin: String,
     stdout: Stdout,
     debug_info: bool,
+    is_carfile: bool,
     wasm_file: String,
     limited_fuel: Option<u64>,
     limited_time: Option<u64>,
@@ -155,9 +156,18 @@ impl BlocklessConfig {
         self.drivers_root_path = r;
     }
 
+    pub fn set_is_carfile(&mut self, is_carfile: bool) {
+        self.is_carfile = is_carfile;
+    }
+
+    pub fn is_carfile(&self) -> bool {
+        self.is_carfile
+    }
+
     pub fn new(wasm_file: &str) -> BlocklessConfig {
         Self {
             debug_info: false,
+            is_carfile: false,
             fs_root_path: None,
             drivers: Vec::new(),
             modules: Vec::new(),
