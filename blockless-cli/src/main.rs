@@ -94,7 +94,12 @@ fn load_extract_from_car(f: File) -> Result<CliConfig> {
     let header = reader.header();
     let rootfs = cfg.0.fs_root_path_ref().expect("root path must be config in car file");
     for rcid in header.roots() {
-        extract_ipld(&mut reader, rcid, Some(rootfs))?;
+        let root_path: PathBuf = rootfs.into();
+        let root_path = root_path.join(rcid.to_string());
+        if !root_path.exists() {
+            fs::create_dir(&root_path)?;
+        }
+        extract_ipld(&mut reader, rcid, Some(root_path))?;
     }
     Ok(cfg)
 }
