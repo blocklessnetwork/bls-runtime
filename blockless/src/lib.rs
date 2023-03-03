@@ -97,8 +97,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
     let drivers = b_conf.drivers_ref();
     load_driver(drivers);
     let fuel = b_conf.get_limited_fuel();
-    let wasm_file: String = b_conf.wasm_file_ref().into();
-    let is_carfile = b_conf.is_carfile();
+    let mut enrty: String = b_conf.entry_ref().into();
     ctx.blockless_config = Some(b_conf);
 
     let mut store = Store::new(&engine, ctx);
@@ -108,18 +107,14 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
             error!("add fuel error: {}", e);
         });
     }
-    
-    let inst = if is_carfile {
-        let module = link_modules(&mut linker, &mut store).await.unwrap();
-        linker.instantiate_async(&mut store, &module).await.unwrap()
-    } else {
-        // Instantiate our module with the imports we've created, and run it.
-        let module = Module::from_file(&engine, &wasm_file).unwrap();
-        linker.module_async(&mut store, "", &module).await.unwrap();
-        linker.instantiate_async(&mut store, &module).await.unwrap()
-    };
-    
-    let func = inst.get_typed_func::<(), (), _>(&mut store, ENTRY).unwrap();
+
+    if enrty == "" {
+        enrty = ENTRY.to_string();
+    }
+
+    let module = link_modules(&mut linker, &mut store).await.unwrap();
+    let inst = linker.instantiate_async(&mut store, &module).await.unwrap();
+    let func = inst.get_typed_func::<(), (), _>(&mut store, &enrty).unwrap();
     let exit_code = match func.call_async(&mut store, ()).await {
         Err(ref t) => {
             let fuel = fuel.unwrap_or(0);

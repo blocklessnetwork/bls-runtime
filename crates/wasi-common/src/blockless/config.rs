@@ -103,7 +103,7 @@ pub struct BlocklessConfig {
     stdout: Stdout,
     debug_info: bool,
     is_carfile: bool,
-    wasm_file: String,
+    entry: String,
     limited_fuel: Option<u64>,
     limited_time: Option<u64>,
     limited_memory: Option<u64>,
@@ -112,10 +112,9 @@ pub struct BlocklessConfig {
     fs_root_path: Option<String>,
     modules: Vec<BlocklessModule>,
     runtime_logger: Option<String>,
-    runtime_logger_level: LoggerLevel,
     extensions_path: Option<String>,
     drivers_root_path: Option<String>,
-    entry_module_index: Option<usize>,
+    runtime_logger_level: LoggerLevel,
     group_permisions: HashMap<String, Vec<Permission>>,
 }
 
@@ -129,8 +128,8 @@ impl BlocklessConfig {
         self.debug_info = b
     }
 
-    pub fn wasm_file_ref(&self) -> &str {
-        &self.wasm_file
+    pub fn entry_ref(&self) -> &str {
+        &self.entry
     }
 
     pub fn runtime_logger_level_ref(&self) -> &LoggerLevel {
@@ -185,7 +184,7 @@ impl BlocklessConfig {
         self.is_carfile
     }
 
-    pub fn new(wasm_file: &str) -> BlocklessConfig {
+    pub fn new(entry: &str) -> BlocklessConfig {
         Self {
             debug_info: false,
             is_carfile: false,
@@ -202,10 +201,9 @@ impl BlocklessConfig {
             extensions_path: None,
             drivers_root_path: None,
             stdout: Stdout::Inherit,
-            entry_module_index: None,
             permisions: Default::default(),
             group_permisions: HashMap::new(),
-            wasm_file: String::from(wasm_file),
+            entry: String::from(entry),
             runtime_logger_level: LoggerLevel::INFO,
         }
     }
@@ -243,16 +241,7 @@ impl BlocklessConfig {
     }
 
     pub fn set_modules(&mut self, modules: Vec<BlocklessModule>) {
-        for (i, e) in modules.iter().enumerate() {
-            if e.name == self.wasm_file {
-                self.entry_module_index = Some(i);
-            }
-        }
         self.modules = modules;
-    }
-
-    pub fn wasm_file_module(&self) -> Option<&BlocklessModule> {
-        self.entry_module_index.map(|i| &self.modules[i])
     }
 
     pub fn stdin(&mut self, stdin: String) {

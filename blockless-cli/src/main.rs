@@ -215,10 +215,5 @@ mod test {
         let cfg = load_from_car(&mut car_reader).unwrap();
         assert_eq!(cfg.0.fs_root_path_ref(), Some("target"));
         assert_eq!(cfg.0.drivers_root_path_ref(), Some("target/drivers"));
-        assert!(matches!(cfg.0.wasm_file_module(), Some(_)));
-        if let Some(c) = cfg.0.wasm_file_module() {
-            assert!(matches!(c.module_type, ModuleType::Entry));
-            assert_eq!(c.file, format!("target/{}/release.wasm", root_cid.to_string()));
-        }
     }
 }
