@@ -54,7 +54,7 @@ impl DriverConfig {
     }
 }
 
-#[derive(Copy, Clone, Debug)]
+#[derive(Copy, Clone, Debug, PartialEq, PartialOrd)]
 pub enum ModuleType {
     Module,
     Entry,

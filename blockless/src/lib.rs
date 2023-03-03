@@ -140,26 +140,27 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
 
 async fn link_modules(linker: &mut Linker<WasiCtx>, store: &mut Store<WasiCtx>) -> Option<Module> {
     let cfg = store.data().blockless_config.as_ref().unwrap();
-    let modules: Vec<BlocklessModule> = cfg.modules_ref().iter().map(|m| (*m).clone()).collect();
-    let modus = modules.iter()
-        .filter(|m| matches!(m.module_type, ModuleType::Module));
-    for m in modus {
+    let mut modules: Vec<BlocklessModule> = cfg.modules_ref().iter().map(|m| (*m).clone()).collect();
+    modules.sort_by(|a, b| a.module_type.partial_cmp(&b.module_type).unwrap());
+    // let modus = modules.iter()
+    //     .filter(|m| matches!(m.module_type, ModuleType::Module))
+    //     .chain(
+    //         modules.iter()
+    //             .filter(|m| matches!(m.module_type, ModuleType::Entry))
+    //     );
+    let mut entry = None;
+    for m in modules {
+        let (m_name, is_entry) = match m.module_type {
+            ModuleType::Module => (m.name.as_str(), false),
+            ModuleType::Entry => ("", true),
+        };
         let module = Module::from_file(store.engine(), &m.file).unwrap();
-        linker.module_async(store.as_context_mut(), &m.name, &module).await.unwrap();
+        linker.module_async(store.as_context_mut(), m_name, &module).await.unwrap();
+        if is_entry {
+            entry = Some(module);
+        }
     }
-        
-    //filter the first entry module
-    let entry = modules.iter()
-        .filter(|m| matches!(m.module_type, ModuleType::Entry))
-        .nth(0);
-    match entry {
-        Some(m) => {
-            let module = Module::from_file(store.engine(), &m.file).unwrap();
-            linker.module_async(store.as_context_mut(), "", &module).await.unwrap();
-            Some(module)
-        },
-        None => None,
-    }
+    entry
 }
 
 fn load_driver(cfs: &[DriverConfig]) {
