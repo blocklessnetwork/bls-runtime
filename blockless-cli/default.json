@@ -5,7 +5,15 @@
     "limited_fuel": 200000000,
     "limited_memory": 30,
     "debug_info": false,
-    "entry": "/Users/join/Downloads/template-rust-hello-world-main/target/wasm32-unknown-unknown/debug/hello-world.wasm",
+    "entry": "main",
+    "modules": [
+        {
+            "file": "/Users/join/Downloads/test1.wasm",
+            "name": "linking2",
+            "type": "module",
+            "md5": "d41d8cd98f00b204e9800998ecf8427e"
+        }
+    ],
     "permissions": [
         "http://httpbin.org/anything",
         "file://a.go"
