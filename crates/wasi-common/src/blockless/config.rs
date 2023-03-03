@@ -54,21 +54,41 @@ impl DriverConfig {
     }
 }
 
-#[derive(Copy, Clone, Debug, PartialEq, PartialOrd)]
+#[derive(Copy, Clone, Debug)]
 pub enum ModuleType {
     Module,
     Entry,
 }
 
-impl ModuleType {
+impl PartialEq for ModuleType {
+    fn eq(&self, other: &Self) -> bool {
+        match (*self, *other) {
+            (ModuleType::Module, ModuleType::Module) => true,
+            (ModuleType::Module, ModuleType::Entry) => false,
+            (ModuleType::Entry, ModuleType::Module) => false,
+            (ModuleType::Entry, ModuleType::Entry) => true,
+        }
+    }
+}
 
+impl PartialOrd for ModuleType {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match (*self, *other) {
+            (ModuleType::Module, ModuleType::Module) => Some(std::cmp::Ordering::Equal),
+            (ModuleType::Module, ModuleType::Entry) => Some(std::cmp::Ordering::Less),
+            (ModuleType::Entry, ModuleType::Module) => Some(std::cmp::Ordering::Greater),
+            (ModuleType::Entry, ModuleType::Entry) => Some(std::cmp::Ordering::Equal),
+        }
+    }
+}
+
+impl ModuleType {
     pub fn from_str(s: &str) -> Self {
         match s {
             "entry" | "ENTRY" => Self::Entry,
             _ => Self::Module,
         }
     }
-
 }
 
 #[derive(Debug, Clone)]
