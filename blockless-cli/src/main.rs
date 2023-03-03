@@ -108,10 +108,10 @@ fn load_cli_config(conf_path: &str) -> Result<CliConfig> {
     let ext = Path::new(conf_path).extension();
     let cfg = ext.and_then(|ext| ext.to_str().map(str::to_ascii_lowercase));
     let cli_config = match cfg {
-        Some(ref f) if f == "car" => {
+        Some(f) if f == "car" => {
             let file = fs::OpenOptions::new()
                 .read(true)
-                .open(f)?;
+                .open(conf_path)?;
             Some(load_extract_from_car(file))
         },
         _ => None,

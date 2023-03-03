@@ -27,7 +27,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
 
     let mut conf = Config::new();
     conf.debug_info(b_conf.get_debug_info());
-    conf.async_support(true);
+    
     if let Some(_) = b_conf.get_limited_fuel() {
         //fuel is enable.
         conf.consume_fuel(true);
@@ -40,10 +40,9 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
             strategy: PoolingAllocationStrategy::default(),
             instance_limits,
         };
-
         conf.allocation_strategy(pool);
     }
-
+    conf.async_support(true);
     let engine = Engine::new(&conf).unwrap();
     let mut linker = Linker::new(&engine);
     blockless_env::add_drivers_to_linker(&mut linker);
@@ -109,16 +108,17 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
             error!("add fuel error: {}", e);
         });
     }
-
+    
     let inst = if is_carfile {
-        let module = link_modules(&mut linker, &mut store).unwrap();
+        let module = link_modules(&mut linker, &mut store).await.unwrap();
         linker.instantiate_async(&mut store, &module).await.unwrap()
     } else {
         // Instantiate our module with the imports we've created, and run it.
         let module = Module::from_file(&engine, &wasm_file).unwrap();
-        linker.module(&mut store, "", &module).unwrap();
+        linker.module_async(&mut store, "", &module).await.unwrap();
         linker.instantiate_async(&mut store, &module).await.unwrap()
     };
+    
     let func = inst.get_typed_func::<(), (), _>(&mut store, ENTRY).unwrap();
     let exit_code = match func.call_async(&mut store, ()).await {
         Err(ref t) => {
@@ -138,22 +138,28 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
 }
 
 
-fn link_modules(linker: &mut Linker<WasiCtx>, store: &mut Store<WasiCtx>) -> Option<Module> {
+async fn link_modules(linker: &mut Linker<WasiCtx>, store: &mut Store<WasiCtx>) -> Option<Module> {
     let cfg = store.data().blockless_config.as_ref().unwrap();
     let modules: Vec<BlocklessModule> = cfg.modules_ref().iter().map(|m| (*m).clone()).collect();
-    
-    modules.iter().map(|m| {
-        let (m_name, is_entry) = match m.module_type {
-            ModuleType::Entry => ("", true),
-            ModuleType::Module => (m.name.as_str(), false),
-        };
+    let modus = modules.iter()
+        .filter(|m| matches!(m.module_type, ModuleType::Module));
+    for m in modus {
         let module = Module::from_file(store.engine(), &m.file).unwrap();
-        linker.module(store.as_context_mut(), m_name, &module).unwrap();
-        (module, is_entry)
-    })
-    .filter(|(_, is_entry)| *is_entry)
-    .nth(0)
-    .map(|(module, _)| module)
+        linker.module_async(store.as_context_mut(), &m.name, &module).await.unwrap();
+    }
+        
+    //filter the first entry module
+    let entry = modules.iter()
+        .filter(|m| matches!(m.module_type, ModuleType::Entry))
+        .nth(0);
+    match entry {
+        Some(m) => {
+            let module = Module::from_file(store.engine(), &m.file).unwrap();
+            linker.module_async(store.as_context_mut(), "", &module).await.unwrap();
+            Some(module)
+        },
+        None => None,
+    }
 }
 
 fn load_driver(cfs: &[DriverConfig]) {

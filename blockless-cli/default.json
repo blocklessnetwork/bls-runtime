@@ -5,7 +5,7 @@
     "limited_fuel": 200000000,
     "limited_memory": 30,
     "debug_info": false,
-    "entry": "/Users/join/Downloads/sdk-assemblyscript/build/release.wasm",
+    "entry": "/Users/join/Downloads/template-rust-hello-world-main/target/wasm32-unknown-unknown/debug/hello-world.wasm",
     "permissions": [
         "http://httpbin.org/anything",
         "file://a.go"
