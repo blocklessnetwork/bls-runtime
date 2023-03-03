@@ -142,12 +142,6 @@ async fn link_modules(linker: &mut Linker<WasiCtx>, store: &mut Store<WasiCtx>) 
     let cfg = store.data().blockless_config.as_ref().unwrap();
     let mut modules: Vec<BlocklessModule> = cfg.modules_ref().iter().map(|m| (*m).clone()).collect();
     modules.sort_by(|a, b| a.module_type.partial_cmp(&b.module_type).unwrap());
-    // let modus = modules.iter()
-    //     .filter(|m| matches!(m.module_type, ModuleType::Module))
-    //     .chain(
-    //         modules.iter()
-    //             .filter(|m| matches!(m.module_type, ModuleType::Entry))
-    //     );
     let mut entry = None;
     for m in modules {
         let (m_name, is_entry) = match m.module_type {
