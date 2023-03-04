@@ -152,8 +152,8 @@ impl CliConfig {
         Ok(vars)
     }
 
-    fn replace_vars(json_str: String,  cid: Option<String>) -> Result<String> {
-        let vars = Self::env_variables(cid)?;
+    fn replace_vars(json_str: String,  root_suffix: Option<String>) -> Result<String> {
+        let vars = Self::env_variables(root_suffix)?;
         let mut raw_json = json_str;
         for var in vars {
             raw_json = raw_json.replace(&var.name, &var.value);
@@ -161,8 +161,8 @@ impl CliConfig {
         Ok(raw_json)
     }
 
-    pub fn from_data(data: String, root: String) -> Result<Self> {
-        let data = Self::replace_vars(data, Some(root))?;
+    pub fn from_data(data: String, root_suffix: Option<String>) -> Result<Self> {
+        let data = Self::replace_vars(data, root_suffix)?;
         Self::from_json_string(data)
     }
 

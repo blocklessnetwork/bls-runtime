@@ -52,7 +52,8 @@ where
     ipld_write(car_reader, cid, &mut data)?;
     let raw_json = String::from_utf8(data)?;
     let roots = car_reader.header().roots();
-    let mut cli_cfg = CliConfig::from_data(raw_json, roots[0].to_string())?;
+    let root_suffix = roots.iter().nth(0).map(|c| c.to_string());
+    let mut cli_cfg = CliConfig::from_data(raw_json, root_suffix)?;
     cli_cfg.0.set_is_carfile(true);
     Ok(cli_cfg)
 }
