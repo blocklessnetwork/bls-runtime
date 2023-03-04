@@ -43,33 +43,6 @@ fn logger_init(cfg: &CliConfig) {
     builder.init();
 }
 
-struct EnvVar {
-    pub name: String,
-    pub value: String,
-}
-
-fn env_variables(cid: String) -> Result<Vec<EnvVar>> {
-    let mut vars = Vec::new();
-    match std::env::var("ENV_ROOT_PATH") {
-        Ok(s) => {
-            let env_root = s.clone();
-            let path: PathBuf = s.into();
-            let root_path = path.join(cid);
-            let path: String = root_path.to_str().unwrap_or_default().into();
-            vars.push(EnvVar { 
-                name: "$ROOT".to_string(), 
-                value: path,
-            });
-            vars.push(EnvVar {
-                name: "$ENV_ROOT_PATH".to_string(),
-                value: env_root,
-            });
-        },
-        Err(e) => return Err(e.into()),
-    }
-    Ok(vars)
-}
-
 fn load_from_car<T>(car_reader: &mut T) -> Result<CliConfig>
 where
     T: CarReader
@@ -77,13 +50,9 @@ where
     let cid = car_reader.search_file_cid("config.json")?;
     let mut data = Vec::new();
     ipld_write(car_reader, cid, &mut data)?;
-    let mut raw_json = String::from_utf8(data)?;
+    let raw_json = String::from_utf8(data)?;
     let roots = car_reader.header().roots();
-    let vars = env_variables(roots[0].to_string())?;
-    for var in vars {
-        raw_json = raw_json.replace(&var.name, &var.value);
-    }
-    let mut cli_cfg = CliConfig::from_data(raw_json.into())?;
+    let mut cli_cfg = CliConfig::from_data(raw_json, roots[0].to_string())?;
     cli_cfg.0.set_is_carfile(true);
     Ok(cli_cfg)
 }

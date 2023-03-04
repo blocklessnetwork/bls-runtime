@@ -3,8 +3,14 @@ use blockless::{self, LoggerLevel, BlocklessModule, ModuleType};
 use blockless::{BlocklessConfig, DriverConfig, MultiAddr, Permission};
 use json::{self, JsonValue};
 use std::fs;
+use std::path::{PathBuf, Path};
 
 pub(crate) struct CliConfig(pub(crate) BlocklessConfig);
+
+struct EnvVar {
+    name: String,
+    value: String,
+}
 
 impl CliConfig {
 
@@ -83,8 +89,8 @@ impl CliConfig {
         }
     }
 
-    fn from_json_string(json_string: &str) -> Result<Self> {
-        let json_obj = json::parse(json_string)?;
+    fn from_json_string(json_string: String) -> Result<Self> {
+        let json_obj = json::parse(&json_string)?;
         let fs_root_path: Option<String> = json_obj["fs_root_path"].as_str().map(String::from);
         let drivers_root_path: Option<String> =
             json_obj["drivers_root_path"].as_str().map(String::from);
@@ -124,14 +130,45 @@ impl CliConfig {
         Ok(CliConfig(bc))
     }
 
-    pub fn from_data(data: Vec<u8>) -> Result<Self> {
-        let json_string = std::str::from_utf8(&data[..])?;
-        Self::from_json_string(json_string)
+    fn env_variables(cid: Option<String>) -> Result<Vec<EnvVar>> {
+        let mut vars = Vec::new();
+        match std::env::var("ENV_ROOT_PATH") {
+            Ok(s) => {
+                let env_root = s.clone();
+                let path: PathBuf = s.into();
+                let root_path = path.join(cid.unwrap_or_default());
+                let path: String = root_path.to_str().unwrap_or_default().into();
+                vars.push(EnvVar { 
+                    name: "$ROOT".to_string(), 
+                    value: path,
+                });
+                vars.push(EnvVar {
+                    name: "$ENV_ROOT_PATH".to_string(),
+                    value: env_root,
+                });
+            },
+            Err(e) => return Err(e.into()),
+        }
+        Ok(vars)
     }
 
-    pub fn from_file(path: &str) -> Result<Self> {
-        let values = fs::read(path)?;
-        let json_string = std::str::from_utf8(&values)?;
+    fn replace_vars(json_str: String,  cid: Option<String>) -> Result<String> {
+        let vars = Self::env_variables(cid)?;
+        let mut raw_json = json_str;
+        for var in vars {
+            raw_json = raw_json.replace(&var.name, &var.value);
+        }
+        Ok(raw_json)
+    }
+
+    pub fn from_data(data: String, root: String) -> Result<Self> {
+        let data = Self::replace_vars(data, Some(root))?;
+        Self::from_json_string(data)
+    }
+
+    pub fn from_file(path: impl AsRef<Path>) -> Result<Self> {
+        let values = fs::read_to_string(path)?;
+        let json_string = Self::replace_vars(values, None)?;
         Self::from_json_string(json_string)
     }
 }
