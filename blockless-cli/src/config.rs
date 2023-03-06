@@ -73,6 +73,7 @@ impl CliConfig {
                 modules_cfg.iter().map(|c| {
                     let name = c["name"].as_str().map(String::from).unwrap_or_default();
                     let file = c["file"].as_str().map(String::from).unwrap_or_default();
+                    let md5 = c["md5"].as_str().map(String::from).unwrap_or_default();
                     let module_type = c["type"].as_str().map(|s| {
                         ModuleType::from_str(s)
                     })
@@ -80,7 +81,8 @@ impl CliConfig {
                     BlocklessModule { 
                         module_type, 
                         name, 
-                        file
+                        file,
+                        md5,
                     }
                 })
                 .collect()

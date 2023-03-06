@@ -96,6 +96,7 @@ pub struct BlocklessModule {
     pub module_type: ModuleType,
     pub name: String,
     pub file: String,
+    pub md5: String,
 }
 
 pub struct BlocklessConfig {

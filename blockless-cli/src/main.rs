@@ -1,11 +1,23 @@
 mod config;
-use blockless::{blockless_run, LoggerLevel};
+use blockless::{
+    blockless_run, 
+    LoggerLevel
+};
 use config::CliConfig;
 use anyhow::Result;
-use std::{env, io, fs::File, path::PathBuf};
+use std::{
+    env, 
+    io::{self, Read}, 
+    fs::File, 
+    path::PathBuf
+};
 use env_logger::Target;
 use tokio::runtime::Builder;
-use log::{error, info, LevelFilter};
+use log::{
+    error, 
+    info, 
+    LevelFilter,
+};
 use std::fs;
 use std::path::Path;
 use rust_car::{
@@ -74,6 +86,33 @@ fn load_extract_from_car(f: File) -> Result<CliConfig> {
     Ok(cfg)
 }
 
+fn file_md5(f: impl AsRef<Path>) -> String {
+    let mut file = fs::OpenOptions::new()
+        .read(true)
+        .open(f).unwrap();
+    let mut buf = vec![0u8; 2048];
+    let mut md5_ctx = md5::Context::new();
+    loop {
+        let n = file.read(&mut buf).unwrap();
+        if n == 0 {
+            break;
+        }
+        md5_ctx.consume(&buf[..n])
+    }
+    let digest = md5_ctx.compute();
+    format!("{digest:x}")
+}
+
+fn check_module_sum(cfg: &CliConfig) {
+    for module in cfg.0.modules_ref() {
+        let m_file = &module.file;
+        let md5sum = file_md5(m_file);
+        if md5sum != module.md5 {
+            panic!("the module {m_file} file md5 checksum is not correctly.");  
+        }
+    }
+}
+
 fn load_cli_config(conf_path: &str) -> Result<CliConfig> {
     let ext = Path::new(conf_path).extension();
     let cfg = ext.and_then(|ext| ext.to_str().map(str::to_ascii_lowercase));
@@ -100,6 +139,7 @@ fn main() {
     }
     let path = path.unwrap();
     let mut cfg = load_cli_config(path).unwrap();
+    check_module_sum(&cfg);
     logger_init(&cfg);
     if cfg.0.stdin_ref().is_empty() {
         io::stdin().read_line(&mut std_buffer).unwrap();
