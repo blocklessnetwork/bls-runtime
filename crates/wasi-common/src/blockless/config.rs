@@ -1,7 +1,7 @@
 use crate::Permission;
 use std::{
     collections::HashMap,
-    path::{Path, PathBuf},
+    path::{Path, PathBuf}, 
 };
 
 pub enum LoggerLevel {
@@ -54,21 +54,68 @@ impl DriverConfig {
     }
 }
 
+#[derive(Copy, Clone, Debug)]
+pub enum ModuleType {
+    Module,
+    Entry,
+}
+
+impl PartialEq for ModuleType {
+    fn eq(&self, other: &Self) -> bool {
+        match (*self, *other) {
+            (ModuleType::Module, ModuleType::Module) => true,
+            (ModuleType::Module, ModuleType::Entry) => false,
+            (ModuleType::Entry, ModuleType::Module) => false,
+            (ModuleType::Entry, ModuleType::Entry) => true,
+        }
+    }
+}
+
+impl PartialOrd for ModuleType {
+    fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
+        match (*self, *other) {
+            (ModuleType::Module, ModuleType::Module) => Some(std::cmp::Ordering::Equal),
+            (ModuleType::Module, ModuleType::Entry) => Some(std::cmp::Ordering::Less),
+            (ModuleType::Entry, ModuleType::Module) => Some(std::cmp::Ordering::Greater),
+            (ModuleType::Entry, ModuleType::Entry) => Some(std::cmp::Ordering::Equal),
+        }
+    }
+}
+
+impl ModuleType {
+    pub fn parse_from_str(s: &str) -> Self {
+        match s {
+            "entry" | "ENTRY" => Self::Entry,
+            _ => Self::Module,
+        }
+    }
+}
+
+#[derive(Debug, Clone)]
+pub struct BlocklessModule {
+    pub module_type: ModuleType,
+    pub name: String,
+    pub file: String,
+    pub md5: String,
+}
+
 pub struct BlocklessConfig {
     stdin: String,
     stdout: Stdout,
     debug_info: bool,
-    wasm_file: String,
+    is_carfile: bool,
+    entry: String,
     limited_fuel: Option<u64>,
     limited_time: Option<u64>,
     limited_memory: Option<u64>,
     drivers: Vec<DriverConfig>,
     permisions: Vec<Permission>,
     fs_root_path: Option<String>,
+    modules: Vec<BlocklessModule>,
     runtime_logger: Option<String>,
-    runtime_logger_level: LoggerLevel,
     extensions_path: Option<String>,
     drivers_root_path: Option<String>,
+    runtime_logger_level: LoggerLevel,
     group_permisions: HashMap<String, Vec<Permission>>,
 }
 
@@ -82,8 +129,8 @@ impl BlocklessConfig {
         self.debug_info = b
     }
 
-    pub fn wasm_file_ref(&self) -> &str {
-        &self.wasm_file
+    pub fn entry_ref(&self) -> &str {
+        &self.entry
     }
 
     pub fn runtime_logger_level_ref(&self) -> &LoggerLevel {
@@ -111,7 +158,7 @@ impl BlocklessConfig {
         perms.iter().for_each(|p| {
             g_perms
                 .entry(p.schema.clone())
-                .or_insert_with(|| Vec::new())
+                .or_insert_with(Vec::new)
                 .push(p.clone());
         });
         self.permisions = perms;
@@ -130,13 +177,23 @@ impl BlocklessConfig {
         self.drivers_root_path = r;
     }
 
-    pub fn new(wasm_file: &str) -> BlocklessConfig {
+    pub fn set_is_carfile(&mut self, is_carfile: bool) {
+        self.is_carfile = is_carfile;
+    }
+
+    pub fn is_carfile(&self) -> bool {
+        self.is_carfile
+    }
+
+    pub fn new(entry: &str) -> BlocklessConfig {
         Self {
             debug_info: false,
-            wasm_file: String::from(wasm_file),
+            is_carfile: false,
             fs_root_path: None,
-            stdout: Stdout::Inherit,
+            drivers: Vec::new(),
+            modules: Vec::new(),
             stdin: String::new(),
+            runtime_logger: None,
             //vm instruction limit.
             limited_fuel: None,
             limited_time: None,
@@ -144,10 +201,10 @@ impl BlocklessConfig {
             limited_memory: None,
             extensions_path: None,
             drivers_root_path: None,
-            runtime_logger: None,
-            drivers: Vec::new(),
+            stdout: Stdout::Inherit,
             permisions: Default::default(),
             group_permisions: HashMap::new(),
+            entry: String::from(entry),
             runtime_logger_level: LoggerLevel::INFO,
         }
     }
@@ -174,6 +231,18 @@ impl BlocklessConfig {
             .as_ref()
             .zip(self.runtime_logger.as_ref())
             .map(|f| Path::new(f.0).join(f.1))
+    }
+
+    pub fn modules_ref(&self) -> Vec<&BlocklessModule> {
+        self.modules.iter().collect()
+    }
+
+    pub fn add_module(&mut self, module: BlocklessModule) {
+        self.modules.push(module);
+    }
+
+    pub fn set_modules(&mut self, modules: Vec<BlocklessModule>) {
+        self.modules = modules;
     }
 
     pub fn stdin(&mut self, stdin: String) {

@@ -27,7 +27,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
 
     let mut conf = Config::new();
     conf.debug_info(b_conf.get_debug_info());
-    conf.async_support(true);
+    
     if let Some(_) = b_conf.get_limited_fuel() {
         //fuel is enable.
         conf.consume_fuel(true);
@@ -40,10 +40,9 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
             strategy: PoolingAllocationStrategy::default(),
             instance_limits,
         };
-
         conf.allocation_strategy(pool);
     }
-
+    conf.async_support(true);
     let engine = Engine::new(&conf).unwrap();
     let mut linker = Linker::new(&engine);
     blockless_env::add_drivers_to_linker(&mut linker);
@@ -53,14 +52,12 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
     blockless_env::add_memory_to_linker(&mut linker);
     blockless_env::add_cgi_to_linker(&mut linker);
     wasmtime_wasi::add_to_linker(&mut linker, |s| s).unwrap();
-    let root_dir = b_conf
-        .fs_root_path_ref()
-        .map(|path| {
+    let root_dir = b_conf.fs_root_path_ref()
+        .and_then(|path| {
             std::fs::File::open(path)
                 .ok()
                 .map(|path| wasmtime_wasi::Dir::from_std_file(path))
-        })
-        .flatten();
+        });
     let mut builder = WasiCtxBuilder::new().inherit_args().unwrap();
     //stdout file process for setting.
     match b_conf.stdout_ref() {
@@ -90,7 +87,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
         &Stdout::Inherit => {
             builder = builder.inherit_stdout();
         }
-        Stdout::Null => {}
+        &Stdout::Null => {}
     }
     if let Some(d) = root_dir {
         builder = builder.preopened_dir(d, "/").unwrap();
@@ -100,7 +97,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
     let drivers = b_conf.drivers_ref();
     load_driver(drivers);
     let fuel = b_conf.get_limited_fuel();
-    let wasm_file: String = b_conf.wasm_file_ref().into();
+    let mut enrty: String = b_conf.entry_ref().into();
     ctx.blockless_config = Some(b_conf);
 
     let mut store = Store::new(&engine, ctx);
@@ -111,11 +108,13 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
         });
     }
 
-    // Instantiate our module with the imports we've created, and run it.
-    let module = Module::from_file(&engine, &wasm_file).unwrap();
-    linker.module(&mut store, "", &module).unwrap();
+    if enrty == "" {
+        enrty = ENTRY.to_string();
+    }
+
+    let module = link_modules(&mut linker, &mut store).await.unwrap();
     let inst = linker.instantiate_async(&mut store, &module).await.unwrap();
-    let func = inst.get_typed_func::<(), (), _>(&mut store, ENTRY).unwrap();
+    let func = inst.get_typed_func::<(), (), _>(&mut store, &enrty).unwrap();
     let exit_code = match func.call_async(&mut store, ()).await {
         Err(ref t) => {
             let fuel = fuel.unwrap_or(0);
@@ -131,6 +130,26 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
         fuel: store.fuel_consumed(),
         code: exit_code,
     }
+}
+
+
+async fn link_modules(linker: &mut Linker<WasiCtx>, store: &mut Store<WasiCtx>) -> Option<Module> {
+    let cfg = store.data().blockless_config.as_ref().unwrap();
+    let mut modules: Vec<BlocklessModule> = cfg.modules_ref().iter().map(|m| (*m).clone()).collect();
+    modules.sort_by(|a, b| a.module_type.partial_cmp(&b.module_type).unwrap());
+    let mut entry = None;
+    for m in modules {
+        let (m_name, is_entry) = match m.module_type {
+            ModuleType::Module => (m.name.as_str(), false),
+            ModuleType::Entry => ("", true),
+        };
+        let module = Module::from_file(store.engine(), &m.file).unwrap();
+        linker.module_async(store.as_context_mut(), m_name, &module).await.unwrap();
+        if is_entry {
+            entry = Some(module);
+        }
+    }
+    entry
 }
 
 fn load_driver(cfs: &[DriverConfig]) {

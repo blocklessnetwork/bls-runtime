@@ -43,7 +43,15 @@ Blockless supports a variety of programming languages including:
     "runtime_logger": "runtime.log", 
     "limited_fuel": 200000000,
     "limited_memory": 30,
-    "entry": "/Users/join/Downloads/sdk-assemblyscript/build/release.wasm",
+    "entry": "main",
+    "modules": [
+        {
+            "file": "/Users/join/Downloads/test1.wasm",
+            "name": "linking2",
+            "type": "module",
+            "md5": "d41d8cd98f00b204e9800998ecf8427e"
+        }
+    ],
     "permissions": [
         "http://httpbin.org/anything",
         "file://a.go"
@@ -63,9 +71,15 @@ Blockless supports a variety of programming languages including:
 
 - `limited_memory`: The maximum size of memory that the app can use. In the example, the maximum is 20 pages, where each page is 64k. So, the app can only use 20 * 64k of physical memory.
 
-- `entry`: The entry function file of the app. Please refer to the app example for more information.
+- `entry`: The entry is the function name. Please refer to the app example for more information.
 
 - `permissions`: a list of resources that the app is allowed to access. If the app tries to access a resource that is not in this list, it will receive a "Permission Deny" error. If the app panics, the log will show the following message:
+
+- `modules`: is the app wasm files. the wasm files have 2 types defined by `type` node, `module` and `entry`. `module` is lib in the app, `entry` is the entry wasm, normally the entry wasm contain the entry function.
+    - `type`: he wasm files have 2 types defined by `type` node.
+    - `file`: the wasm file.
+    - `name`: name is used for define the linker name, the app can be use the name for the caller.
+    - `md5`: the checksum of the file.
 
 ```log
 panic: Permission deny

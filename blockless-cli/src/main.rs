@@ -1,13 +1,29 @@
 mod config;
-use blockless::{blockless_run, LoggerLevel};
+use blockless::{
+    blockless_run, 
+    LoggerLevel
+};
 use config::CliConfig;
-use std::{env, io};
+use anyhow::Result;
+use std::{
+    env, 
+    io::{self, Read}, 
+    fs::File, 
+    path::PathBuf
+};
 use env_logger::Target;
 use tokio::runtime::Builder;
-use log::{error, info, LevelFilter};
+use log::{
+    error, 
+    info, 
+    LevelFilter,
+};
 use std::fs;
-
-
+use std::path::Path;
+use rust_car::{
+    reader::{self, CarReader},
+    utils::{ipld_write, extract_ipld}
+};
 
 fn logger_init(cfg: &CliConfig) {
     let rt_logger = cfg.0.runtime_logger_ref();
@@ -39,6 +55,79 @@ fn logger_init(cfg: &CliConfig) {
     builder.init();
 }
 
+fn load_from_car<T>(car_reader: &mut T) -> Result<CliConfig>
+where
+    T: CarReader
+{
+    let cid = car_reader.search_file_cid("config.json")?;
+    let mut data = Vec::new();
+    ipld_write(car_reader, cid, &mut data)?;
+    let raw_json = String::from_utf8(data)?;
+    let roots = car_reader.header().roots();
+    let root_suffix = roots.iter().nth(0).map(|c| c.to_string());
+    let mut cli_cfg = CliConfig::from_data(raw_json, root_suffix)?;
+    cli_cfg.0.set_is_carfile(true);
+    Ok(cli_cfg)
+}
+
+fn load_extract_from_car(f: File) -> Result<CliConfig> {
+    let mut reader = reader::new_v1(f)?;
+    let cfg = load_from_car(&mut reader)?;
+    let header = reader.header();
+    let rootfs = cfg.0.fs_root_path_ref().expect("root path must be config in car file");
+    for rcid in header.roots() {
+        let root_path: PathBuf = rootfs.into();
+        let root_path = root_path.join(rcid.to_string());
+        if !root_path.exists() {
+            fs::create_dir(&root_path)?;
+        }
+        extract_ipld(&mut reader, rcid, Some(root_path))?;
+    }
+    Ok(cfg)
+}
+
+fn file_md5(f: impl AsRef<Path>) -> String {
+    let mut file = fs::OpenOptions::new()
+        .read(true)
+        .open(f).unwrap();
+    let mut buf = vec![0u8; 2048];
+    let mut md5_ctx = md5::Context::new();
+    loop {
+        let n = file.read(&mut buf).unwrap();
+        if n == 0 {
+            break;
+        }
+        md5_ctx.consume(&buf[..n])
+    }
+    let digest = md5_ctx.compute();
+    format!("{digest:x}")
+}
+
+fn check_module_sum(cfg: &CliConfig) {
+    for module in cfg.0.modules_ref() {
+        let m_file = &module.file;
+        let md5sum = file_md5(m_file);
+        if md5sum != module.md5 {
+            panic!("the module {m_file} file md5 checksum is not correctly.");  
+        }
+    }
+}
+
+fn load_cli_config(conf_path: &str) -> Result<CliConfig> {
+    let ext = Path::new(conf_path).extension();
+    let cfg = ext.and_then(|ext| ext.to_str().map(str::to_ascii_lowercase));
+    let cli_config = match cfg {
+        Some(f) if f == "car" => {
+            let file = fs::OpenOptions::new()
+                .read(true)
+                .open(conf_path)?;
+            Some(load_extract_from_car(file))
+        },
+        _ => None,
+    };
+    cli_config.unwrap_or_else(|| CliConfig::from_file(conf_path))
+}
+
 fn main() {
     let args = env::args().collect::<Vec<_>>();
     let path = args.iter().nth(1);
@@ -48,8 +137,9 @@ fn main() {
         eprintln!("usage: {} [path]\npath: configure file path", args[0]);
         return;
     }
-
-    let mut cfg = CliConfig::from_file(path.unwrap()).unwrap();
+    let path = path.unwrap();
+    let mut cfg = load_cli_config(path).unwrap();
+    check_module_sum(&cfg);
     logger_init(&cfg);
     if cfg.0.stdin_ref().is_empty() {
         io::stdin().read_line(&mut std_buffer).unwrap();
@@ -70,4 +160,70 @@ fn main() {
         let exit_code = blockless_run(cfg.0).await;
         info!("The wasm execute finish, the exit code: {}", exit_code.code);
     });
+}
+
+
+mod test {
+    #![allow(unused)]
+    use blockless::ModuleType;
+    use rust_car::{
+        Ipld,
+        header::CarHeader,
+        writer::{self as  car_writer, CarWriter}, 
+        unixfs::{UnixFs, Link}, 
+        codec::Encoder
+    };
+    use super::*;
+
+    #[test]
+    fn test_load_from_car() {
+        let mut buf = Vec::new();
+        let mut write_car = || {
+            let output = std::io::Cursor::new(&mut buf);
+            let mut writer = car_writer::new_v1_default_roots(output).unwrap();
+            let data = br#"{
+                "fs_root_path": "$ENV_ROOT_PATH", 
+                "drivers_root_path": "$ENV_ROOT_PATH/drivers", 
+                "runtime_logger": "runtime.log", 
+                "limited_fuel": 200000000,
+                "limited_memory": 30,
+                "debug_info": false,
+                "entry": "release",
+                "modules": [
+                    {
+                        "file": "$ROOT/lib.wasm",
+                        "name": "lib",
+                        "type": "module",
+                        "md5": "d41d8cd98f00b204e9800998ecf8427e"
+                    },
+                    {
+                        "file": "$ROOT/release.wasm",
+                        "name": "release",
+                        "type": "entry",
+                        "md5": "d41d8cd98f00b204e9800998ecf8427e"
+                    }
+                ],
+                "permissions": [
+                    "http://httpbin.org/anything",
+                    "file://a.go"
+                ]
+            }"#.to_vec();
+            let d_len = data.len();
+            let f_cid = writer.write_ipld(Ipld::Bytes(data)).unwrap();
+            let mut unixfs = UnixFs::new_directory();
+            unixfs.add_link(Link::new(f_cid, "config.json".to_string(), d_len as _));
+            let root_cid = writer.write_ipld(unixfs.encode().unwrap());
+            writer.rewrite_header(CarHeader::new_v1(vec![root_cid.unwrap()])).unwrap();
+            writer.flush().unwrap();
+        };
+        write_car();
+        let current_path = std::env::current_dir().unwrap();
+        std::env::set_var("ENV_ROOT_PATH", "target");
+        let input = std::io::Cursor::new(&mut buf);
+        let mut car_reader = reader::new_v1(input).unwrap();
+        let root_cid = car_reader.header().roots()[0];
+        let cfg = load_from_car(&mut car_reader).unwrap();
+        assert_eq!(cfg.0.fs_root_path_ref(), Some("target"));
+        assert_eq!(cfg.0.drivers_root_path_ref(), Some("target/drivers"));
+    }
 }

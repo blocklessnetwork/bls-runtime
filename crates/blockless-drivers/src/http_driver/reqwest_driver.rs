@@ -240,7 +240,7 @@ mod test {
     impl Stream for TestStream {
         type Item = reqwest::Result<Bytes>;
 
-        fn poll_next(self: Pin<&mut Self>, cx: &mut std::task::Context<'_>) -> Poll<Option<Self::Item>> {
+        fn poll_next(self: Pin<&mut Self>, _cx: &mut std::task::Context<'_>) -> Poll<Option<Self::Item>> {
             let s = self.get_mut().0.pop().map(|s| Ok(s));
             Poll::Ready(s)
         }
