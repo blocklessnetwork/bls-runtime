@@ -83,7 +83,7 @@ impl PartialOrd for ModuleType {
 }
 
 impl ModuleType {
-    pub fn from_str(s: &str) -> Self {
+    pub fn parse_from_str(s: &str) -> Self {
         match s {
             "entry" | "ENTRY" => Self::Entry,
             _ => Self::Module,
@@ -158,7 +158,7 @@ impl BlocklessConfig {
         perms.iter().for_each(|p| {
             g_perms
                 .entry(p.schema.clone())
-                .or_insert_with(|| Vec::new())
+                .or_insert_with(Vec::new)
                 .push(p.clone());
         });
         self.permisions = perms;
@@ -234,7 +234,7 @@ impl BlocklessConfig {
     }
 
     pub fn modules_ref(&self) -> Vec<&BlocklessModule> {
-        self.modules.iter().map(|s| s).collect()
+        self.modules.iter().collect()
     }
 
     pub fn add_module(&mut self, module: BlocklessModule) {

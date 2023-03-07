@@ -75,7 +75,7 @@ impl CliConfig {
                     let file = c["file"].as_str().map(String::from).unwrap_or_default();
                     let md5 = c["md5"].as_str().map(String::from).unwrap_or_default();
                     let module_type = c["type"].as_str().map(|s| {
-                        ModuleType::from_str(s)
+                        ModuleType::parse_from_str(s)
                     })
                     .unwrap_or(ModuleType::Module);
                     BlocklessModule { 
