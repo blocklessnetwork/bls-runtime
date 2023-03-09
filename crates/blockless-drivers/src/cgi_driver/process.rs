@@ -273,12 +273,7 @@ async fn list_cgi_directory(
 ) -> anyhow::Result<Vec<ExtensionMeta>> {
     let mut read_dir = tokio::fs::read_dir(path).await?;
     let mut rs = Vec::new();
-    loop {
-        let entry = read_dir.next_entry().await?;
-        let entry = match entry {
-            Some(e) => e,
-            None => break,
-        };
+    while let Some(entry) =  read_dir.next_entry().await? {
         let file_name = entry.file_name();
         if file_name == DB_NAME {
             continue;
@@ -288,7 +283,7 @@ async fn list_cgi_directory(
             continue;
         }
         #[cfg(target_family="unix")]
-        if meta_data.mode()&0o001 == 0  {
+        if meta_data.mode()&0o111 == 0  {
             continue;
         }
         let full_path = entry.path();
@@ -404,7 +399,7 @@ mod test {
             let mut file = fs::OpenOptions::new()
                 .create(true)
                 .write(true)
-                .mode(0o770)
+                .mode(0o700)
                 .open(test_extension)
                 .unwrap();
             //The CGI must support "--ext_verify" paramter
@@ -427,7 +422,7 @@ mod test {
                 path: temp_dir.path().to_path_buf()
             };
             let exts = _test_extensions_file(&temp_dir, "f1").await.unwrap(); 
-            assert!(exts.len() == 1);
+            assert_eq!(exts.len(), 1);
             assert!(exts[0].alias == "f1");
             assert!(exts[0].description == "eeeeee");
             assert!(exts[0].file_name == "f1");
