@@ -118,8 +118,9 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
     let exit_code = match func.call_async(&mut store, ()).await {
         Err(ref t) => {
             let fuel = fuel.unwrap_or(0);
-            trap_info(t, store.fuel_consumed(), fuel);
-            t.i32_exit_status().unwrap_or(-1)
+            trap_info(t, store.fuel_consumed(), fuel)
+                .or(t.i32_exit_status())
+                .unwrap_or(-1)
         }
         Ok(_) => {
             debug!("program exit normal.");
@@ -159,17 +160,44 @@ fn load_driver(cfs: &[DriverConfig]) {
     });
 }
 
-fn trap_info(t: &Trap, fuel: Option<u64>, max_fuel: u64) {
+fn trap_code_2_exit_code(trap_code: TrapCode) -> Option<i32> {
+    match trap_code {
+        TrapCode::StackOverflow => Some(2),
+        TrapCode::MemoryOutOfBounds => Some(3),
+        TrapCode::HeapMisaligned => Some(4),
+        TrapCode::TableOutOfBounds => Some(5),
+        TrapCode::IndirectCallToNull => Some(6),
+        TrapCode::BadSignature => Some(7),
+        TrapCode::IntegerOverflow => Some(8),
+        TrapCode::IntegerDivisionByZero => Some(9),
+        TrapCode::BadConversionToInteger => Some(10),
+        TrapCode::UnreachableCodeReached => Some(11),
+        TrapCode::Interrupt => Some(12),
+        TrapCode::AlwaysTrapAdapter => Some(13),
+        _ => None,
+    }
+}
+
+fn trap_info(t: &Trap, fuel: Option<u64>, max_fuel: u64) -> Option<i32> {
+    if let Some(trap_code) = t.trap_code() {
+        if let Some(code) = trap_code_2_exit_code(trap_code) {
+            error!("error: {}", t);
+            return Some(code);
+        }
+    }
     if let Some(fuel) = fuel {
         if fuel >= max_fuel {
             error!(
                 "All fuel is consumed, the app exited, fuel consumed {}, Max Fuel is {}.",
                 fuel, max_fuel
             );
+            return Some(1);
         } else {
             error!("Fuel {}:{}. {}", fuel, max_fuel, t);
         }
     } else {
         error!("error: {}", t);
     }
+    
+    None
 }

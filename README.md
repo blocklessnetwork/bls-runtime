@@ -100,3 +100,21 @@ The runtime requires an input from stdin and also accepts environment variables 
 $ "echo "FOO" | env THIS_IS_MY_VAR=FOO BLS_LIST_VARS=THIS_IS_MY_VAR ~/.bls/runtime/blockless-cli ./build/manifest.json"
 ```
 
+## Exit code
+
+|code|description|
+|----|-------------------|
+|Exit Code 1|The flue used out|
+|Exit Code 2|call stack exhausted|
+|Exit Code 3|out of bounds memory access|
+|Exit Code 4|misaligned memory access|
+|Exit Code 5|undefined element: out of bounds table access|
+|Exit Code 6|uninitialized element|
+|Exit Code 7|indirect call type mismatch|
+|Exit Code 8|integer overflow|
+|Exit Code 9|integer divide by zero|
+|Exit Code 10|invalid conversion to integer|
+|Exit Code 11|wasm `unreachable` instruction executed|
+|Exit Code 12|interrupt|
+|Exit Code 13|degenerate component adapter called|
+|Exit Code 128|The configure error.|
