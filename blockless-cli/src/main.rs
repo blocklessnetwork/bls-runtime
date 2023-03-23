@@ -160,10 +160,11 @@ fn main() -> ExitCode {
         
     let code = rt.block_on(async {
         if let Some(time) = run_time {
-            tokio::spawn(async move {
+            let _ = tokio::spawn(async move {
                 tokio::time::sleep(Duration::from_millis(time)).await;
+                info!("The wasm execute finish, the exit code: 15");
                 std::process::exit(15);
-            });
+            }).await;
         }
         info!("The wasm app start.");
         std::panic::set_hook(Box::new(|panic_info| {

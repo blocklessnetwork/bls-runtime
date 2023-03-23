@@ -117,4 +117,5 @@ $ "echo "FOO" | env THIS_IS_MY_VAR=FOO BLS_LIST_VARS=THIS_IS_MY_VAR ~/.bls/runti
 |Exit Code 11|wasm `unreachable` instruction executed|
 |Exit Code 12|interrupt|
 |Exit Code 13|degenerate component adapter called|
+|Exit Code 15|the app timeout.|
 |Exit Code 128|The configure error.|
