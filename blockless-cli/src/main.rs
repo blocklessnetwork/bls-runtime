@@ -9,7 +9,7 @@ use std::{
     env, 
     io::{self, Read}, 
     fs::File, 
-    path::PathBuf
+    path::PathBuf, time::Duration, sync::atomic::{AtomicBool, Ordering}
 };
 use env_logger::Target;
 use tokio::runtime::Builder;
@@ -152,6 +152,12 @@ fn main() {
         .build()
         .unwrap();
     rt.block_on(async {
+        if let Some(time) = run_time {
+            tokio::spawn(async move {
+                tokio::time::sleep(Duration::from_millis(time)).await;
+                std::process::exit(15);
+            });
+        }
         info!("The wasm app start.");
         std::panic::set_hook(Box::new(|panic_info| {
             error!("{}", panic_info.to_string());
