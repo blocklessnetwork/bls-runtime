@@ -9,7 +9,9 @@ use std::{
     env, 
     io::{self, Read}, 
     fs::File, 
-    path::PathBuf, time::Duration, sync::atomic::{AtomicBool, Ordering}
+    path::PathBuf, 
+    time::Duration, 
+    process::ExitCode
 };
 use env_logger::Target;
 use tokio::runtime::Builder;
@@ -103,14 +105,16 @@ fn file_md5(f: impl AsRef<Path>) -> String {
     format!("{digest:x}")
 }
 
-fn check_module_sum(cfg: &CliConfig) {
+fn check_module_sum(cfg: &CliConfig) -> Option<i32> {
     for module in cfg.0.modules_ref() {
         let m_file = &module.file;
         let md5sum = file_md5(m_file);
         if md5sum != module.md5 {
-            panic!("the module {m_file} file md5 checksum is not correctly.");  
+            eprintln!("the module {m_file} file md5 checksum is not correctly.");
+            return Some(128);
         }
     }
+    None
 }
 
 fn load_cli_config(conf_path: &str) -> Result<CliConfig> {
@@ -128,18 +132,20 @@ fn load_cli_config(conf_path: &str) -> Result<CliConfig> {
     cli_config.unwrap_or_else(|| CliConfig::from_file(conf_path))
 }
 
-fn main() {
+fn main() -> ExitCode {
     let args = env::args().collect::<Vec<_>>();
     let path = args.iter().nth(1);
     let mut std_buffer = String::new();
 
     if path.is_none() {
         eprintln!("usage: {} [path]\npath: configure file path", args[0]);
-        return;
+        return ExitCode::from(128);
     }
     let path = path.unwrap();
     let mut cfg = load_cli_config(path).unwrap();
-    check_module_sum(&cfg);
+    if let Some(code) = check_module_sum(&cfg) {
+        return ExitCode::from(code as u8);
+    }
     logger_init(&cfg);
     if cfg.0.stdin_ref().is_empty() {
         io::stdin().read_line(&mut std_buffer).unwrap();
@@ -151,7 +157,8 @@ fn main() {
         .enable_time()
         .build()
         .unwrap();
-    rt.block_on(async {
+        
+    let code = rt.block_on(async {
         if let Some(time) = run_time {
             tokio::spawn(async move {
                 tokio::time::sleep(Duration::from_millis(time)).await;
@@ -165,7 +172,9 @@ fn main() {
         }));
         let exit_code = blockless_run(cfg.0).await;
         info!("The wasm execute finish, the exit code: {}", exit_code.code);
+        exit_code.code
     });
+    ExitCode::from(code as u8)
 }
 
 

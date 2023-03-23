@@ -5,13 +5,13 @@
     "limited_fuel": 200000000,
     "limited_memory": 30,
     "debug_info": false,
-    "entry": "main",
+    "entry": "test",
     "modules": [
         {
-            "file": "/Users/join/Downloads/test1.wasm",
-            "name": "linking2",
-            "type": "module",
-            "md5": "d41d8cd98f00b204e9800998ecf8427e"
+            "file": "/Users/join/Downloads/test_wasm/target/wasm32-unknown-unknown/debug/test_wasm.wasm",
+            "name": "",
+            "type": "entry",
+            "md5": "46ccc517ce3c2d5a76dc93e52da72799"
         }
     ],
     "permissions": [
