@@ -105,6 +105,7 @@ pub struct BlocklessConfig {
     debug_info: bool,
     is_carfile: bool,
     entry: String,
+    run_time: Option<u64>,
     limited_fuel: Option<u64>,
     limited_time: Option<u64>,
     limited_memory: Option<u64>,
@@ -120,6 +121,14 @@ pub struct BlocklessConfig {
 }
 
 impl BlocklessConfig {
+
+    pub fn get_run_time(&self) -> Option<u64> {
+        self.run_time
+    }
+
+    pub fn set_run_time(&mut self, run_time: Option<u64>) {
+        self.run_time = run_time;
+    }
 
     pub fn get_debug_info(&self) -> bool {
         self.debug_info
@@ -187,6 +196,7 @@ impl BlocklessConfig {
 
     pub fn new(entry: &str) -> BlocklessConfig {
         Self {
+            run_time: None,
             debug_info: false,
             is_carfile: false,
             fs_root_path: None,

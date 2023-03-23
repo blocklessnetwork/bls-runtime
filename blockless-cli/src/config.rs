@@ -104,6 +104,7 @@ impl CliConfig {
         let stdin: Option<&str> = Some(json_obj["stdin"].as_str()).unwrap_or(None);
         let stdout: Option<String> = json_obj["stdout"].as_str().map(String::from);
         let debug_info: Option<bool> = json_obj["debug_info"].as_bool();
+        let run_time: Option<u64> = json_obj["run_time"].as_u64();
         
         let drvs = Self::drivers(&json_obj["drivers"]);
         let modules = Self::modules(&json_obj["modules"]);
@@ -125,6 +126,7 @@ impl CliConfig {
         bc.drivers_root_path(drivers_root_path);
         bc.limited_fuel(limited_fuel);
         bc.limited_memory(limited_memory);
+        bc.set_run_time(run_time);
 
         if stdin.is_some() {
             bc.stdin(stdin.unwrap().to_string());

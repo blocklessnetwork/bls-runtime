@@ -9,7 +9,9 @@ use std::{
     env, 
     io::{self, Read}, 
     fs::File, 
-    path::PathBuf, process::ExitCode
+    path::PathBuf, 
+    time::Duration, 
+    process::ExitCode
 };
 use env_logger::Target;
 use tokio::runtime::Builder;
@@ -149,13 +151,20 @@ fn main() -> ExitCode {
         io::stdin().read_line(&mut std_buffer).unwrap();
         cfg.0.stdin(std_buffer);
     }
-
+    let run_time = cfg.0.get_run_time();
     let rt = Builder::new_current_thread()
         .enable_io()
         .enable_time()
         .build()
         .unwrap();
+        
     let code = rt.block_on(async {
+        if let Some(time) = run_time {
+            tokio::spawn(async move {
+                tokio::time::sleep(Duration::from_millis(time)).await;
+                std::process::exit(15);
+            });
+        }
         info!("The wasm app start.");
         std::panic::set_hook(Box::new(|panic_info| {
             error!("{}", panic_info.to_string());
