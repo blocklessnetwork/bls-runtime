@@ -2,6 +2,7 @@ use anyhow::Result;
 use blockless::{self, LoggerLevel, BlocklessModule, ModuleType};
 use blockless::{BlocklessConfig, DriverConfig, MultiAddr, Permission};
 use json::{self, JsonValue};
+use std::env::VarError;
 use std::fs;
 use std::path::{PathBuf, Path};
 
@@ -151,6 +152,7 @@ impl CliConfig {
                     value: env_root,
                 });
             },
+            Err(VarError::NotPresent) => {},
             Err(e) => return Err(e.into()),
         }
         Ok(vars)
