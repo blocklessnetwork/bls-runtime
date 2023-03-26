@@ -1,5 +1,6 @@
 use blockless_drivers::{CdylibDriver, DriverConetxt};
 use blockless_env;
+use cap_std::ambient_authority;
 use log::{debug, error};
 use std::{env, path::Path};
 pub use wasi_common::*;
@@ -54,9 +55,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
     wasmtime_wasi::add_to_linker(&mut linker, |s| s).unwrap();
     let root_dir = b_conf.fs_root_path_ref()
         .and_then(|path| {
-            std::fs::File::open(path)
-                .ok()
-                .map(|path| wasmtime_wasi::Dir::from_std_file(path))
+            wasmtime_wasi::Dir::open_ambient_dir(path, ambient_authority()).ok()
         });
     let mut builder = WasiCtxBuilder::new().inherit_args().unwrap();
     //stdout file process for setting.
