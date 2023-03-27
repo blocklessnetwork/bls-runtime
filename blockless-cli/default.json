@@ -2,16 +2,16 @@
     "fs_root_path": "/Users/join/Downloads", 
     "drivers_root_path": "/Users/join/Downloads", 
     "runtime_logger": "runtime.log", 
-    "limited_fuel": 200000000,
     "limited_memory": 30,
+    "run_time": 2000,
     "debug_info": false,
-    "entry": "main",
+    "entry": "test",
     "modules": [
         {
-            "file": "/Users/join/Downloads/test1.wasm",
-            "name": "linking2",
-            "type": "module",
-            "md5": "d41d8cd98f00b204e9800998ecf8427e"
+            "file": "/Users/join/Downloads/test_wasm/target/wasm32-unknown-unknown/debug/test_wasm.wasm",
+            "name": "",
+            "type": "entry",
+            "md5": "036bf68a2af64dd5b7320641b8df903c"
         }
     ],
     "permissions": [
