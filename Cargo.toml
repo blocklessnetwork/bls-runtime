@@ -13,22 +13,25 @@ members = [
 wasi-common = {path = "crates/wasi-common"}
 
 [workspace.dependencies]
-wasmtime = "2.0.2"
-wasmtime-wasi = "2.0.2"
+wasmtime = "7.0.0"
+wasmtime-wasi = "7.0.0"
 anyhow = "1.0.22"
-wiggle = "2.0.2"
-cap-std = "0.26.0"
-cap-fs-ext = "0.26.0"
-cap-time-ext = "0.26.0"
-cap-rand = "0.26.0"
+wiggle = "7.0.0"
+cap-std = "1.0.0"
+cap-fs-ext = "1.0.0"
+cap-time-ext = "1.0.0"
+cap-rand = "1.0.0"
+bitflags = "1.2"
+async-trait = "0.1.42"
 tracing = "0.1.19"
 io-lifetimes = "0.7.0"
-rustix = "0.35.10"
+log = { version = "0.4.8", default-features = false }
+rustix = "0.36.7"
 thiserror = "1"
 wasi-common = {path = "crates/wasi-common"}
 wasi-cap-std-sync = {path = "crates/wasi-common/cap-std-sync"}
 blockless-drivers = {path = "crates/blockless-drivers"}
-windows-sys = "0.36.0"
+windows-sys = "0.45.0"
 once_cell = "1.12.0"
 md5 = "0.7.0"
-rust-car = "^0.1.2"
+rust-car = "0.1.4"

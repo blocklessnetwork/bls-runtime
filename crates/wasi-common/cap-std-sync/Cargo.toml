@@ -1,6 +1,6 @@
 [package]
 name = "wasi-cap-std-sync"
-version = "2.0.2"
+version = "7.0.0"
 authors = ["The Wasmtime Project Developers"]
 description = "WASI implementation in Rust"
 license = "Apache-2.0 WITH LLVM-exception"
@@ -12,26 +12,26 @@ edition = "2021"
 include = ["src/**/*", "README.md", "LICENSE" ]
 
 [dependencies]
-wasi-common = {workspace = true}
-async-trait = "0.1"
-anyhow = {workspace = true}
-cap-std = {workspace = true}
-cap-fs-ext = {workspace = true}
-cap-time-ext = {workspace = true}
-cap-rand = {workspace = true}
-fs-set-times = "0.17.0"
-system-interface = { version = "0.23.0", features = ["cap_std_impls"] }
-tracing = {workspace = true}
-io-lifetimes = { workspace = true, default-features = false }
-is-terminal = "0.3.0"
+wasi-common = { workspace = true }
+async-trait = { workspace = true }
+anyhow = { workspace = true }
+cap-std = { workspace = true }
+cap-fs-ext = "1.0.0"
+cap-time-ext = "1.0.0"
+cap-rand = { workspace = true }
+fs-set-times = "0.18.0"
+system-interface = { version = "0.25.0", features = ["cap_std_impls"] }
+tracing = { workspace = true }
+io-lifetimes = { workspace = true }
+is-terminal = "0.4.0"
 
 [target.'cfg(unix)'.dependencies]
 rustix = { workspace = true, features = ["fs"] }
 
 [target.'cfg(windows)'.dependencies]
 once_cell = { workspace = true }
+io-extras = "0.17.0"
 rustix = { workspace = true, features = ["net"] }
-io-extras = "0.15.0"
 
 [target.'cfg(windows)'.dependencies.windows-sys]
 workspace = true
