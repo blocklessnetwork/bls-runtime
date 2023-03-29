@@ -22,16 +22,6 @@ impl From<BlocklessMemoryErrorKind> for types::BlocklessMemoryError {
     }
 }
 
-impl types::UserErrorConversion for WasiCtx {
-    fn blockless_memory_error_from_blockless_memory_error_kind(
-        &mut self,
-        e: BlocklessMemoryErrorKind,
-    ) -> Result<types::BlocklessMemoryError, wiggle::Trap> {
-        e.try_into()
-            .map_err(|e| wiggle::Trap::String(format!("{:?}", e)))
-    }
-}
-
 impl wiggle::GuestErrorType for types::BlocklessMemoryError {
     fn success() -> Self {
         Self::Success

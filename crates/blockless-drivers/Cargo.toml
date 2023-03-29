@@ -10,11 +10,14 @@ edition = "2021"
 [features]
 default = ["builtin_http"]
 builtin_http = []
+wiggle_metadata = ["wiggle/wiggle_metadata"]
 
 [dependencies]
 blockless-drivers-macro = {path = "macro"}
 wasmtime-wasi = {workspace = true}
-wiggle = {workspace = true}
+wiggle = {default-features = false, workspace = true}
+wasi-cap-std-sync = {workspace = true}
+wasi-common = {workspace = true}
 anyhow = {workspace = true}
 cap-std = {workspace = true}
 log = "0.4"
@@ -25,8 +28,6 @@ serde_urlencoded = "0.7"
 bytes = "1"
 httparse = "1"
 json = {version = "0.12.4"}
-wasi-cap-std-sync = {workspace = true}
-wasi-common = {workspace = true}
 url = "2.2"
 rust-s3 = "0.32.0"
 futures-core = "0.3.25"

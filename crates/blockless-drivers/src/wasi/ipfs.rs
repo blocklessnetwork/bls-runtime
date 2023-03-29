@@ -29,16 +29,6 @@ impl From<IpfsErrorKind> for types::IpfsError {
     }
 }
 
-impl types::UserErrorConversion for WasiCtx {
-    fn ipfs_error_from_ipfs_error_kind(
-        &mut self,
-        e: IpfsErrorKind,
-    ) -> Result<types::IpfsError, wiggle::Trap> {
-        e.try_into()
-            .map_err(|e| wiggle::Trap::String(format!("{:?}", e)))
-    }
-}
-
 impl wiggle::GuestErrorType for types::IpfsError {
     fn success() -> Self {
         Self::Success
@@ -54,7 +44,7 @@ impl blockless_ipfs::BlocklessIpfs for WasiCtx {
         let params: &str = &params.as_str().map_err(|e| {
             error!("guest url error: {}", e);
             IpfsErrorKind::Utf8Error
-        })?;
+        })?.unwrap();
         let (status, fd) = ipfs_driver::command(params).await?;
         Ok((types::IpfsHandle::from(fd), types::StatusCode::from(status)))
     }
@@ -90,7 +80,7 @@ impl blockless_ipfs::BlocklessIpfs for WasiCtx {
         let params = buf.as_array(buf_len).as_slice().map_err(|e| {
             error!("guest url error: {}", e);
             IpfsErrorKind::InvalidParameter
-        })?;
+        })?.unwrap();
         let buf = unsafe { std::slice::from_raw_parts(params.as_ptr(), buf_len as _) };
         let rs = ipfs_driver::write_body(handle.into(), buf).await?;
         Ok(rs)

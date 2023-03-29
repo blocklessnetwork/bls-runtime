@@ -27,16 +27,6 @@ impl From<CgiErrorKind> for types::CgiError {
     }
 }
 
-impl types::UserErrorConversion for WasiCtx {
-    fn cgi_error_from_cgi_error_kind(
-        &mut self,
-        e: CgiErrorKind,
-    ) -> Result<types::CgiError, wiggle::Trap> {
-        e.try_into()
-            .map_err(|e| wiggle::Trap::String(format!("{:?}", e)))
-    }
-}
-
 impl wiggle::GuestErrorType for types::CgiError {
     fn success() -> Self {
         Self::Success
@@ -52,7 +42,7 @@ impl blockless_cgi::BlocklessCgi for WasiCtx {
         let cmd: &str = &command_with_args.as_str().map_err(|e| {
             error!("command error: {}", e);
             CgiErrorKind::InvalidParameter
-        })?;
+        })?.unwrap();
         let root_path = self.blockless_config
             .as_ref()
             .and_then(|c| c.drivers_root_path_ref())
@@ -130,7 +120,7 @@ impl blockless_cgi::BlocklessCgi for WasiCtx {
         let buf = buf.as_array(buf_len).as_slice().map_err(|e| {
             error!("guest stdin write buf error: {}", e);
             CgiErrorKind::InvalidParameter
-        })?;
+        })?.unwrap();
         let buf = unsafe { std::slice::from_raw_parts(buf.as_ptr(), buf_len as _) };
         child_stdin_write(handle.into(), buf).await
     }

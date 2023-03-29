@@ -1,10 +1,8 @@
 use crate::error::*;
 
 use super::driver_api::DriverApi;
-use anyhow::Error;
-use anyhow::Result;
+use wasi_common::Error;
 use std::any::Any;
-use std::io;
 use wasi_common::{file::FileType, WasiFile};
 
 pub(crate) struct DriverWasiFile {
@@ -32,12 +30,12 @@ impl WasiFile for DriverWasiFile {
         self
     }
 
-    async fn get_filetype(&mut self) -> Result<FileType> {
+    async fn get_filetype(&self) -> Result<FileType, Error> {
         Ok(FileType::BlockDevice)
     }
 
-    async fn read_vectored<'a>(&mut self, slices: &mut [io::IoSliceMut<'a>]) -> Result<u64, Error> {
-        let buf = slices
+    async fn read_vectored<'a>(&self, _bufs: &mut [std::io::IoSliceMut<'a>]) -> Result<u64, Error> {
+        let buf = _bufs
             .iter_mut()
             .find(|b| !b.is_empty())
             .map_or(&mut [][..], |b| &mut **b);
@@ -53,8 +51,8 @@ impl WasiFile for DriverWasiFile {
         }
     }
 
-    async fn write_vectored<'a>(&mut self, slices: &[io::IoSlice<'a>]) -> Result<u64, Error> {
-        let buf = slices
+    async fn write_vectored<'a>(&self, _bufs: &[std::io::IoSlice<'a>]) -> Result<u64, Error> {
+        let buf = _bufs
             .iter()
             .find(|b| !b.is_empty())
             .map_or(&[][..], |b| &**b);

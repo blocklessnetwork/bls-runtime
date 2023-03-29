@@ -24,7 +24,7 @@ cap-rand = "1.0.0"
 bitflags = "1.2"
 async-trait = "0.1.42"
 tracing = "0.1.19"
-io-lifetimes = "0.7.0"
+io-lifetimes = { version = "1.0.0", default-features = false }
 log = { version = "0.4.8", default-features = false }
 rustix = "0.36.7"
 thiserror = "1"
