@@ -15,6 +15,7 @@ pub struct ExitStatus {
 }
 
 pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
+    let max_fuel = b_conf.get_limited_fuel();
     //set the drivers root path, if not setting use exe file path.
     let drivers_root_path = b_conf
         .drivers_root_path_ref()
@@ -112,12 +113,24 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
     let func = inst.get_typed_func::<(), ()>(&mut store, &enrty).unwrap();
     let exit_code = match func.call_async(&mut store, ()).await {
         Err(ref t) => {
-            panic!("{t}")
-            // t.
-            // let fuel = fuel.unwrap_or(0);
-            // trap_info(t, store.fuel_consumed(), fuel)
-            //     .or(t.i32_exit_status())
-            //     .unwrap_or(-1)
+            let trap = t.downcast_ref::<Trap>();
+            let rs = trap.and_then(|t| trap_code_2_exit_code(t)).unwrap_or(-1);
+            match trap {
+                Some(Trap::OutOfFuel) => {
+                    let used_fuel = store.fuel_consumed().unwrap();
+                    let max_fuel = match max_fuel {
+                        Some(m) => m,
+                        None => 0,
+                    };
+                    error!(
+                        "All fuel is consumed, the app exited, fuel consumed {}, Max Fuel is {}.",
+                        used_fuel, max_fuel
+                    );
+                }
+                _ => error!("error: {}", t),
+                
+            };
+            rs
         }
         Ok(_) => {
             debug!("program exit normal.");
@@ -160,8 +173,8 @@ fn load_driver(cfs: &[DriverConfig]) {
     });
 }
 
-fn trap_code_2_exit_code(trap_code: Trap) -> Option<i32> {
-    match trap_code {
+fn trap_code_2_exit_code(trap_code: &Trap) -> Option<i32> {
+    match *trap_code {
         Trap::StackOverflow => Some(2),
         Trap::MemoryOutOfBounds => Some(3),
         Trap::HeapMisaligned => Some(4),
@@ -174,30 +187,7 @@ fn trap_code_2_exit_code(trap_code: Trap) -> Option<i32> {
         Trap::UnreachableCodeReached => Some(11),
         Trap::Interrupt => Some(12),
         Trap::AlwaysTrapAdapter => Some(13),
+        Trap::OutOfFuel => Some(1),
         _ => None,
     }
 }
-
-// fn trap_info(t: &Trap, fuel: Option<u64>, max_fuel: u64) -> Option<i32> {
-//     if let Some(trap_code) = t.trap_code() {
-//         if let Some(code) = trap_code_2_exit_code(trap_code) {
-//             error!("error: {}", t);
-//             return Some(code);
-//         }
-//     }
-//     if let Some(fuel) = fuel {
-//         if fuel >= max_fuel {
-//             error!(
-//                 "All fuel is consumed, the app exited, fuel consumed {}, Max Fuel is {}.",
-//                 fuel, max_fuel
-//             );
-//             return Some(1);
-//         } else {
-//             error!("Fuel {}:{}. {}", fuel, max_fuel, t);
-//         }
-//     } else {
-//         error!("error: {}", t);
-//     }
-    
-//     None
-// }
