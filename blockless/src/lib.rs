@@ -175,6 +175,7 @@ fn load_driver(cfs: &[DriverConfig]) {
 
 fn trap_code_2_exit_code(trap_code: &Trap) -> Option<i32> {
     match *trap_code {
+        Trap::OutOfFuel => Some(1),
         Trap::StackOverflow => Some(2),
         Trap::MemoryOutOfBounds => Some(3),
         Trap::HeapMisaligned => Some(4),
@@ -187,7 +188,6 @@ fn trap_code_2_exit_code(trap_code: &Trap) -> Option<i32> {
         Trap::UnreachableCodeReached => Some(11),
         Trap::Interrupt => Some(12),
         Trap::AlwaysTrapAdapter => Some(13),
-        Trap::OutOfFuel => Some(1),
         _ => None,
     }
 }

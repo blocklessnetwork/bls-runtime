@@ -50,16 +50,14 @@ impl blockless_cgi::BlocklessCgi for WasiCtx {
             error!("command error: {}", e);
             CgiErrorKind::InvalidParameter
         })?.unwrap();
-        let root_path = self.config_drivers_root_path_ref()
-            .unwrap_or("cgi_drivers_root");
+        let root_path = self.config_drivers_root_path_ref().unwrap();
         command_and_exec(root_path, cmd).await.map(|r| r.into())
     }
 
     async fn cgi_list_exec(
         &mut self
     ) -> Result<types::CgiHandle, CgiErrorKind> {
-        let root_path = self.config_drivers_root_path_ref()
-            .unwrap_or("cgi_drivers_root");
+        let root_path = self.config_drivers_root_path_ref().unwrap();
         cgi_directory_list_exec(root_path).await.map(|r| r.into())
     }
 
