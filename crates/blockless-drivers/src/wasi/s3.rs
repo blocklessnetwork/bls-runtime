@@ -11,6 +11,15 @@ wiggle::from_witx!({
     wasmtime: false,
 });
 
+impl types::UserErrorConversion for WasiCtx {
+
+    fn s3_error_from_s3_error_kind(&mut self,e:self::S3ErrorKind) -> wiggle::anyhow::Result<types::S3Error>  {
+        e.try_into()
+            .map_err(|e| wiggle::anyhow::anyhow!(format!("{:?}", e)))
+    }
+    
+}
+
 impl From<S3ErrorKind> for types::S3Error {
     fn from(e: S3ErrorKind) -> types::S3Error {
         use types::S3Error;

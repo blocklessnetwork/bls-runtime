@@ -19,12 +19,13 @@ pub fn linker_integration(args: TokenStream) -> proc_macro::TokenStream {
         }
     }
     let method_name = format_ident!("{}", config.link_method.value());
-    quote!(
+
+    let s = quote!(
         pub fn #method_name(linker: &mut Linker<WasiCtx>) {
             #(#funcs)*
         }
-    )
-    .into()
+    );
+    s.into()
 }
 
 fn generate_func(
@@ -70,17 +71,12 @@ fn generate_func(
                     let mem = match caller.get_export("memory") {
                         Some(#rt::wasmtime_crate::Extern::Memory(m)) => m,
                         _ => {
-                            return Err(#rt::wasmtime_crate::Trap::new("missing required memory export"));
+                            wiggle::anyhow::bail!("missing required memory export");
                         }
                     };
                     let (mem, ctx) = mem.data_and_store_mut(&mut caller);
                     let mem = #rt::wasmtime::WasmtimeGuestMemory::new(mem);
-
-                    match #abi_func(ctx, &mem #(, #arg_names)*).await {
-                        Ok(r) => Ok(<#ret_ty>::from(r)),
-                        Err(#rt::Trap::String(err)) => Err(#rt::wasmtime_crate::Trap::new(err)),
-                        Err(#rt::Trap::I32Exit(err)) => Err(#rt::wasmtime_crate::Trap::i32_exit(err)),
-                    }
+                    Ok(<#ret_ty>::from(#abi_func(ctx, &mem #(, #arg_names)*).await ?))
                 })
             },
         ).unwrap();

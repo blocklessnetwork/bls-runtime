@@ -222,7 +222,7 @@ impl TableFileExt for crate::table::Table {
     }
 }
 
-pub(crate) struct FileEntry {
+pub struct FileEntry {
     caps: RwLock<FileCaps>,
     file: Box<dyn WasiFile>,
 }

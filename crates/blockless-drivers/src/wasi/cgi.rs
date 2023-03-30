@@ -15,6 +15,13 @@ wiggle::from_witx!({
     wasmtime: false,
 });
 
+impl types::UserErrorConversion for WasiCtx {
+    fn cgi_error_from_cgi_error_kind(&mut self,e:self::CgiErrorKind) -> wiggle::anyhow::Result<types::CgiError>  {
+        e.try_into()
+            .map_err(|e| wiggle::anyhow::anyhow!(format!("{:?}", e)))
+    }
+}
+
 impl From<CgiErrorKind> for types::CgiError {
     fn from(c: CgiErrorKind) -> Self {
         use types::CgiError;
@@ -43,9 +50,7 @@ impl blockless_cgi::BlocklessCgi for WasiCtx {
             error!("command error: {}", e);
             CgiErrorKind::InvalidParameter
         })?.unwrap();
-        let root_path = self.blockless_config
-            .as_ref()
-            .and_then(|c| c.drivers_root_path_ref())
+        let root_path = self.config_drivers_root_path_ref()
             .unwrap_or("cgi_drivers_root");
         command_and_exec(root_path, cmd).await.map(|r| r.into())
     }
@@ -53,9 +58,7 @@ impl blockless_cgi::BlocklessCgi for WasiCtx {
     async fn cgi_list_exec(
         &mut self
     ) -> Result<types::CgiHandle, CgiErrorKind> {
-        let root_path = self.blockless_config
-            .as_ref()
-            .and_then(|c| c.drivers_root_path_ref())
+        let root_path = self.config_drivers_root_path_ref()
             .unwrap_or("cgi_drivers_root");
         cgi_directory_list_exec(root_path).await.map(|r| r.into())
     }

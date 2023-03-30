@@ -12,6 +12,15 @@ wiggle::from_witx!({
     wasmtime: false,
 });
 
+impl types::UserErrorConversion for WasiCtx {
+
+    fn ipfs_error_from_ipfs_error_kind(&mut self,e:self::IpfsErrorKind) -> wiggle::anyhow::Result<types::IpfsError>  {
+        e.try_into()
+            .map_err(|e| wiggle::anyhow::anyhow!(format!("{:?}", e)))
+    }
+    
+}
+
 impl From<IpfsErrorKind> for types::IpfsError {
     fn from(e: IpfsErrorKind) -> types::IpfsError {
         use types::IpfsError;

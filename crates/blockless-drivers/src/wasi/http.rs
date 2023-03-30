@@ -11,6 +11,14 @@ wiggle::from_witx!({
     wasmtime: false,
 });
 
+impl types::UserErrorConversion for WasiCtx {
+    fn http_error_from_http_error_kind(&mut self,e : self::HttpErrorKind) -> wiggle::anyhow::Result<types::HttpError>  {
+        e.try_into()
+            .map_err(|e| wiggle::anyhow::anyhow!(format!("{:?}", e)))
+    }
+}
+
+
 impl From<HttpErrorKind> for types::HttpError {
     fn from(e: HttpErrorKind) -> types::HttpError {
         use types::HttpError;

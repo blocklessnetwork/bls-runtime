@@ -6,7 +6,8 @@ use crate::string_array::StringArray;
 use crate::table::Table;
 use crate::{Error, StringArrayError};
 use cap_rand::RngCore;
-use std::ops::Deref;
+use std::mem;
+use std::ops::{Deref, DerefMut};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
 
@@ -30,7 +31,7 @@ pub struct WasiCtxInner {
     pub clocks: WasiClocks,
     pub sched: Box<dyn WasiSched>,
     pub table: Table,
-    pub blockless_config: Option<BlocklessConfig>,
+    pub blockless_config: Mutex<Option<BlocklessConfig>>,
 }
 
 impl WasiCtx {
@@ -47,17 +48,34 @@ impl WasiCtx {
             clocks,
             sched,
             table,
-            blockless_config: None,
+            blockless_config: Mutex::new(None),
         }));
         s.set_stdin(Box::new(crate::pipe::ReadPipe::new(std::io::empty())));
         s.set_stdout(Box::new(crate::pipe::WritePipe::new(std::io::sink())));
         s.set_stderr(Box::new(crate::pipe::WritePipe::new(std::io::sink())));
         s
     }
+
+    pub fn set_blockless_config(&mut self, c: Option<BlocklessConfig>) {
+        let mut lock = self.0.blockless_config.lock().unwrap();
+        c.map(|c| lock.deref_mut().replace(c));
+    }
+
+    pub fn config_drivers_root_path_ref(&mut self) -> Option<&'static str> {
+        let lock = self.0.blockless_config.lock().unwrap();
+        lock.as_ref().and_then(|l| l.drivers_root_path_ref().map(|s| unsafe {mem::transmute(s)}))
+    }
+
+    pub fn config_stdin_ref(&mut self) -> Option<&'static str> {
+        let lock = self.0.blockless_config.lock().unwrap();
+        lock.as_ref().and_then(|l| Some(unsafe{mem::transmute(l.stdin_ref().as_str())}))
+    }
     
     pub fn resource_permission(&self, resource: &str) -> bool {
-        match self.blockless_config {
-            Some(ref c) => c.resource_permission(resource),
+        match self.blockless_config.lock().unwrap().deref() {
+            Some(ref c) => {
+                c.resource_permission(resource)
+            },
             None => false,
         }
     }

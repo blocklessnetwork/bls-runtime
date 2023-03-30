@@ -8,7 +8,6 @@ pub mod s3;
 use crate::ErrorKind;
 use crate::{Driver, DriverConetxt};
 pub use guest_ptr::ArrayTuple;
-use log::debug;
 use std::sync::Arc;
 use wasi_common::file::{FileCaps, FileEntry};
 use wasi_common::WasiCtx;
@@ -20,6 +19,15 @@ wiggle::from_witx!({
     async: *,
     wasmtime: false,
 });
+
+impl types::UserErrorConversion for WasiCtx {
+
+    fn errno_from_error_kind(&mut self,e:self::ErrorKind) -> wiggle::anyhow::Result<types::Errno>  {
+        e.try_into()
+            .map_err(|e| wiggle::anyhow::anyhow!(format!("{:?}", e)))
+    }
+    
+}
 
 impl From<ErrorKind> for types::Errno {
     fn from(e: ErrorKind) -> types::Errno {
@@ -101,7 +109,7 @@ impl blockless_drivers::BlocklessDrivers for WasiCtx {
         match drv
             .open(path, opts)
             .await
-            .map(|f| Box::new(FileEntry::new(caps, f)))
+            .map(|f| Arc::new(FileEntry::new(caps, f)))
         {
             Ok(f) => {
                 let fd_num = self.table().push(f).unwrap();

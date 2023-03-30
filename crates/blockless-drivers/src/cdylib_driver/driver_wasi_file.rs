@@ -45,7 +45,7 @@ impl WasiFile for DriverWasiFile {
             if rs == 0 {
                 return Ok(n as _);
             }
-            return Err(ErrorKind::from(rs).into());
+            return Err(std::io::Error::from_raw_os_error(rs as _).into());
         } else {
             return Ok(n as _);
         }
@@ -59,8 +59,11 @@ impl WasiFile for DriverWasiFile {
         let mut n = 0;
         let rs = self.api.blockless_write(self.fd, buf, &mut n);
         if rs != 0 {
-            return Err(ErrorKind::from(rs).into());
+            return Err(std::io::Error::from_raw_os_error(rs as _).into());
         }
-        Ok(n.try_into()?)
+        match  n.try_into() {
+            Ok(o) => Ok(o),
+            Err(_) => Err(std::io::Error::from_raw_os_error(rs as _).into()),
+        }
     }
 }
