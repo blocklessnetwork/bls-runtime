@@ -6,7 +6,6 @@ use crate::string_array::StringArray;
 use crate::table::Table;
 use crate::{Error, StringArrayError};
 use cap_rand::RngCore;
-use std::mem;
 use std::ops::{Deref, DerefMut};
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
@@ -61,14 +60,14 @@ impl WasiCtx {
         c.map(|c| lock.deref_mut().replace(c));
     }
 
-    pub fn config_drivers_root_path_ref(&mut self) -> Option<&'static str> {
+    pub fn config_drivers_root_path_ref(&mut self) -> Option<String> {
         let lock = self.0.blockless_config.lock().unwrap();
-        lock.as_ref().and_then(|l| l.drivers_root_path_ref().map(|s| unsafe {mem::transmute(s)}))
+        lock.as_ref().and_then(|l| l.drivers_root_path_ref().map(String::from))
     }
 
-    pub fn config_stdin_ref(&mut self) -> Option<&'static str> {
+    pub fn config_stdin_ref(&mut self) -> Option<String> {
         let lock = self.0.blockless_config.lock().unwrap();
-        lock.as_ref().and_then(|l| Some(unsafe{mem::transmute(l.stdin_ref().as_str())}))
+        lock.as_ref().and_then(|l| Some(String::from(l.stdin_ref().as_str())))
     }
     
     pub fn resource_permission(&self, resource: &str) -> bool {
