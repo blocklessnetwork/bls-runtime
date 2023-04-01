@@ -3,15 +3,14 @@
     "drivers_root_path": "/Users/join/Downloads", 
     "runtime_logger": "runtime.log", 
     "limited_memory": 30,
-    "run_time": 2000,
     "debug_info": false,
-    "entry": "test",
+    "entry": "_start",
     "modules": [
         {
-            "file": "/Users/join/Downloads/test_wasm/target/wasm32-unknown-unknown/debug/test_wasm.wasm",
+            "file": "/Users/join/Downloads/sdk-rust/target/wasm32-wasi/release/exam1.wasm",
             "name": "",
             "type": "entry",
-            "md5": "036bf68a2af64dd5b7320641b8df903c"
+            "md5": "d5cfa0fc2c4ae995160c68c496dc26b0"
         }
     ],
     "permissions": [
