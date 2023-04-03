@@ -15,6 +15,7 @@ pub struct ExitStatus {
 }
 
 pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
+    let max_fuel = b_conf.get_limited_fuel();
     //set the drivers root path, if not setting use exe file path.
     let drivers_root_path = b_conf
         .drivers_root_path_ref()
@@ -35,13 +36,9 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
     }
 
     if let Some(m) = b_conf.get_limited_memory() {
-        let mut instance_limits = InstanceLimits::default();
-        instance_limits.memory_pages = m;
-        let pool = InstanceAllocationStrategy::Pooling {
-            strategy: PoolingAllocationStrategy::default(),
-            instance_limits,
-        };
-        conf.allocation_strategy(pool);
+        let mut allocation_config = PoolingAllocationConfig::default();
+        allocation_config.instance_memory_pages(m);
+        conf.allocation_strategy(InstanceAllocationStrategy::Pooling(allocation_config));
     }
     conf.async_support(true);
     let engine = Engine::new(&conf).unwrap();
@@ -97,7 +94,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
     load_driver(drivers);
     let fuel = b_conf.get_limited_fuel();
     let mut enrty: String = b_conf.entry_ref().into();
-    ctx.blockless_config = Some(b_conf);
+    ctx.set_blockless_config(Some(b_conf));
 
     let mut store = Store::new(&engine, ctx);
     //set the fuel from the configure.
@@ -113,13 +110,27 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
 
     let module = link_modules(&mut linker, &mut store).await.unwrap();
     let inst = linker.instantiate_async(&mut store, &module).await.unwrap();
-    let func = inst.get_typed_func::<(), (), _>(&mut store, &enrty).unwrap();
+    let func = inst.get_typed_func::<(), ()>(&mut store, &enrty).unwrap();
     let exit_code = match func.call_async(&mut store, ()).await {
         Err(ref t) => {
-            let fuel = fuel.unwrap_or(0);
-            trap_info(t, store.fuel_consumed(), fuel)
-                .or(t.i32_exit_status())
-                .unwrap_or(-1)
+            let trap = t.downcast_ref::<Trap>();
+            let rs = trap.and_then(|t| trap_code_2_exit_code(t)).unwrap_or(-1);
+            match trap {
+                Some(Trap::OutOfFuel) => {
+                    let used_fuel = store.fuel_consumed().unwrap();
+                    let max_fuel = match max_fuel {
+                        Some(m) => m,
+                        None => 0,
+                    };
+                    error!(
+                        "All fuel is consumed, the app exited, fuel consumed {}, Max Fuel is {}.",
+                        used_fuel, max_fuel
+                    );
+                }
+                _ => error!("error: {}", t),
+                
+            };
+            rs
         }
         Ok(_) => {
             debug!("program exit normal.");
@@ -134,8 +145,11 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
 
 
 async fn link_modules(linker: &mut Linker<WasiCtx>, store: &mut Store<WasiCtx>) -> Option<Module> {
-    let cfg = store.data().blockless_config.as_ref().unwrap();
-    let mut modules: Vec<BlocklessModule> = cfg.modules_ref().iter().map(|m| (*m).clone()).collect();
+    let mut modules: Vec<BlocklessModule> = {
+        let lock = store.data().blockless_config.lock().unwrap();
+        let cfg = lock.as_ref().unwrap();
+        cfg.modules_ref().iter().map(|m| (*m).clone()).collect()
+    };
     modules.sort_by(|a, b| a.module_type.partial_cmp(&b.module_type).unwrap());
     let mut entry = None;
     for m in modules {
@@ -159,44 +173,21 @@ fn load_driver(cfs: &[DriverConfig]) {
     });
 }
 
-fn trap_code_2_exit_code(trap_code: TrapCode) -> Option<i32> {
-    match trap_code {
-        TrapCode::StackOverflow => Some(2),
-        TrapCode::MemoryOutOfBounds => Some(3),
-        TrapCode::HeapMisaligned => Some(4),
-        TrapCode::TableOutOfBounds => Some(5),
-        TrapCode::IndirectCallToNull => Some(6),
-        TrapCode::BadSignature => Some(7),
-        TrapCode::IntegerOverflow => Some(8),
-        TrapCode::IntegerDivisionByZero => Some(9),
-        TrapCode::BadConversionToInteger => Some(10),
-        TrapCode::UnreachableCodeReached => Some(11),
-        TrapCode::Interrupt => Some(12),
-        TrapCode::AlwaysTrapAdapter => Some(13),
+fn trap_code_2_exit_code(trap_code: &Trap) -> Option<i32> {
+    match *trap_code {
+        Trap::OutOfFuel => Some(1),
+        Trap::StackOverflow => Some(2),
+        Trap::MemoryOutOfBounds => Some(3),
+        Trap::HeapMisaligned => Some(4),
+        Trap::TableOutOfBounds => Some(5),
+        Trap::IndirectCallToNull => Some(6),
+        Trap::BadSignature => Some(7),
+        Trap::IntegerOverflow => Some(8),
+        Trap::IntegerDivisionByZero => Some(9),
+        Trap::BadConversionToInteger => Some(10),
+        Trap::UnreachableCodeReached => Some(11),
+        Trap::Interrupt => Some(12),
+        Trap::AlwaysTrapAdapter => Some(13),
         _ => None,
     }
-}
-
-fn trap_info(t: &Trap, fuel: Option<u64>, max_fuel: u64) -> Option<i32> {
-    if let Some(trap_code) = t.trap_code() {
-        if let Some(code) = trap_code_2_exit_code(trap_code) {
-            error!("error: {}", t);
-            return Some(code);
-        }
-    }
-    if let Some(fuel) = fuel {
-        if fuel >= max_fuel {
-            error!(
-                "All fuel is consumed, the app exited, fuel consumed {}, Max Fuel is {}.",
-                fuel, max_fuel
-            );
-            return Some(1);
-        } else {
-            error!("Fuel {}:{}. {}", fuel, max_fuel, t);
-        }
-    } else {
-        error!("error: {}", t);
-    }
-    
-    None
 }

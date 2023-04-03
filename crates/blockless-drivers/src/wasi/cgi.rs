@@ -15,6 +15,13 @@ wiggle::from_witx!({
     wasmtime: false,
 });
 
+impl types::UserErrorConversion for WasiCtx {
+    fn cgi_error_from_cgi_error_kind(&mut self,e:self::CgiErrorKind) -> wiggle::anyhow::Result<types::CgiError>  {
+        e.try_into()
+            .map_err(|e| wiggle::anyhow::anyhow!(format!("{:?}", e)))
+    }
+}
+
 impl From<CgiErrorKind> for types::CgiError {
     fn from(c: CgiErrorKind) -> Self {
         use types::CgiError;
@@ -24,16 +31,6 @@ impl From<CgiErrorKind> for types::CgiError {
             CgiErrorKind::RuntimeError => CgiError::RuntimeError,
             CgiErrorKind::InvalidExtension => CgiError::InvalidExtension,
         }
-    }
-}
-
-impl types::UserErrorConversion for WasiCtx {
-    fn cgi_error_from_cgi_error_kind(
-        &mut self,
-        e: CgiErrorKind,
-    ) -> Result<types::CgiError, wiggle::Trap> {
-        e.try_into()
-            .map_err(|e| wiggle::Trap::String(format!("{:?}", e)))
     }
 }
 
@@ -52,22 +49,16 @@ impl blockless_cgi::BlocklessCgi for WasiCtx {
         let cmd: &str = &command_with_args.as_str().map_err(|e| {
             error!("command error: {}", e);
             CgiErrorKind::InvalidParameter
-        })?;
-        let root_path = self.blockless_config
-            .as_ref()
-            .and_then(|c| c.drivers_root_path_ref())
-            .unwrap_or("cgi_drivers_root");
-        command_and_exec(root_path, cmd).await.map(|r| r.into())
+        })?.unwrap();
+        let root_path = self.config_drivers_root_path_ref().unwrap();
+        command_and_exec(&root_path, cmd).await.map(|r| r.into())
     }
 
     async fn cgi_list_exec(
         &mut self
     ) -> Result<types::CgiHandle, CgiErrorKind> {
-        let root_path = self.blockless_config
-            .as_ref()
-            .and_then(|c| c.drivers_root_path_ref())
-            .unwrap_or("cgi_drivers_root");
-        cgi_directory_list_exec(root_path).await.map(|r| r.into())
+        let root_path = self.config_drivers_root_path_ref().unwrap();
+        cgi_directory_list_exec(&root_path).await.map(|r| r.into())
     }
 
     async fn cgi_list_read<'a>(
@@ -130,7 +121,7 @@ impl blockless_cgi::BlocklessCgi for WasiCtx {
         let buf = buf.as_array(buf_len).as_slice().map_err(|e| {
             error!("guest stdin write buf error: {}", e);
             CgiErrorKind::InvalidParameter
-        })?;
+        })?.unwrap();
         let buf = unsafe { std::slice::from_raw_parts(buf.as_ptr(), buf_len as _) };
         child_stdin_write(handle.into(), buf).await
     }

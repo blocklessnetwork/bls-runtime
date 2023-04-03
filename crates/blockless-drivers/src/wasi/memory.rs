@@ -11,6 +11,15 @@ wiggle::from_witx!({
     wasmtime: false,
 });
 
+impl types::UserErrorConversion for WasiCtx {
+
+    fn blockless_memory_error_from_blockless_memory_error_kind(&mut self,e:self::BlocklessMemoryErrorKind) -> wiggle::anyhow::Result<types::BlocklessMemoryError>  {
+        e.try_into()
+            .map_err(|e| wiggle::anyhow::anyhow!(format!("{:?}", e)))
+    }
+    
+}
+
 impl From<BlocklessMemoryErrorKind> for types::BlocklessMemoryError {
     fn from(e: BlocklessMemoryErrorKind) -> types::BlocklessMemoryError {
         use types::BlocklessMemoryError;
@@ -19,16 +28,6 @@ impl From<BlocklessMemoryErrorKind> for types::BlocklessMemoryError {
             BlocklessMemoryErrorKind::RuntimeError => BlocklessMemoryError::RuntimeError,
             BlocklessMemoryErrorKind::InvalidParameter => BlocklessMemoryError::InvalidParameter,
         }
-    }
-}
-
-impl types::UserErrorConversion for WasiCtx {
-    fn blockless_memory_error_from_blockless_memory_error_kind(
-        &mut self,
-        e: BlocklessMemoryErrorKind,
-    ) -> Result<types::BlocklessMemoryError, wiggle::Trap> {
-        e.try_into()
-            .map_err(|e| wiggle::Trap::String(format!("{:?}", e)))
     }
 }
 
@@ -45,7 +44,7 @@ impl blockless_memory::BlocklessMemory for WasiCtx {
         buf: &GuestPtr<'a, u8>,
         buf_len: u32,
     ) -> Result<u32, BlocklessMemoryErrorKind> {
-        let stdin = self.blockless_config.as_ref().unwrap().stdin_ref();
+        let stdin = self.config_stdin_ref().unwrap();
         let mut dest_buf = vec![0; buf_len as _];
         let rs = memory_driver::read(&mut dest_buf, stdin.to_string()).await?;
         if rs > 0 {

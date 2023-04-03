@@ -1,5 +1,5 @@
 use std::mem;
-use wiggle::{GuestPtr, GuestType, GuestTypeTransparent};
+use wiggle::{GuestPtr, GuestType};
 
 #[derive(Debug)]
 pub struct ArrayTuple(u32, u32);
@@ -24,11 +24,5 @@ impl<'a> GuestType<'a> for ArrayTuple {
         let len_ptr = ptr.cast::<u32>().add(1)?;
         ptr.cast::<u32>().write(offs)?;
         len_ptr.write(len)
-    }
-}
-
-unsafe impl<'a> GuestTypeTransparent<'a> for ArrayTuple {
-    fn validate(_ptr: *mut Self) -> Result<(), wiggle::GuestError> {
-        Ok(())
     }
 }

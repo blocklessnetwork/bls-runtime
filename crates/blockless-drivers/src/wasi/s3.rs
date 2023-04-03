@@ -11,6 +11,15 @@ wiggle::from_witx!({
     wasmtime: false,
 });
 
+impl types::UserErrorConversion for WasiCtx {
+
+    fn s3_error_from_s3_error_kind(&mut self,e:self::S3ErrorKind) -> wiggle::anyhow::Result<types::S3Error>  {
+        e.try_into()
+            .map_err(|e| wiggle::anyhow::anyhow!(format!("{:?}", e)))
+    }
+    
+}
+
 impl From<S3ErrorKind> for types::S3Error {
     fn from(e: S3ErrorKind) -> types::S3Error {
         use types::S3Error;
@@ -30,16 +39,6 @@ impl From<S3ErrorKind> for types::S3Error {
     }
 }
 
-impl types::UserErrorConversion for WasiCtx {
-    fn s3_error_from_s3_error_kind(
-        &mut self,
-        e: S3ErrorKind,
-    ) -> Result<types::S3Error, wiggle::Trap> {
-        e.try_into()
-            .map_err(|e| wiggle::Trap::String(format!("{:?}", e)))
-    }
-}
-
 impl wiggle::GuestErrorType for types::S3Error {
     fn success() -> Self {
         Self::Success
@@ -56,7 +55,7 @@ impl blockless_s3::BlocklessS3 for WasiCtx {
         let params: &str = &param.as_str().map_err(|e| {
             error!("guest url error: {}", e);
             S3ErrorKind::Utf8Error
-        })?;
+        })?.unwrap();
         let rs = s3_driver::bucket_command(cmd, params).await?;
         Ok(rs.into())
     }
@@ -70,11 +69,11 @@ impl blockless_s3::BlocklessS3 for WasiCtx {
         let cfg: &str = &cfg.as_str().map_err(|e| {
             error!("guest url error: {}", e);
             S3ErrorKind::Utf8Error
-        })?;
+        })?.unwrap();
         let params = buf.as_array(buf_len).as_slice().map_err(|e| {
             error!("guest url error: {}", e);
             S3ErrorKind::InvalidParameter
-        })?;
+        })?.unwrap();
         s3_driver::bucket_put_object(cfg, &params).await
     }
 

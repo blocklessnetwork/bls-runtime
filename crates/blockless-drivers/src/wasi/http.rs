@@ -11,6 +11,14 @@ wiggle::from_witx!({
     wasmtime: false,
 });
 
+impl types::UserErrorConversion for WasiCtx {
+    fn http_error_from_http_error_kind(&mut self,e : self::HttpErrorKind) -> wiggle::anyhow::Result<types::HttpError>  {
+        e.try_into()
+            .map_err(|e| wiggle::anyhow::anyhow!(format!("{:?}", e)))
+    }
+}
+
+
 impl From<HttpErrorKind> for types::HttpError {
     fn from(e: HttpErrorKind) -> types::HttpError {
         use types::HttpError;
@@ -77,22 +85,11 @@ impl From<u32> for HttpErrorKind {
     }
 }
 
-impl types::UserErrorConversion for WasiCtx {
-    fn http_error_from_http_error_kind(
-        &mut self,
-        e: HttpErrorKind,
-    ) -> Result<types::HttpError, wiggle::Trap> {
-        e.try_into()
-            .map_err(|e| wiggle::Trap::String(format!("{:?}", e)))
-    }
-}
-
 impl wiggle::GuestErrorType for types::HttpError {
     fn success() -> Self {
         Self::Success
     }
 }
-
 
 #[wiggle::async_trait]
 impl blockless_http::BlocklessHttp for WasiCtx {
@@ -104,7 +101,7 @@ impl blockless_http::BlocklessHttp for WasiCtx {
         let url: &str = &url.as_str().map_err(|e| {
             error!("guest url error: {}", e);
             HttpErrorKind::Utf8Error
-        })?;
+        })?.unwrap();
         if !self.resource_permission(url) {
             error!("Permission Deny");
             return Err(HttpErrorKind::PermissionDeny);
@@ -112,7 +109,7 @@ impl blockless_http::BlocklessHttp for WasiCtx {
         let opts: &str = &opts.as_str().map_err(|e| {
             error!("guest options error: {}", e);
             HttpErrorKind::Utf8Error
-        })?;
+        })?.unwrap();
         let (fd, code) = http_driver::http_req(url, opts).await?;
         Ok((types::HttpHandle::from(fd), types::CodeType::from(code)))
     }
@@ -131,7 +128,7 @@ impl blockless_http::BlocklessHttp for WasiCtx {
         let head: &str = &head.as_str().map_err(|e| {
             error!("guest head error: {}", e);
             HttpErrorKind::Utf8Error
-        })?;
+        })?.unwrap();
         let mut dest_buf = vec![0; buf_len as _];
         let buf = buf.clone();
         let rs = http_driver::http_read_head(handle.into(), head, &mut dest_buf[..]).await?;
