@@ -360,7 +360,24 @@ mod test {
 
     #[test]
     fn test_config() {
-        let config = BlocklessConfig::new("test");
+        let mut config = BlocklessConfig::new("test");
         assert!(matches!(config.version(), BlocklessConfigVersion::Version0));
+        let permisions = vec![
+            Permission{
+                url: "/test1".to_string(),
+                schema: "http".to_string(),
+            },
+            Permission{
+                url: "/test2".to_string(),
+                schema: "http".to_string(),
+            },
+        ];
+        config.permisions(permisions);
+        let grps = config.group_permisions.get("http");
+        if let Some(grps) =  grps {
+            assert_eq!(grps.len(), 2);
+        } else {
+            unreachable!("should not reach.");
+        }
     }
 }
