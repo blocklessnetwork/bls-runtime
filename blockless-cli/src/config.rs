@@ -217,9 +217,30 @@ mod test {
                 "file://a.go"
             ]
         }"#.to_string();
+        
         std::env::set_var("ENV_ROOT_PATH", "target");
         let config = CliConfig::from_data(data, None).unwrap();
         assert!(matches!(config.0.version(), BlocklessConfigVersion::Version1));
         assert_eq!(config.0.modules_ref().len(), 2);
+    }
+
+    fn test_from_json() {
+        let data = r#"{
+            "fs_root_path": "/", 
+            "drivers_root_path": "/drivers", 
+            "runtime_logger": "runtime.log", 
+            "limited_fuel": 200000000,
+            "limited_memory": 30,
+            "debug_info": false,
+            "entry": "lib.wasm",
+            "permissions": [
+                "http://httpbin.org/anything",
+                "file://a.go"
+            ]
+        }"#.to_string();
+        let config = CliConfig::from_json_string(data).unwrap();
+        assert!(matches!(config.0.version(), BlocklessConfigVersion::Version0));
+        assert_eq!(config.0.get_limited_memory(), Some(30));
+        assert_eq!(config.0.get_limited_fuel(), Some(200000000));
     }
 }
