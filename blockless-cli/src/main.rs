@@ -151,7 +151,7 @@ fn main() -> ExitCode {
         io::stdin().read_line(&mut std_buffer).unwrap();
         cfg.0.stdin(std_buffer);
     }
-    let run_time = cfg.0.get_run_time();
+    let run_time = cfg.0.run_time();
     let rt = Builder::new_current_thread()
         .enable_io()
         .enable_time()

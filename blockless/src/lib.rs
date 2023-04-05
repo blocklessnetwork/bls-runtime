@@ -94,6 +94,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
     load_driver(drivers);
     let fuel = b_conf.get_limited_fuel();
     let mut enrty: String = b_conf.entry_ref().into();
+    let version = b_conf.version();
     ctx.set_blockless_config(Some(b_conf));
 
     let mut store = Store::new(&engine, ctx);
@@ -103,12 +104,21 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
             error!("add fuel error: {}", e);
         });
     }
-
-    if enrty == "" {
-        enrty = ENTRY.to_string();
-    }
-
-    let module = link_modules(&mut linker, &mut store).await.unwrap();
+    let (module, enrty) = match version {
+        BlocklessConfigVersion::Version0 => {
+            let module = Module::from_file(store.engine(), &enrty).unwrap();
+            linker.module_async(store.as_context_mut(), "", &module).await.unwrap();
+            (module, ENTRY.to_string())
+        },
+        BlocklessConfigVersion::Version1 => {
+            if enrty == "" {
+                enrty = ENTRY.to_string();
+            }
+            let module = link_modules(&mut linker, &mut store).await.unwrap();
+            (module, enrty)
+        },
+    };
+    
     let inst = linker.instantiate_async(&mut store, &module).await.unwrap();
     let func = inst.get_typed_func::<(), ()>(&mut store, &enrty).unwrap();
     let exit_code = match func.call_async(&mut store, ()).await {
@@ -142,7 +152,6 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
         code: exit_code,
     }
 }
-
 
 async fn link_modules(linker: &mut Linker<WasiCtx>, store: &mut Store<WasiCtx>) -> Option<Module> {
     let mut modules: Vec<BlocklessModule> = {
