@@ -111,6 +111,7 @@ impl CliConfig {
         let modules = Self::modules(&json_obj["modules"]);
         let perms: Vec<Permission> = Self::permissions(&json_obj["permissions"]);
         let entry: &str = json_obj["entry"].as_str().unwrap();
+        let version = json_obj["version"].as_usize();
         let mut bc = BlocklessConfig::new(entry);
         bc.set_modules(modules);
         bc.extensions_path(extensions_path);
@@ -128,6 +129,7 @@ impl CliConfig {
         bc.limited_fuel(limited_fuel);
         bc.limited_memory(limited_memory);
         bc.set_run_time(run_time);
+        version.map(|v| bc.set_version(v.into()));
 
         if stdin.is_some() {
             bc.stdin(stdin.unwrap().to_string());
@@ -176,5 +178,48 @@ impl CliConfig {
         let values = fs::read_to_string(path)?;
         let json_string = Self::replace_vars(values, None)?;
         Self::from_json_string(json_string)
+    }
+}
+
+
+mod test {
+    #![allow(unused)]
+    use blockless::BlocklessConfigVersion;
+
+    use super::*;
+
+    fn test_load_config() {
+        let data = r#"{
+            "version": 1,
+            "fs_root_path": "$ENV_ROOT_PATH", 
+            "drivers_root_path": "$ENV_ROOT_PATH/drivers", 
+            "runtime_logger": "runtime.log", 
+            "limited_fuel": 200000000,
+            "limited_memory": 30,
+            "debug_info": false,
+            "entry": "release",
+            "modules": [
+                {
+                    "file": "$ROOT/lib.wasm",
+                    "name": "lib",
+                    "type": "module",
+                    "md5": "d41d8cd98f00b204e9800998ecf8427e"
+                },
+                {
+                    "file": "$ROOT/release.wasm",
+                    "name": "release",
+                    "type": "entry",
+                    "md5": "d41d8cd98f00b204e9800998ecf8427e"
+                }
+            ],
+            "permissions": [
+                "http://httpbin.org/anything",
+                "file://a.go"
+            ]
+        }"#.to_string();
+        std::env::set_var("ENV_ROOT_PATH", "target");
+        let config = CliConfig::from_data(data, None).unwrap();
+        assert!(matches!(config.0.version(), BlocklessConfigVersion::Version1));
+        assert_eq!(config.0.modules_ref().len(), 2);
     }
 }

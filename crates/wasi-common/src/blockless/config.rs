@@ -105,6 +105,16 @@ pub enum BlocklessConfigVersion {
     Version1,
 }
 
+impl From<usize> for BlocklessConfigVersion {
+    fn from(value: usize) -> Self {
+        match value {
+            1 => BlocklessConfigVersion::Version1,
+            0 => BlocklessConfigVersion::Version0,
+            _ => unreachable!("unknown configure version: {value}."),
+        } 
+    }
+}
+
 pub struct BlocklessConfig {
     stdin: String,
     stdout: Stdout,
