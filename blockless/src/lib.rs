@@ -123,24 +123,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
     let func = inst.get_typed_func::<(), ()>(&mut store, &enrty).unwrap();
     let exit_code = match func.call_async(&mut store, ()).await {
         Err(ref t) => {
-            let trap = t.downcast_ref::<Trap>();
-            let rs = trap.and_then(|t| trap_code_2_exit_code(t)).unwrap_or(-1);
-            match trap {
-                Some(Trap::OutOfFuel) => {
-                    let used_fuel = store.fuel_consumed().unwrap();
-                    let max_fuel = match max_fuel {
-                        Some(m) => m,
-                        None => 0,
-                    };
-                    error!(
-                        "All fuel is consumed, the app exited, fuel consumed {}, Max Fuel is {}.",
-                        used_fuel, max_fuel
-                    );
-                }
-                _ => error!("error: {}", t),
-                
-            };
-            rs
+            error_process(t, || store.fuel_consumed().unwrap(), max_fuel)
         }
         Ok(_) => {
             debug!("program exit normal.");
@@ -182,6 +165,35 @@ fn load_driver(cfs: &[DriverConfig]) {
     });
 }
 
+fn error_process<F>(
+    t: &anyhow::Error, 
+    used_fuel: F,
+    max_fuel: Option<u64>,
+) -> i32 
+where
+    F: FnOnce() -> u64
+{
+    let trap = t.downcast_ref::<Trap>();
+    let rs = trap.and_then(|t| trap_code_2_exit_code(t)).unwrap_or(-1);
+    match trap {
+        Some(Trap::OutOfFuel) => {
+            let used_fuel = used_fuel();
+            let max_fuel = match max_fuel {
+                Some(m) => m,
+                None => 0,
+            };
+            error!(
+                "All fuel is consumed, the app exited, fuel consumed {}, Max Fuel is {}.",
+                used_fuel, max_fuel
+            );
+        }
+        _ => error!("error: {}", t),
+        
+    };
+    rs
+}
+
+#[inline(always)]
 fn trap_code_2_exit_code(trap_code: &Trap) -> Option<i32> {
     match *trap_code {
         Trap::OutOfFuel => Some(1),
@@ -198,5 +210,17 @@ fn trap_code_2_exit_code(trap_code: &Trap) -> Option<i32> {
         Trap::Interrupt => Some(12),
         Trap::AlwaysTrapAdapter => Some(13),
         _ => None,
+    }
+}
+
+mod test {
+    #[allow(unused_imports)]
+    use super::*;
+    
+    #[test]
+    fn test_exit_code() {
+        let err = Trap::OutOfFuel.into();
+        let rs = error_process(&err, || 20u64, Some(30));
+        assert_eq!(rs, 1);
     }
 }
