@@ -352,3 +352,15 @@ impl BlocklessConfig {
         self.limited_memory
     }
 }
+
+mod test {
+
+    #[allow(unused_imports)]
+    use super::*;
+
+    #[test]
+    fn test_config() {
+        let config = BlocklessConfig::new("test");
+        assert!(matches!(config.version(), BlocklessConfigVersion::Version0));
+    }
+}
