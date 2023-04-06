@@ -93,7 +93,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
     let drivers = b_conf.drivers_ref();
     load_driver(drivers);
     let fuel = b_conf.get_limited_fuel();
-    let mut enrty: String = b_conf.entry_ref().into();
+    let mut entry: String = b_conf.entry_ref().into();
     let version = b_conf.version();
     ctx.set_blockless_config(Some(b_conf));
 
@@ -104,23 +104,23 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
             error!("add fuel error: {}", e);
         });
     }
-    let (module, enrty) = match version {
+    let (module, entry) = match version {
         BlocklessConfigVersion::Version0 => {
-            let module = Module::from_file(store.engine(), &enrty).unwrap();
+            let module = Module::from_file(store.engine(), &entry).unwrap();
             linker.module_async(store.as_context_mut(), "", &module).await.unwrap();
             (module, ENTRY.to_string())
         },
         BlocklessConfigVersion::Version1 => {
-            if enrty == "" {
-                enrty = ENTRY.to_string();
+            if entry == "" {
+                entry = ENTRY.to_string();
             }
             let module = link_modules(&mut linker, &mut store).await.unwrap();
-            (module, enrty)
+            (module, entry)
         },
     };
     
     let inst = linker.instantiate_async(&mut store, &module).await.unwrap();
-    let func = inst.get_typed_func::<(), ()>(&mut store, &enrty).unwrap();
+    let func = inst.get_typed_func::<(), ()>(&mut store, &entry).unwrap();
     let exit_code = match func.call_async(&mut store, ()).await {
         Err(ref t) => {
             error_process(t, || store.fuel_consumed().unwrap(), max_fuel)
@@ -215,7 +215,7 @@ where
 mod test {
     #[allow(unused_imports)]
     use super::*;
-    use std::fs;
+    use std::{fs, path::PathBuf};
     use tempdir::TempDir;
     use tokio::runtime::Builder;
     
@@ -226,31 +226,51 @@ mod test {
         assert_eq!(rs, 1);
     }
 
-    #[test]
-    fn test_blockless_run() {
-        let temp_dir = TempDir::new("blockless_run").unwrap();
-        let file_path = temp_dir.path().join("run.wasm");
+    fn run_blockless(config: BlocklessConfig) -> ExitStatus {
+        let rt = Builder::new_current_thread()
+            .enable_io()
+            .enable_time()
+            .build()
+            .unwrap();
+        
+        rt.block_on(async {
+            blockless_run(config).await
+        })
+    }
+
+    fn simple_run_wat(temp_dir: &TempDir) -> PathBuf {
+        let file_path = temp_dir.path().join("test_blockless_run.wasm");
         let code = r#"
         (module
             (func (export "_start")
             )
-            (memory (export "memory") 2)
-          )
+            (memory (export "memory") 1)
+        )
         "#;
         fs::write(&file_path, code).unwrap();
+        file_path
+    }
+
+    #[test]
+    fn test_outof_fuel() {
+        let temp = TempDir::new("blockless_run").unwrap();
+        let file_path = simple_run_wat(&temp);
+        let path = file_path.to_str().unwrap();
+        let mut config =  BlocklessConfig::new(path);
+        config.limited_fuel(Some(1));
+        config.set_version(BlocklessConfigVersion::Version0);
+        let code = run_blockless(config);
+        assert_eq!(code.code, 1);
+    }
+
+    #[test]
+    fn test_blockless_normal() {
+        let temp = TempDir::new("blockless_run").unwrap();
+        let file_path = simple_run_wat(&temp);
         let path = file_path.to_str().unwrap();
         let mut config =  BlocklessConfig::new(path);
         config.set_version(BlocklessConfigVersion::Version0);
-        
-        let rt = Builder::new_current_thread()
-        .enable_io()
-        .enable_time()
-        .build()
-        .unwrap();
-        
-        let code = rt.block_on(async {
-            blockless_run(config).await
-        });
+        let code = run_blockless(config);
         assert_eq!(code.code, 0);
     }
 
@@ -303,15 +323,7 @@ mod test {
         let mut config =  BlocklessConfig::new("_start");
         config.set_version(BlocklessConfigVersion::Version1);
         config.set_modules(modules);
-        let rt = Builder::new_current_thread()
-            .enable_io()
-            .enable_time()
-            .build()
-            .unwrap();
-            
-        let code = rt.block_on(async {
-            blockless_run(config).await
-        });
+        let code = run_blockless(config);
         assert_eq!(code.code, 0);
     }
 
