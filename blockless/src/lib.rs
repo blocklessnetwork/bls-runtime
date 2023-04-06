@@ -215,6 +215,9 @@ where
 mod test {
     #[allow(unused_imports)]
     use super::*;
+    use std::fs;
+    use tempdir::TempDir;
+    use tokio::runtime::Builder;
     
     #[test]
     fn test_exit_code() {
@@ -225,7 +228,30 @@ mod test {
 
     #[test]
     fn test_blockless_run() {
+        let temp_dir = TempDir::new("blockless_run").unwrap();
+        let file_path = temp_dir.path().join("run.wasm");
+        let code = r#"
+        (module
+            (func (export "_start")
+            )
+            (memory (export "memory") 2)
+          )
+        "#;
+        fs::write(&file_path, code).unwrap();
+        let path = file_path.to_str().unwrap();
+        let mut config =  BlocklessConfig::new(path);
+        config.set_version(BlocklessConfigVersion::Version0);
         
+        let rt = Builder::new_current_thread()
+        .enable_io()
+        .enable_time()
+        .build()
+        .unwrap();
+        
+        let code = rt.block_on(async {
+            blockless_run(config).await
+        });
+        assert_eq!(code.code, 0);
     }
 
 }
