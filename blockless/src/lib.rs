@@ -254,4 +254,65 @@ mod test {
         assert_eq!(code.code, 0);
     }
 
+    #[test]
+    fn test_blockless_run_modules() {
+        let temp_dir = TempDir::new("blockless_run").unwrap();
+        let run_wasm = temp_dir.path().join("run.wasm");
+        let code = r#"
+        (module
+            (import "module" "double" (func $double (param i32) (result i32)))
+            (func (export "_start")
+                i32.const 2
+                call $double
+                drop
+            )
+          )
+        "#;
+        let run_md5 = format!("{:x}", md5::compute(code));
+        fs::write(&run_wasm, code).unwrap();
+        let run_wasm_str = run_wasm.to_str().unwrap();
+        
+        let file_path = temp_dir.path().join("module.wasm");
+        let code = r#"
+        (module
+            (func (export "double") (param i32) (result i32)
+                local.get 0
+                i32.const 2
+                i32.mul
+            )
+            (memory (export "memory") 2)
+          )
+        "#;
+        let module_md5 = format!("{:x}", md5::compute(code));
+        fs::write(&file_path, code).unwrap();
+        let module_wasm  = file_path.to_str().unwrap();
+        let modules = vec![
+            BlocklessModule { 
+                module_type: ModuleType::Entry, 
+                name: "".to_string(), 
+                file: run_wasm_str.to_string(), 
+                md5: run_md5 
+            },
+            BlocklessModule { 
+                module_type: ModuleType::Module, 
+                name: "module".to_string(), 
+                file: module_wasm.to_string(), 
+                md5: module_md5 
+            },
+        ];
+        let mut config =  BlocklessConfig::new("_start");
+        config.set_version(BlocklessConfigVersion::Version1);
+        config.set_modules(modules);
+        let rt = Builder::new_current_thread()
+            .enable_io()
+            .enable_time()
+            .build()
+            .unwrap();
+            
+        let code = rt.block_on(async {
+            blockless_run(config).await
+        });
+        assert_eq!(code.code, 0);
+    }
+
 }
