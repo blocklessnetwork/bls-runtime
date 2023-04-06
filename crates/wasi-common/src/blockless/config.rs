@@ -390,8 +390,10 @@ mod test {
         } else {
             unreachable!("should not reach.");
         }
-        config.fs_root_path(Some("/root".into()));
-        config.runtime_logger(Some("test.log".into()));
+        let root = Some("/root".into());
+        config.fs_root_path(root);
+        let test = Some("test.log".into());
+        config.runtime_logger(test);
         let result = PathBuf::new().join("/root").join("test.log");
         assert_eq!(config.runtime_logger_ref().unwrap(), result);
     }
