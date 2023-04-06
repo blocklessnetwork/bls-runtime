@@ -211,6 +211,7 @@ where
     rs
 }
 
+#[cfg(test)]
 mod test {
     #[allow(unused_imports)]
     use super::*;
@@ -220,6 +221,11 @@ mod test {
         let err = Trap::OutOfFuel.into();
         let rs = error_process(&err, || 20u64, Some(30));
         assert_eq!(rs, 1);
+    }
+
+    #[test]
+    fn test_blockless_run() {
+        
     }
 
 }

@@ -181,7 +181,7 @@ impl CliConfig {
     }
 }
 
-
+#[cfg(test)]
 mod test {
     #![allow(unused)]
     use blockless::BlocklessConfigVersion;

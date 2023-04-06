@@ -363,6 +363,7 @@ impl BlocklessConfig {
     }
 }
 
+#[cfg(test)]
 mod test {
 
     #![allow(unused_imports)]

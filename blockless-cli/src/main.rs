@@ -178,7 +178,7 @@ fn main() -> ExitCode {
     ExitCode::from(code as u8)
 }
 
-
+#[cfg(test)]
 mod test {
     #![allow(unused)]
     use blockless::ModuleType;
