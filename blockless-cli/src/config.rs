@@ -188,6 +188,7 @@ mod test {
 
     use super::*;
 
+    #[test]
     fn test_load_config() {
         let data = r#"{
             "version": 1,
@@ -224,6 +225,7 @@ mod test {
         assert_eq!(config.0.modules_ref().len(), 2);
     }
 
+    #[test]
     fn test_from_json() {
         let data = r#"{
             "fs_root_path": "/", 
