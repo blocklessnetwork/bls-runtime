@@ -173,6 +173,24 @@ fn error_process<F>(
 where
     F: FnOnce() -> u64
 {
+    let trap_code_2_exit_code = |trap_code: &Trap| -> Option<i32> {
+        match *trap_code {
+            Trap::OutOfFuel => Some(1),
+            Trap::StackOverflow => Some(2),
+            Trap::MemoryOutOfBounds => Some(3),
+            Trap::HeapMisaligned => Some(4),
+            Trap::TableOutOfBounds => Some(5),
+            Trap::IndirectCallToNull => Some(6),
+            Trap::BadSignature => Some(7),
+            Trap::IntegerOverflow => Some(8),
+            Trap::IntegerDivisionByZero => Some(9),
+            Trap::BadConversionToInteger => Some(10),
+            Trap::UnreachableCodeReached => Some(11),
+            Trap::Interrupt => Some(12),
+            Trap::AlwaysTrapAdapter => Some(13),
+            _ => None,
+        }
+    };
     let trap = t.downcast_ref::<Trap>();
     let rs = trap.and_then(|t| trap_code_2_exit_code(t)).unwrap_or(-1);
     match trap {
@@ -193,26 +211,6 @@ where
     rs
 }
 
-#[inline(always)]
-fn trap_code_2_exit_code(trap_code: &Trap) -> Option<i32> {
-    match *trap_code {
-        Trap::OutOfFuel => Some(1),
-        Trap::StackOverflow => Some(2),
-        Trap::MemoryOutOfBounds => Some(3),
-        Trap::HeapMisaligned => Some(4),
-        Trap::TableOutOfBounds => Some(5),
-        Trap::IndirectCallToNull => Some(6),
-        Trap::BadSignature => Some(7),
-        Trap::IntegerOverflow => Some(8),
-        Trap::IntegerDivisionByZero => Some(9),
-        Trap::BadConversionToInteger => Some(10),
-        Trap::UnreachableCodeReached => Some(11),
-        Trap::Interrupt => Some(12),
-        Trap::AlwaysTrapAdapter => Some(13),
-        _ => None,
-    }
-}
-
 mod test {
     #[allow(unused_imports)]
     use super::*;
@@ -223,4 +221,5 @@ mod test {
         let rs = error_process(&err, || 20u64, Some(30));
         assert_eq!(rs, 1);
     }
+
 }
