@@ -419,5 +419,11 @@ mod test {
 
         let ty = "error".into();
         assert!(matches!(ty, LoggerLevel::ERROR));
+
+        let ty = "warn".into();
+        assert!(matches!(ty, LoggerLevel::WARN));
+
+        let ty = "trace".into();
+        assert!(matches!(ty, LoggerLevel::TRACE));
     }
 }
