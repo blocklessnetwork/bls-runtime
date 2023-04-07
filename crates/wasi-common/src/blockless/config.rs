@@ -397,4 +397,15 @@ mod test {
         let result = PathBuf::new().join("/root").join("test.log");
         assert_eq!(config.runtime_logger_ref().unwrap(), result);
     }
+
+    #[test]
+    fn test_version_convert() {
+        let _version0: BlocklessConfigVersion = 0.into();
+        let matched = matches!(BlocklessConfigVersion::Version0, _version0);
+        assert!(matched);
+
+        let _version1: BlocklessConfigVersion = 1.into();
+        let matched = matches!(BlocklessConfigVersion::Version1, _version1);
+        assert!(matched);
+    }
 }
