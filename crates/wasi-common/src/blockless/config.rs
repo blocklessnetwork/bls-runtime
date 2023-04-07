@@ -408,4 +408,16 @@ mod test {
         let matched = matches!(BlocklessConfigVersion::Version1, _version1);
         assert!(matched);
     }
+
+    #[test]
+    fn test_logger_level_convert() {
+        let ty = "debug".into();
+        assert!(matches!(ty, LoggerLevel::DEBUG));
+
+        let ty = "info".into();
+        assert!(matches!(ty, LoggerLevel::INFO));
+
+        let ty = "error".into();
+        assert!(matches!(ty, LoggerLevel::ERROR));
+    }
 }
