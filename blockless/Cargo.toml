@@ -16,3 +16,8 @@ blockless-drivers = {workspace = true}
 blockless-env = {path = "../crates/blockless-env"}
 anyhow = {workspace = true}
 log = "0.4"
+
+[dev-dependencies]
+tempdir = {workspace = true}
+tokio = {version = "1", features = ["rt", "net", "time"]}
+md5 = {workspace = true}

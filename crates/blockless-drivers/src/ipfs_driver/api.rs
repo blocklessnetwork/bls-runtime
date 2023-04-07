@@ -101,6 +101,7 @@ impl Api {
     }
 }
 
+#[cfg(test)]
 mod test {
     #[allow(unused)]
     use super::*;
