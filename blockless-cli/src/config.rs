@@ -3,7 +3,9 @@ use blockless::{self, LoggerLevel, BlocklessModule, ModuleType};
 use blockless::{BlocklessConfig, DriverConfig, MultiAddr, Permission};
 use json::{self, JsonValue};
 use std::env::VarError;
+use std::ffi::OsStr;
 use std::fs;
+use std::os::unix::prelude::OsStrExt;
 use std::path::{PathBuf, Path};
 
 pub(crate) struct CliConfig(pub(crate) BlocklessConfig);
@@ -14,6 +16,32 @@ struct EnvVar {
 }
 
 impl CliConfig {
+
+    fn defaut_logger_file(filen: &OsStr) -> Option<String> {
+        let filen = filen.as_bytes();
+        let p = match filen.iter().position(|b| *b == b'.') {
+            Some(p) => p,
+            None => return Some("runtime".to_string()),
+        };
+        OsStr::from_bytes(&filen[..p])
+            .to_os_string()
+            .to_str()
+            .map(String::from)
+    }
+
+    /// config the wasm file as entry file
+    /// current directory as the root path
+    pub fn new_with_wasm(wasm_file: impl AsRef<Path>) -> CliConfig {
+        let file_path = wasm_file.as_ref();
+        let file_name = file_path.file_name().unwrap();
+        let log_file = Self::defaut_logger_file(file_name);
+        let mut bconf = BlocklessConfig::new(file_path.to_str().unwrap());
+        bconf.fs_root_path(Some(".".to_string()));
+        log_file.as_ref().map(|log_file| {
+            bconf.runtime_logger(Some(format!("{log_file}.log")));
+        });
+        CliConfig(bconf)
+    }
 
     fn permissions(permission_json: &JsonValue) -> Vec<Permission> {
         match *permission_json {
@@ -184,9 +212,24 @@ impl CliConfig {
 #[cfg(test)]
 mod test {
     #![allow(unused)]
+    use std::ffi::OsString;
+
     use blockless::BlocklessConfigVersion;
 
     use super::*;
+
+    #[test]
+    fn test_defaut_logger_file() {
+        let filen: OsString = "test.wasm".into();
+        let filen = CliConfig::defaut_logger_file(&filen);
+        let filen = filen.unwrap();
+        assert_eq!(filen, "test".to_string());
+
+        let filen: OsString = "test".into();
+        let filen = CliConfig::defaut_logger_file(&filen);
+        let filen = filen.unwrap();
+        assert_eq!(filen, "runtime".to_string());
+    }
 
     #[test]
     fn test_load_config() {

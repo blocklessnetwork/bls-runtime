@@ -117,19 +117,30 @@ fn check_module_sum(cfg: &CliConfig) -> Option<i32> {
     None
 }
 
-fn load_cli_config(conf_path: &str) -> Result<CliConfig> {
-    let ext = Path::new(conf_path).extension();
+fn load_wasm_directly(wasmfile: &str) -> Result<CliConfig> {
+    Ok(CliConfig::new_with_wasm(wasmfile))
+}
+
+/// the cli support 3 type file, 
+/// 1. the car file format, all files archive into the car file.
+/// 2. the wasm or wasi file format, will run wasm directly.
+/// 3. the the config file, format, all files is define in the config file.
+fn load_cli_config(file_path: &str) -> Result<CliConfig> {
+    let ext = Path::new(file_path).extension();
     let cfg = ext.and_then(|ext| ext.to_str().map(str::to_ascii_lowercase));
     let cli_config = match cfg {
-        Some(f) if f == "car" => {
+        Some(ext) if ext == "car" => {
             let file = fs::OpenOptions::new()
                 .read(true)
-                .open(conf_path)?;
+                .open(file_path)?;
             Some(load_extract_from_car(file))
+        },
+        Some(ext) if ext == "wasm" || ext == "wasi" => {
+            Some(load_wasm_directly(file_path))
         },
         _ => None,
     };
-    cli_config.unwrap_or_else(|| CliConfig::from_file(conf_path))
+    cli_config.unwrap_or_else(|| CliConfig::from_file(file_path))
 }
 
 fn main() -> ExitCode {
