@@ -206,7 +206,10 @@ mod test {
     fn test_load_cli_wasm_config() {
         let wasm_conf = load_cli_config("test.wasm");
         let wasm_conf = wasm_conf.unwrap();
-        assert_eq!(wasm_conf.0.entry_ref(), "test.wasm");
+        let entry_ref = wasm_conf.0.entry_ref();
+        assert_eq!(entry_ref, "test.wasm");
+        let root_path_ref = wasm_conf.0.fs_root_path_ref();
+        assert_eq!(root_path_ref, Some("."));
     }
 
     #[test]
