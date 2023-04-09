@@ -232,6 +232,17 @@ mod test {
     }
 
     #[test]
+    fn test_new_with_wasm() {
+        let cliconf = CliConfig::new_with_wasm("test.wasm");
+        let current = Some(".");
+        let root_path = cliconf.0.fs_root_path_ref();
+        assert_eq!(root_path, current);
+        let config_logger_ref = cliconf.0.runtime_logger_ref();
+        let logger_ref = Some("./test.log".into());
+        assert_eq!(logger_ref, config_logger_ref);
+    }
+
+    #[test]
     fn test_load_config() {
         let data = r#"{
             "version": 1,
