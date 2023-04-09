@@ -203,6 +203,12 @@ mod test {
     use super::*;
 
     #[test]
+    fn test_load_cli_wasm_config() {
+        let wasm_conf = load_cli_config("test.wasm").unwrap();
+        assert_eq!(wasm_conf.0.entry_ref(), "test.wasm");
+    }
+
+    #[test]
     fn test_load_from_car() {
         let mut buf = Vec::new();
         let mut write_car = || {
