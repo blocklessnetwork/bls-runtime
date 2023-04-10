@@ -37,6 +37,7 @@ impl CliConfig {
         let log_file = Self::defaut_logger_file(file_name);
         let mut bconf = BlocklessConfig::new(file_path.to_str().unwrap());
         bconf.fs_root_path(Some(".".to_string()));
+        bconf.runtime_logger_level(LoggerLevel::WARN);
         log_file.as_ref().map(|log_file| {
             bconf.runtime_logger(Some(format!("{log_file}.log")));
         });
@@ -240,6 +241,9 @@ mod test {
         let config_logger_ref = cliconf.0.runtime_logger_ref();
         let logger_ref = Some("./test.log".into());
         assert_eq!(logger_ref, config_logger_ref);
+
+        let logger_level = cliconf.0.runtime_logger_level_ref();
+        assert!(matches!(&LoggerLevel::WARN, logger_level));
     }
 
     #[test]

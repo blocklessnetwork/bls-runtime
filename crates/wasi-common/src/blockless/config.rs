@@ -258,7 +258,7 @@ impl BlocklessConfig {
             entry: String::from(entry),
             permisions: Default::default(),
             group_permisions: HashMap::new(),
-            runtime_logger_level: LoggerLevel::INFO,
+            runtime_logger_level: LoggerLevel::WARN,
             veriosn: BlocklessConfigVersion::Version0,
         }
     }
