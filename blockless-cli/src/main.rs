@@ -1,12 +1,13 @@
+mod cli_clap;
 mod config;
 use blockless::{
     blockless_run, 
     LoggerLevel
 };
+use cli_clap::apply_config;
 use config::CliConfig;
 use anyhow::Result;
 use std::{
-    env, 
     io::{self, Read}, 
     fs::File, 
     path::PathBuf, 
@@ -144,16 +145,11 @@ fn load_cli_config(file_path: &str) -> Result<CliConfig> {
 }
 
 fn main() -> ExitCode {
-    let args = env::args().collect::<Vec<_>>();
-    let path = args.iter().nth(1);
+    let matches = cli_clap::cli_command().get_matches();
     let mut std_buffer = String::new();
-
-    if path.is_none() {
-        eprintln!("usage: {} [path]\npath: configure file path", args[0]);
-        return ExitCode::from(128);
-    }
-    let path = path.unwrap();
+    let path = matches.get_one::<String>("input").unwrap();
     let mut cfg = load_cli_config(path).unwrap();
+    apply_config(&mut cfg.0, &matches);
     if let Some(code) = check_module_sum(&cfg) {
         return ExitCode::from(code as u8);
     }
