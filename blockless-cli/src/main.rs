@@ -4,6 +4,7 @@ use blockless::{
     blockless_run, 
     LoggerLevel
 };
+#[allow(unused_imports)]
 use cli_clap::apply_config;
 use config::CliConfig;
 use anyhow::Result;
@@ -12,7 +13,7 @@ use std::{
     fs::File, 
     path::PathBuf, 
     time::Duration, 
-    process::ExitCode
+    process::ExitCode, env
 };
 use env_logger::Target;
 use tokio::runtime::Builder;
@@ -145,11 +146,16 @@ fn load_cli_config(file_path: &str) -> Result<CliConfig> {
 }
 
 fn main() -> ExitCode {
-    let matches = cli_clap::cli_command().get_matches();
+    let args = env::args().collect::<Vec<_>>();
+    let path = args.iter().nth(1);
     let mut std_buffer = String::new();
-    let path = matches.get_one::<String>("input").unwrap();
+
+    if path.is_none() {
+        eprintln!("usage: {} [path]\npath: configure file path", args[0]);
+        return ExitCode::from(128);
+    }
+    let path = path.unwrap();
     let mut cfg = load_cli_config(path).unwrap();
-    apply_config(&mut cfg.0, &matches);
     if let Some(code) = check_module_sum(&cfg) {
         return ExitCode::from(code as u8);
     }

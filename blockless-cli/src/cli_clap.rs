@@ -1,3 +1,4 @@
+#![allow(unused)]
 use blockless::BlocklessConfig;
 use clap::{Arg, ArgMatches, Command};
 
@@ -50,6 +51,7 @@ pub(crate) fn cli_command() -> Command {
                 .help("the limited fuel for runtime, default is infine")
                 .required(false),
         )
+        .allow_missing_positional(true)
 }
 
 #[rustfmt::skip]
