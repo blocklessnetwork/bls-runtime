@@ -146,6 +146,11 @@ impl BlocklessConfig {
     }
 
     #[inline(always)]
+    pub fn entry(&mut self, entry: String) {
+        self.entry = entry;
+    }
+
+    #[inline(always)]
     pub fn set_version(&mut self, version: BlocklessConfigVersion) {
         self.veriosn = version;
     }
