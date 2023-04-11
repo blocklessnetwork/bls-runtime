@@ -401,6 +401,10 @@ mod test {
         config.runtime_logger(test);
         let result = PathBuf::new().join("/root").join("test.log");
         assert_eq!(config.runtime_logger_ref().unwrap(), result);
+
+        assert_eq!(config.entry_ref(), "test");
+        config.entry("_start".into());
+        assert_eq!(config.entry_ref(), "_start");
     }
 
     #[test]
