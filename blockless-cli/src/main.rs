@@ -1,17 +1,19 @@
+mod cli_clap;
 mod config;
 use blockless::{
     blockless_run, 
     LoggerLevel
 };
+#[allow(unused_imports)]
+use cli_clap::apply_config;
 use config::CliConfig;
 use anyhow::Result;
 use std::{
-    env, 
     io::{self, Read}, 
     fs::File, 
     path::PathBuf, 
     time::Duration, 
-    process::ExitCode
+    process::ExitCode, env
 };
 use env_logger::Target;
 use tokio::runtime::Builder;
@@ -117,19 +119,30 @@ fn check_module_sum(cfg: &CliConfig) -> Option<i32> {
     None
 }
 
-fn load_cli_config(conf_path: &str) -> Result<CliConfig> {
-    let ext = Path::new(conf_path).extension();
+fn load_wasm_directly(wasmfile: &str) -> Result<CliConfig> {
+    Ok(CliConfig::new_with_wasm(wasmfile))
+}
+
+/// the cli support 3 type file, 
+/// 1. the car file format, all files archive into the car file.
+/// 2. the wasm or wasi file format, will run wasm directly.
+/// 3. the the config file, format, all files is define in the config file.
+fn load_cli_config(file_path: &str) -> Result<CliConfig> {
+    let ext = Path::new(file_path).extension();
     let cfg = ext.and_then(|ext| ext.to_str().map(str::to_ascii_lowercase));
     let cli_config = match cfg {
-        Some(f) if f == "car" => {
+        Some(ext) if ext == "car" => {
             let file = fs::OpenOptions::new()
                 .read(true)
-                .open(conf_path)?;
+                .open(file_path)?;
             Some(load_extract_from_car(file))
+        },
+        Some(ext) if ext == "wasm" || ext == "wasi" => {
+            Some(load_wasm_directly(file_path))
         },
         _ => None,
     };
-    cli_config.unwrap_or_else(|| CliConfig::from_file(conf_path))
+    cli_config.unwrap_or_else(|| CliConfig::from_file(file_path))
 }
 
 fn main() -> ExitCode {
@@ -190,6 +203,16 @@ mod test {
         codec::Encoder
     };
     use super::*;
+
+    #[test]
+    fn test_load_cli_wasm_config() {
+        let wasm_conf = load_cli_config("test.wasm");
+        let wasm_conf = wasm_conf.unwrap();
+        let entry_ref = wasm_conf.0.entry_ref();
+        assert_eq!(entry_ref, "test.wasm");
+        let root_path_ref = wasm_conf.0.fs_root_path_ref();
+        assert_eq!(root_path_ref, Some("."));
+    }
 
     #[test]
     fn test_load_from_car() {

@@ -146,6 +146,11 @@ impl BlocklessConfig {
     }
 
     #[inline(always)]
+    pub fn entry(&mut self, entry: String) {
+        self.entry = entry;
+    }
+
+    #[inline(always)]
     pub fn set_version(&mut self, version: BlocklessConfigVersion) {
         self.veriosn = version;
     }
@@ -258,7 +263,7 @@ impl BlocklessConfig {
             entry: String::from(entry),
             permisions: Default::default(),
             group_permisions: HashMap::new(),
-            runtime_logger_level: LoggerLevel::INFO,
+            runtime_logger_level: LoggerLevel::WARN,
             veriosn: BlocklessConfigVersion::Version0,
         }
     }
@@ -396,6 +401,10 @@ mod test {
         config.runtime_logger(test);
         let result = PathBuf::new().join("/root").join("test.log");
         assert_eq!(config.runtime_logger_ref().unwrap(), result);
+
+        assert_eq!(config.entry_ref(), "test");
+        config.entry("_start".into());
+        assert_eq!(config.entry_ref(), "_start");
     }
 
     #[test]
