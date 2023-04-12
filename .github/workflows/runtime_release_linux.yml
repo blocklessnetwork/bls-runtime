@@ -12,7 +12,7 @@ jobs:
           - build: linux
             os: linux-latest
             rust: stable
-            runson: ubuntu-latest
+            runson: ubuntu-20.04
             target: x86_64-unknown-linux-gnu
             arch: x86_64
             cross: false
