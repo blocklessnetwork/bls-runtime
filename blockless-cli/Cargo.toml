@@ -15,6 +15,7 @@ tokio = {version = "1", features = ["rt", "net", "time"]}
 log = "0.4.17"
 rust-car = {workspace = true}
 md5 = {workspace = true}
+url = "2.2"
 clap = {version = "4.2.1", features = ["color", "suggestions", "derive"]}
 
 [dependencies.env_logger]

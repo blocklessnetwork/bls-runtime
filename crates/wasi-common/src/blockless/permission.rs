@@ -1,4 +1,4 @@
-#[derive(Clone)]
+#[derive(Clone, Debug, PartialEq)]
 pub struct Permission {
     pub url: String,
     pub schema: String,

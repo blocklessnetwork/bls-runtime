@@ -1,7 +1,10 @@
 #![allow(unused)]
+use std::str::FromStr;
+
 use anyhow::{bail, Result};
-use blockless::{BlocklessConfig, BlocklessModule};
+use blockless::{BlocklessConfig, BlocklessModule, Permission};
 use clap::{Arg, ArgMatches, Command, Parser};
+use url::Url;
 
 use crate::config::CliConfig;
 
@@ -35,12 +38,23 @@ const LIMITED_FUEL_HELP: &str =
 const ENVS_HELP: &str = 
     "the app envs will pass into the app";
 
+const PERMISSION_HELP: &str = 
+    "the permissions for app";
+
 fn parse_envs(envs: &str) -> Result<(String, String)> {
     let parts: Vec<_> = envs.splitn(2, "=").collect();
     if parts.len() != 2 {
         bail!("must be of the form `key=value`")
     }
     Ok((parts[0].to_string(), parts[1].to_string()))
+}
+
+fn parse_permission(permsion: &str) -> Result<Permission> {
+    let url = Url::from_str(permsion)?;
+    Ok(Permission { 
+        schema: url.scheme().into(), 
+        url: permsion.into() 
+    })
 }
 
 #[derive(Parser, Debug)]
@@ -66,11 +80,14 @@ pub(crate) struct CliCommandOpts {
     #[clap(long = "entry", value_name = "ENTERY-HELP", help = ENTRY_HELP)]
     entry: Option<String>,
 
-    #[clap(long = "limited-fuel", value_name = "ENTERY-HELP", help = ENTRY_HELP)]
+    #[clap(long = "limited-fuel", value_name = "ENTERY-HELP", help = LIMITED_FUEL_HELP)]
     limited_fuel: Option<u64>,
 
-    #[clap(long = "env", value_name = "ENV=VAL", help = ENVS_HELP, number_of_values = 1, value_parser=parse_envs)]
+    #[clap(long = "env", value_name = "ENV=VAL", help = ENVS_HELP, number_of_values = 1, value_parser = parse_envs)]
     envs: Vec<(String, String)>,
+
+    #[clap(long = "permission", value_name = "PERMISSION", help = PERMISSION_HELP, value_parser = parse_permission)]
+    permissions: Vec<Permission>,
 
     #[clap(value_name = "ARGS", help = APP_ARGS_HELP)]
     args: Vec<String>,
@@ -92,6 +109,7 @@ impl CliCommandOpts {
         conf.0.limited_fuel(self.limited_fuel);
         conf.0.set_run_time(self.run_time);
         conf.0.set_stdin_args(self.args);
+        conf.0.permisions(self.permissions);
     }
 }
 
@@ -107,6 +125,27 @@ mod test {
         assert_eq!(cli.input.as_str(), "test");
         assert_eq!(cli.args.len(), 1);
         assert_eq!(cli.args[0], "--test=10");
+    }
+
+    #[test]
+    fn test_cli_command_env() {
+        let cli = CliCommandOpts::try_parse_from(["cli", "test", "--env", "a=1", "--env", "b=2"]).unwrap();
+        assert_eq!(cli.input.as_str(), "test");
+        assert_eq!(cli.envs.len(), 2);
+        assert_eq!(cli.envs[0], ("a".to_string(), "1".to_string()));
+        assert_eq!(cli.envs[1], ("b".to_string(), "2".to_string()));
+    }
+
+    #[test]
+    fn test_cli_command_permisson() {
+        let cli = CliCommandOpts::try_parse_from(["cli", "test", "--permission", "http://www.google.com"]).unwrap();
+        assert_eq!(cli.input.as_str(), "test");
+        assert_eq!(cli.permissions.len(), 1);
+        let perm = Permission {
+            schema: "http".to_string(), 
+            url: "http://www.google.com".to_string(),
+        };
+        assert_eq!(cli.permissions[0], perm);
     }
 
     #[test]
