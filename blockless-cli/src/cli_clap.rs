@@ -48,25 +48,25 @@ pub(crate) struct CliCommandOpts {
     #[clap(value_name = "INPUT", required = true, help = INPUT_HELP )]
     input: String,
 
-    #[clap(long = "debug_info", value_name = "DEBUG_INFO", help = DEBUG_INFO_HELP)]
+    #[clap(long = "debug-info", value_name = "DEBUG_INFO", help = DEBUG_INFO_HELP)]
     debug_info: bool,
 
-    #[clap(long = "fs_root_path", value_name = "FS_ROOT_PATH", help = FS_ROOT_PATH_HELP)]
+    #[clap(long = "fs-root-path", value_name = "FS_ROOT_PATH", help = FS_ROOT_PATH_HELP)]
     fs_root_path: Option<String>,
 
-    #[clap(long = "runtime_logger", value_name = "RUNTIME_LOGGER", help = RUNTIME_LOGGER_HELP)]
+    #[clap(long = "runtime-logger", value_name = "RUNTIME_LOGGER", help = RUNTIME_LOGGER_HELP)]
     runtime_logger: Option<String>,
 
-    #[clap(long = "limited_memory", value_name = "LIMITED_MEMORY", help = LIMITED_MEMORY_HELP)]
+    #[clap(long = "limited-memory", value_name = "LIMITED_MEMORY", help = LIMITED_MEMORY_HELP)]
     limited_memory: Option<u64>,
 
-    #[clap(long = "run_time", value_name = "RUN_TIME", help = RUN_TIME_HELP)]
+    #[clap(long = "run-time", value_name = "RUN_TIME", help = RUN_TIME_HELP)]
     run_time: Option<u64>,
 
     #[clap(long = "entry", value_name = "ENTERY_HELP", help = ENTRY_HELP)]
     entry: Option<String>,
 
-    #[clap(long = "limited_fuel", value_name = "ENTERY_HELP", help = ENTRY_HELP)]
+    #[clap(long = "limited-fuel", value_name = "ENTERY_HELP", help = ENTRY_HELP)]
     limited_fuel: Option<u64>,
 
     #[clap(long = "env", value_name = "env=val", help = ENVS_HELP, number_of_values = 1, value_parser=parse_envs)]
