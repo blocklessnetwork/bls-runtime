@@ -32,6 +32,17 @@ const ENTRY_HELP: &str =
 const LIMITED_FUEL_HELP: &str = 
     "the limited fuel for runtime, default is infine";
 
+const ENVS_HELP: &str = 
+    "the app envs will pass into the app";
+
+fn parse_envs(envs: &str) -> Result<(String, String)> {
+    let parts: Vec<_> = envs.splitn(2, "=").collect();
+    if parts.len() != 2 {
+        bail!("must be of the form `key=value`")
+    }
+    Ok((parts[0].to_string(), parts[1].to_string()))
+}
+
 #[derive(Parser, Debug)]
 pub(crate) struct CliCommandOpts {
     #[clap(value_name = "INPUT", required = true, help = INPUT_HELP )]
@@ -58,8 +69,12 @@ pub(crate) struct CliCommandOpts {
     #[clap(long = "limited_fuel", value_name = "ENTERY_HELP", help = ENTRY_HELP)]
     limited_fuel: Option<u64>,
 
+    #[clap(long = "env", value_name = "env=val", help = ENVS_HELP, number_of_values = 1, value_parser=parse_envs)]
+    envs: Vec<(String, String)>,
+
     #[clap(value_name = "ARGS", help = APP_ARGS_HELP)]
     args: Vec<String>,
+    
 }
 
 
