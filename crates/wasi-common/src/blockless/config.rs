@@ -180,10 +180,9 @@ impl BlocklessConfig {
                 .modules
                 .iter()
                 .find(|m| {
-                    if matches!(ModuleType::Entry, m.module_type) {
-                        true
-                    } else {
-                        false
+                    match m.module_type {
+                        ModuleType::Entry => true,
+                        _ => false,
                     }
                 })
                 .map(|s| s.file.as_str()),
