@@ -180,7 +180,7 @@ impl BlocklessConfig {
                 .modules
                 .iter()
                 .find(|m| {
-                    if let ModuleType::Entry = m.module_type {
+                    if matches!(ModuleType::Entry, m.module_type) {
                         true
                     } else {
                         false
@@ -189,6 +189,7 @@ impl BlocklessConfig {
                 .map(|s| s.file.as_str()),
         };
         entry_module.and_then(|s| {
+            #[allow(clippy::map_flatten)]
             PathBuf::from_str(s).ok().and_then(|p| {
                 p.file_name()
                     .map(|name| name.as_str().ok().map(|s| s.to_string()))
