@@ -122,10 +122,12 @@ pub struct BlocklessConfig {
     is_carfile: bool,
     entry: String,
     run_time: Option<u64>,
+    stdin_args: Vec<String>,
     limited_fuel: Option<u64>,
     limited_time: Option<u64>,
-    limited_memory: Option<u64>,
     drivers: Vec<DriverConfig>,
+    limited_memory: Option<u64>,
+    envs: Vec<(String, String)>,
     permisions: Vec<Permission>,
     fs_root_path: Option<String>,
     modules: Vec<BlocklessModule>,
@@ -143,6 +145,26 @@ impl BlocklessConfig {
     #[inline(always)]
     pub fn version(&self) -> BlocklessConfigVersion {
         self.veriosn
+    }
+
+    #[inline(always)]
+    pub fn set_envs(&mut self, envs: Vec<(String, String)>) {
+        self.envs = envs;
+    }
+
+    #[inline(always)]
+    pub fn envs(&self) -> Vec<(String, String)> {
+        self.envs.clone()
+    }
+
+    #[inline(always)]
+    pub fn set_stdin_args(&mut self, args: Vec<String>) {
+        self.stdin_args = args;
+    }
+
+    #[inline(always)]
+    pub fn stdin_args(&self) -> Vec<String> {
+        self.stdin_args.clone()
     }
 
     #[inline(always)]
@@ -245,6 +267,7 @@ impl BlocklessConfig {
     pub fn new(entry: &str) -> BlocklessConfig {
         Self {
             run_time: None,
+            envs: Vec::new(),
             debug_info: false,
             is_carfile: false,
             fs_root_path: None,
@@ -255,6 +278,7 @@ impl BlocklessConfig {
             //vm instruction limit.
             limited_fuel: None,
             limited_time: None,
+            stdin_args: Vec::new(),
             //memory limit, 1 page = 64k.
             limited_memory: None,
             extensions_path: None,

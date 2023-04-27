@@ -15,7 +15,7 @@ wiggle_metadata = ["wiggle/wiggle_metadata"]
 [dependencies]
 blockless-drivers-macro = {path = "macro"}
 wasmtime-wasi = {workspace = true}
-wiggle = {default-features = false, workspace = true}
+wiggle = {workspace = true}
 wasi-cap-std-sync = {workspace = true}
 wasi-common = {workspace = true}
 anyhow = {workspace = true}
