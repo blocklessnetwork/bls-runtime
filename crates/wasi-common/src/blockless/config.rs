@@ -1,7 +1,10 @@
+use rustix::path::Arg;
+
 use crate::Permission;
 use std::{
     collections::HashMap,
-    path::{Path, PathBuf}, 
+    path::{Path, PathBuf},
+    str::FromStr,
 };
 
 pub enum LoggerLevel {
@@ -13,14 +16,13 @@ pub enum LoggerLevel {
 }
 
 impl From<&str> for LoggerLevel {
-
     fn from(value: &str) -> Self {
         match value {
-            "debug"|"DEBUG" => LoggerLevel::DEBUG,
-            "info"|"INFO" => LoggerLevel::INFO,
-            "warn"|"WARN" => LoggerLevel::WARN,
-            "trace"|"TRACE" => LoggerLevel::TRACE,
-            "error"|"ERROR" => LoggerLevel::ERROR,
+            "debug" | "DEBUG" => LoggerLevel::DEBUG,
+            "info" | "INFO" => LoggerLevel::INFO,
+            "warn" | "WARN" => LoggerLevel::WARN,
+            "trace" | "TRACE" => LoggerLevel::TRACE,
+            "error" | "ERROR" => LoggerLevel::ERROR,
             _ => LoggerLevel::INFO,
         }
     }
@@ -111,7 +113,7 @@ impl From<usize> for BlocklessConfigVersion {
             1 => BlocklessConfigVersion::Version1,
             0 => BlocklessConfigVersion::Version0,
             _ => unreachable!("unknown configure version: {value}."),
-        } 
+        }
     }
 }
 
@@ -141,7 +143,6 @@ pub struct BlocklessConfig {
 }
 
 impl BlocklessConfig {
-
     #[inline(always)]
     pub fn version(&self) -> BlocklessConfigVersion {
         self.veriosn
@@ -170,6 +171,30 @@ impl BlocklessConfig {
     #[inline(always)]
     pub fn entry(&mut self, entry: String) {
         self.entry = entry;
+    }
+
+    pub fn entry_module(&self) -> Option<String> {
+        let entry_module = match self.veriosn {
+            BlocklessConfigVersion::Version0 => Some(self.entry.as_str()),
+            BlocklessConfigVersion::Version1 => self
+                .modules
+                .iter()
+                .find(|m| {
+                    if let ModuleType::Entry = m.module_type {
+                        true
+                    } else {
+                        false
+                    }
+                })
+                .map(|s| s.file.as_str()),
+        };
+        entry_module.and_then(|s| {
+            PathBuf::from_str(s).ok().and_then(|p| {
+                p.file_name()
+                    .map(|name| name.as_str().ok().map(|s| s.to_string()))
+                    .flatten()
+            })
+        })
     }
 
     #[inline(always)]
@@ -212,7 +237,7 @@ impl BlocklessConfig {
         self.runtime_logger_level = level;
     }
 
-    #[inline(always)]   
+    #[inline(always)]
     pub fn fs_root_path(&mut self, r: Option<String>) {
         self.fs_root_path = r;
     }
@@ -226,7 +251,7 @@ impl BlocklessConfig {
     pub fn runtime_logger(&mut self, l: Option<String>) {
         self.runtime_logger = l;
     }
-    
+
     pub fn permisions(&mut self, perms: Vec<Permission>) {
         let mut g_perms: HashMap<String, Vec<_>> = HashMap::new();
         perms.iter().for_each(|p| {
@@ -302,7 +327,6 @@ impl BlocklessConfig {
         &self.drivers
     }
 
-    
     /// stdout file must be work in sandbox root_path,
     /// if root_path is not setting, the stdout file will use Inherit
     #[inline(always)]
@@ -365,27 +389,27 @@ impl BlocklessConfig {
     pub fn limited_time(&mut self, time: Option<u64>) {
         self.limited_time = time
     }
-    
+
     #[inline(always)]
     pub fn get_limited_time(&self) -> Option<u64> {
         self.limited_time
     }
-    
+
     #[inline(always)]
     pub fn limited_fuel(&mut self, fuel: Option<u64>) {
         self.limited_fuel = fuel
     }
-    
+
     #[inline(always)]
     pub fn get_limited_fuel(&self) -> Option<u64> {
         self.limited_fuel
     }
-    
+
     #[inline(always)]
     pub fn limited_memory(&mut self, m: Option<u64>) {
         self.limited_memory = m
     }
-    
+
     #[inline(always)]
     pub fn get_limited_memory(&self) -> Option<u64> {
         self.limited_memory
@@ -403,18 +427,18 @@ mod test {
         let mut config = BlocklessConfig::new("test");
         assert!(matches!(config.version(), BlocklessConfigVersion::Version0));
         let permisions = vec![
-            Permission{
+            Permission {
                 url: "/test1".to_string(),
                 schema: "http".to_string(),
             },
-            Permission{
+            Permission {
                 url: "/test2".to_string(),
                 schema: "http".to_string(),
             },
         ];
         config.permisions(permisions);
         let grps = config.group_permisions.get("http");
-        if let Some(grps) =  grps {
+        if let Some(grps) = grps {
             assert_eq!(grps.len(), 2);
         } else {
             unreachable!("should not reach.");

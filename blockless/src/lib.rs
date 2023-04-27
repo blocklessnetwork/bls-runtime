@@ -85,7 +85,10 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
         }
         &Stdout::Null => {}
     }
-    builder = builder.args(&b_conf.stdin_args()[..]).unwrap();
+    let entry_module = b_conf.entry_module().unwrap();
+    let mut args = vec![entry_module];
+    args.extend_from_slice(&b_conf.stdin_args()[..]);
+    builder = builder.args(&args[..]).unwrap();
     builder = builder.envs(&b_conf.envs()[..]).unwrap();
     if let Some(d) = root_dir {
         builder = builder.preopened_dir(d, "/").unwrap();
