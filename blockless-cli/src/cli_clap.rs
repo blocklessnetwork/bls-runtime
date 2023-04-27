@@ -123,7 +123,7 @@ mod test {
 
     #[test]
     fn test_cli_command_runtime_log() {
-        let command_line = r#"blockless_cli test.wasm --runtime_logger runtime.log"#;
+        let command_line = r#"blockless_cli test.wasm --runtime-logger runtime.log"#;
         let command_line = command_line
             .split(" ")
             .map(str::to_string)
@@ -135,7 +135,7 @@ mod test {
 
     #[test]
     fn test_cli_command_fs_root_path() {
-        let command_line = r#"blockless_cli test.wasm --fs_root_path /"#;
+        let command_line = r#"blockless_cli test.wasm --fs-root-path /"#;
         let command_line = command_line
             .split(" ")
             .map(str::to_string)
