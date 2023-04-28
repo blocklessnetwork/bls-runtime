@@ -118,8 +118,7 @@ impl CliCommandOpts {
 
     pub fn into_config(self, conf: &mut CliConfig) {
         conf.0.debug_info(self.debug_info);
-        let is_entry = self.entry.is_some();
-        self.entry.map(|e| conf.0.entry(e));
+        conf.0.entry(self.entry.unwrap_or("_start".into()));
         conf.0.fs_root_path(self.fs_root_path);
         conf.0.runtime_logger(self.runtime_logger);
         conf.0.limited_memory(self.limited_memory);
@@ -138,10 +137,6 @@ impl CliCommandOpts {
             });
             conf.0.set_modules(modules);
             conf.0.set_version(blockless::BlocklessConfigVersion::Version1);
-            //in the version modules the entry default is  _start.
-            if !is_entry {
-                conf.0.entry("_start".into());
-            }
         }
     }
 }
