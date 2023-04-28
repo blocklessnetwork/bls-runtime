@@ -138,7 +138,7 @@ fn load_cli_config(file_path: &str) -> Result<CliConfig> {
                 .open(file_path)?;
             Some(load_extract_from_car(file))
         },
-        Some(ext) if ext == "wasm" || ext == "wasi" => {
+        Some(ext) if ext == "wasm" || ext == "wasi" || ext == "wat" => {
             Some(load_wasm_directly(file_path))
         },
         _ => None,

@@ -2,7 +2,7 @@
 use std::str::FromStr;
 
 use anyhow::{bail, Result};
-use blockless::{BlocklessConfig, BlocklessModule, Permission};
+use blockless::{BlocklessConfig, BlocklessModule, Permission, ModuleType};
 use clap::{Arg, ArgMatches, Command, Parser};
 use url::Url;
 
@@ -41,6 +41,9 @@ const ENVS_HELP: &str =
 const PERMISSION_HELP: &str = 
     "the permissions for app";
 
+const MODULES_HELP: &str = 
+    "the modules used by app";
+
 fn parse_envs(envs: &str) -> Result<(String, String)> {
     let parts: Vec<_> = envs.splitn(2, "=").collect();
     if parts.len() != 2 {
@@ -54,6 +57,16 @@ fn parse_permission(permsion: &str) -> Result<Permission> {
     Ok(Permission { 
         schema: url.scheme().into(), 
         url: permsion.into() 
+    })
+}
+
+fn parse_module(module: &str) -> Result<BlocklessModule> {
+    let mods: Vec<_> = module.splitn(2, "=").collect();
+    Ok(BlocklessModule {
+        module_type: ModuleType::Module,
+        name: mods[0].into(),
+        file: mods[1].into(),
+        md5: String::new(),//didn't need check.
     })
 }
 
@@ -89,6 +102,9 @@ pub(crate) struct CliCommandOpts {
     #[clap(long = "permission", value_name = "PERMISSION", help = PERMISSION_HELP, value_parser = parse_permission)]
     permissions: Vec<Permission>,
 
+    #[clap(long = "module", value_name = "MODULE-NAME=MODULE-PATH", help = MODULES_HELP, value_parser = parse_module)]
+    modules: Vec<BlocklessModule>,
+
     #[clap(value_name = "ARGS", help = APP_ARGS_HELP)]
     args: Vec<String>,
     
@@ -102,6 +118,7 @@ impl CliCommandOpts {
 
     pub fn into_config(self, conf: &mut CliConfig) {
         conf.0.debug_info(self.debug_info);
+        let is_entry = self.entry.is_some();
         self.entry.map(|e| conf.0.entry(e));
         conf.0.fs_root_path(self.fs_root_path);
         conf.0.runtime_logger(self.runtime_logger);
@@ -111,6 +128,21 @@ impl CliCommandOpts {
         conf.0.set_stdin_args(self.args);
         conf.0.permisions(self.permissions);
         conf.0.set_envs(self.envs);
+        let mut modules = self.modules;
+        if modules.len() > 0 {
+            modules.push(BlocklessModule { 
+                module_type: ModuleType::Entry, 
+                name: String::new(), 
+                file: self.input, 
+                md5: String::new() 
+            });
+            conf.0.set_modules(modules);
+            conf.0.set_version(blockless::BlocklessConfigVersion::Version1);
+            //in the version modules the entry default is  _start.
+            if !is_entry {
+                conf.0.entry("_start".into());
+            }
+        }
     }
 }
 
