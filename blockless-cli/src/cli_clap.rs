@@ -107,7 +107,6 @@ pub(crate) struct CliCommandOpts {
 
     #[clap(value_name = "ARGS", help = APP_ARGS_HELP)]
     args: Vec<String>,
-    
 }
 
 
