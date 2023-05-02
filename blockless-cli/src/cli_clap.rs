@@ -12,7 +12,7 @@ const INPUT_HELP: &str  =
     "the input file is wasm file, configure file, or car file";
 
 const DEBUG_INFO_HELP: &str  = 
-    "the input file is wasm file, configure file, or car file";
+    "the debug info for the runtime.";
 
 const APP_ARGS_HELP: &str = 
     "the app args will pass into the app";
@@ -90,10 +90,10 @@ pub(crate) struct CliCommandOpts {
     #[clap(long = "run-time", value_name = "RUN-TIME", help = RUN_TIME_HELP)]
     run_time: Option<u64>,
 
-    #[clap(long = "entry", value_name = "ENTERY-HELP", help = ENTRY_HELP)]
+    #[clap(long = "entry", value_name = "ENTERY", help = ENTRY_HELP)]
     entry: Option<String>,
 
-    #[clap(long = "limited-fuel", value_name = "ENTERY-HELP", help = LIMITED_FUEL_HELP)]
+    #[clap(long = "limited-fuel", value_name = "LIMITED-FUEL", help = LIMITED_FUEL_HELP)]
     limited_fuel: Option<u64>,
 
     #[clap(long = "env", value_name = "ENV=VAL", help = ENVS_HELP, number_of_values = 1, value_parser = parse_envs)]
