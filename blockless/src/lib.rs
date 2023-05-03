@@ -54,7 +54,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
         .and_then(|path| {
             wasmtime_wasi::Dir::open_ambient_dir(path, ambient_authority()).ok()
         });
-    let mut builder = WasiCtxBuilder::new().inherit_args().unwrap();
+    let mut builder = WasiCtxBuilder::new();
     //stdout file process for setting.
     match b_conf.stdout_ref() {
         &Stdout::FileName(ref file_name) => {
@@ -85,6 +85,11 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
         }
         &Stdout::Null => {}
     }
+    let entry_module = b_conf.entry_module().unwrap();
+    let mut args = vec![entry_module];
+    args.extend_from_slice(&b_conf.stdin_args()[..]);
+    builder = builder.args(&args[..]).unwrap();
+    builder = builder.envs(&b_conf.envs()[..]).unwrap();
     if let Some(d) = root_dir {
         builder = builder.preopened_dir(d, "/").unwrap();
     }

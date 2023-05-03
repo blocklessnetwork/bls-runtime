@@ -16,8 +16,6 @@ path = "../blockless-drivers/macro"
 
 [dependencies.wasmtime]
 workspace = true
-default-features = false
 
 [dependencies.wiggle]
 workspace = true
-default-features = false

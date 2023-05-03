@@ -11,7 +11,7 @@ links = "wasi-common-19"
 [dependencies]
 anyhow = {workspace = true}
 thiserror = {workspace = true}
-wiggle = { default-features = false, workspace = true}
+wiggle = { workspace = true}
 tracing = { workspace = true }
 cap-std = {workspace = true}
 cap-rand = {workspace = true}

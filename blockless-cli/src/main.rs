@@ -4,8 +4,9 @@ use blockless::{
     blockless_run, 
     LoggerLevel
 };
+use clap::Parser;
+use cli_clap::CliCommandOpts;
 #[allow(unused_imports)]
-use cli_clap::apply_config;
 use config::CliConfig;
 use anyhow::Result;
 use std::{
@@ -13,7 +14,7 @@ use std::{
     fs::File, 
     path::PathBuf, 
     time::Duration, 
-    process::ExitCode, env
+    process::ExitCode,
 };
 use env_logger::Target;
 use tokio::runtime::Builder;
@@ -137,7 +138,7 @@ fn load_cli_config(file_path: &str) -> Result<CliConfig> {
                 .open(file_path)?;
             Some(load_extract_from_car(file))
         },
-        Some(ext) if ext == "wasm" || ext == "wasi" => {
+        Some(ext) if ext == "wasm" || ext == "wasi" || ext == "wat" => {
             Some(load_wasm_directly(file_path))
         },
         _ => None,
@@ -146,15 +147,9 @@ fn load_cli_config(file_path: &str) -> Result<CliConfig> {
 }
 
 fn main() -> ExitCode {
-    let args = env::args().collect::<Vec<_>>();
-    let path = args.iter().nth(1);
     let mut std_buffer = String::new();
-
-    if path.is_none() {
-        eprintln!("usage: {} [path]\npath: configure file path", args[0]);
-        return ExitCode::from(128);
-    }
-    let path = path.unwrap();
+    let cli_command_opts = CliCommandOpts::parse();
+    let path = cli_command_opts.input_ref();
     let mut cfg = load_cli_config(path).unwrap();
     if let Some(code) = check_module_sum(&cfg) {
         return ExitCode::from(code as u8);
@@ -165,12 +160,12 @@ fn main() -> ExitCode {
         cfg.0.stdin(std_buffer);
     }
     let run_time = cfg.0.run_time();
+    cli_command_opts.into_config(&mut cfg);
     let rt = Builder::new_current_thread()
         .enable_io()
         .enable_time()
         .build()
         .unwrap();
-        
     let code = rt.block_on(async {
         if let Some(time) = run_time {
             let _ = tokio::spawn(async move {
