@@ -117,7 +117,6 @@ impl CliCommandOpts {
 
     pub fn into_config(self, conf: &mut CliConfig) {
         conf.0.debug_info(self.debug_info);
-        conf.0.entry(self.entry.unwrap_or("_start".into()));
         conf.0.fs_root_path(self.fs_root_path);
         conf.0.runtime_logger(self.runtime_logger);
         conf.0.limited_memory(self.limited_memory);
@@ -127,6 +126,11 @@ impl CliCommandOpts {
         conf.0.permisions(self.permissions);
         conf.0.set_envs(self.envs);
         let mut modules = self.modules;
+        let mut has_entry = false;
+        self.entry.map(|e| {
+            has_entry = true;
+            conf.0.entry(e)
+        });
         if modules.len() > 0 {
             modules.push(BlocklessModule { 
                 module_type: ModuleType::Entry, 
@@ -135,6 +139,9 @@ impl CliCommandOpts {
                 md5: String::new() 
             });
             conf.0.set_modules(modules);
+            if !has_entry {
+                conf.0.reset_modules_model_entry();
+            }
             conf.0.set_version(blockless::BlocklessConfigVersion::Version1);
         }
     }
@@ -142,6 +149,8 @@ impl CliCommandOpts {
 
 #[cfg(test)]
 mod test {
+
+    use blockless::BlocklessConfigVersion;
 
     #[allow(unused)]
     use super::*;
@@ -182,8 +191,8 @@ mod test {
             .split(" ")
             .map(str::to_string)
             .collect::<Vec<String>>();
-        let matches = CliCommandOpts::try_parse_from(command_line).unwrap();
-        let pat = matches.input.as_str();
+        let cli_opts = CliCommandOpts::try_parse_from(command_line).unwrap();
+        let pat = cli_opts.input.as_str();
         assert_eq!(pat, "test.wasm");
     }
 
@@ -194,8 +203,8 @@ mod test {
             .split(" ")
             .map(str::to_string)
             .collect::<Vec<String>>();
-        let matches = CliCommandOpts::try_parse_from(command_line).unwrap();
-        let pat = matches.runtime_logger.as_ref().unwrap().as_str();
+        let cli_opts = CliCommandOpts::try_parse_from(command_line).unwrap();
+        let pat = cli_opts.runtime_logger.as_ref().unwrap().as_str();
         assert_eq!(pat, "runtime.log");
     }
 
@@ -206,9 +215,51 @@ mod test {
             .split(" ")
             .map(str::to_string)
             .collect::<Vec<String>>();
-        let matches = CliCommandOpts::try_parse_from(command_line).unwrap();
-        let pat = matches.fs_root_path.as_ref().unwrap().as_str();
+        let cli_opts = CliCommandOpts::try_parse_from(command_line).unwrap();
+        let pat = cli_opts.fs_root_path.as_ref().unwrap().as_str();
         assert_eq!(pat, "/");
+    }
+
+    #[test]
+    fn test_cli_command_signal_wasm() {
+        let command_line = r#"blockless_cli test.wasm --fs-root-path /"#;
+        let command_line = command_line
+            .split(" ")
+            .map(str::to_string)
+            .collect::<Vec<String>>();
+        let cli_opts = CliCommandOpts::try_parse_from(command_line).unwrap();
+        let mut cli_conf = CliConfig(BlocklessConfig::new("/a.wasm"));
+        cli_opts.into_config(&mut cli_conf);
+        assert_eq!(cli_conf.0.entry_ref(), "/a.wasm");
+        assert!(matches!(cli_conf.0.version(), BlocklessConfigVersion::Version0));
+    }
+
+    #[test]
+    fn test_cli_command_modules_wasm() {
+        let command_line = r#"blockless_cli test.wasm --fs-root-path / --module=test=/module.wasm"#;
+        let command_line = command_line
+            .split(" ")
+            .map(str::to_string)
+            .collect::<Vec<String>>();
+        let cli_opts = CliCommandOpts::try_parse_from(command_line).unwrap();
+        let mut cli_conf = CliConfig(BlocklessConfig::new("/a.wasm"));
+        cli_opts.into_config(&mut cli_conf);
+        assert_eq!(cli_conf.0.entry_ref(), "_start");
+        assert!(matches!(cli_conf.0.version(), BlocklessConfigVersion::Version1));
+    }
+
+    #[test]
+    fn test_cli_command_modules_wasm_with_entry() {
+        let command_line = r#"blockless_cli test.wasm --fs-root-path / --module=test=/module.wasm --entry=run"#;
+        let command_line = command_line
+            .split(" ")
+            .map(str::to_string)
+            .collect::<Vec<String>>();
+        let cli_opts = CliCommandOpts::try_parse_from(command_line).unwrap();
+        let mut cli_conf = CliConfig(BlocklessConfig::new("/a.wasm"));
+        cli_opts.into_config(&mut cli_conf);
+        assert_eq!(cli_conf.0.entry_ref(), "run");
+        assert!(matches!(cli_conf.0.version(), BlocklessConfigVersion::Version1));
     }
     
 }
