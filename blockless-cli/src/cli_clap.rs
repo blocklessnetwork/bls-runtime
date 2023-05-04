@@ -44,6 +44,9 @@ const PERMISSION_HELP: &str =
 const MODULES_HELP: &str = 
     "the modules used by app";
 
+const V86_HELP: &str = 
+    "the v86 model flag when the v86 flag the car file must be v86 configure and image.";
+
 fn parse_envs(envs: &str) -> Result<(String, String)> {
     let parts: Vec<_> = envs.splitn(2, "=").collect();
     if parts.len() != 2 {
@@ -72,6 +75,9 @@ fn parse_module(module: &str) -> Result<BlocklessModule> {
 
 #[derive(Parser, Debug)]
 pub(crate) struct CliCommandOpts {
+    #[clap(long = "v86", value_name = "V86", required = false, help = V86_HELP )]
+    v86: bool,
+    
     #[clap(value_name = "INPUT", required = true, help = INPUT_HELP )]
     input: String,
 
@@ -111,6 +117,13 @@ pub(crate) struct CliCommandOpts {
 
 
 impl CliCommandOpts {
+    
+    #[inline(always)]
+    pub fn is_v86(&self) -> bool {
+        self.v86
+    }
+
+    #[inline(always)]
     pub fn input_ref(&self) -> &str {
         &self.input
     }
@@ -145,6 +158,12 @@ mod test {
 
     #[allow(unused)]
     use super::*;
+
+    #[test]
+    fn test_cli_command_v86() {
+        let cli = CliCommandOpts::try_parse_from(["cli", "test", "--v86"]).unwrap();;
+        assert_eq!(cli.v86, true);
+    }
 
     #[test]
     fn test_cli_command() {

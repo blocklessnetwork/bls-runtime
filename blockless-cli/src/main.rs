@@ -30,11 +30,15 @@ use rust_car::{
     utils::{ipld_write, extract_ipld}
 };
 
-fn logger_init(cfg: &CliConfig) {
-    let rt_logger = cfg.0.runtime_logger_ref();
+fn logger_init_with_config(cfg: &CliConfig) {
+    let rt_logger = cfg.0.runtime_logger_path();
+    let rt_logger_level = cfg.0.get_runtime_logger_level();
+    logger_init(rt_logger, rt_logger_level);
+}
+
+fn logger_init(rt_logger: Option<PathBuf>, rt_logger_level: LoggerLevel) {
     let mut builder = env_logger::Builder::from_default_env();
-    let rt_logger_level = cfg.0.runtime_logger_level_ref();
-    let filter_level = match *rt_logger_level {
+    let filter_level = match rt_logger_level {
         LoggerLevel::INFO => LevelFilter::Info,
         LoggerLevel::WARN => LevelFilter::Warn,
         LoggerLevel::DEBUG => LevelFilter::Debug,
@@ -146,15 +150,13 @@ fn load_cli_config(file_path: &str) -> Result<CliConfig> {
     cli_config.unwrap_or_else(|| CliConfig::from_file(file_path))
 }
 
-fn main() -> ExitCode {
+fn v86_runtime(cfg: CliConfig) -> i32 {
+    0
+}
+
+fn wasm_runtime(mut cfg: CliConfig, cli_command_opts: CliCommandOpts) -> i32 {
+    logger_init_with_config(&cfg);
     let mut std_buffer = String::new();
-    let cli_command_opts = CliCommandOpts::parse();
-    let path = cli_command_opts.input_ref();
-    let mut cfg = load_cli_config(path).unwrap();
-    if let Some(code) = check_module_sum(&cfg) {
-        return ExitCode::from(code as u8);
-    }
-    logger_init(&cfg);
     if cfg.0.stdin_ref().is_empty() {
         io::stdin().read_line(&mut std_buffer).unwrap();
         cfg.0.stdin(std_buffer);
@@ -166,7 +168,7 @@ fn main() -> ExitCode {
         .enable_time()
         .build()
         .unwrap();
-    let code = rt.block_on(async {
+    rt.block_on(async {
         if let Some(time) = run_time {
             let _ = tokio::spawn(async move {
                 tokio::time::sleep(Duration::from_millis(time)).await;
@@ -182,8 +184,23 @@ fn main() -> ExitCode {
         let exit_code = blockless_run(cfg.0).await;
         info!("The wasm execute finish, the exit code: {}", exit_code.code);
         exit_code.code
-    });
-    ExitCode::from(code as u8)
+    })
+}
+
+fn main() -> ExitCode {
+    let cli_command_opts = CliCommandOpts::parse();
+    let path = cli_command_opts.input_ref();
+    let cfg = load_cli_config(path).unwrap();
+    if let Some(code) = check_module_sum(&cfg) {
+        return ExitCode::from(code as u8);
+    }
+    let code = if cli_command_opts.is_v86() {
+        0
+    } else {
+        wasm_runtime(cfg, cli_command_opts) as u8
+    };
+    
+    ExitCode::from(code)
 }
 
 #[cfg(test)]

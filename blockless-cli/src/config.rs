@@ -238,11 +238,11 @@ mod test {
         let current = Some(".");
         let root_path = cliconf.0.fs_root_path_ref();
         assert_eq!(root_path, current);
-        let config_logger_ref = cliconf.0.runtime_logger_ref();
+        let config_logger_ref = cliconf.0.runtime_logger_path();
         let logger_ref = Some("./test.log".into());
         assert_eq!(logger_ref, config_logger_ref);
 
-        let logger_level = cliconf.0.runtime_logger_level_ref();
+        let logger_level = cliconf.0.runtime_logger_path();
         assert!(matches!(&LoggerLevel::WARN, logger_level));
     }
 
