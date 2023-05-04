@@ -7,6 +7,8 @@ use std::{
     str::FromStr,
 };
 
+const ENTRY: &str = "_start";
+
 pub enum LoggerLevel {
     INFO,
     WARN,
@@ -350,6 +352,12 @@ impl BlocklessConfig {
     #[inline(always)]
     pub fn add_module(&mut self, module: BlocklessModule) {
         self.modules.push(module);
+    }
+
+    #[inline(always)]
+    pub fn reset_modules_model_entry(&mut self) -> &str {
+        self.entry = ENTRY.to_string();
+        &self.entry
     }
 
     #[inline(always)]
