@@ -1,5 +1,3 @@
-use rustix::path::Arg;
-
 use crate::Permission;
 use std::{
     collections::HashMap,
@@ -190,7 +188,7 @@ impl BlocklessConfig {
             #[allow(clippy::map_flatten)]
             PathBuf::from_str(s).ok().and_then(|p| {
                 p.file_name()
-                    .map(|name| name.as_str().ok().map(|s| s.to_string()))
+                    .map(|name| name.to_str().map(|s| s.to_string()))
                     .flatten()
             })
         })
