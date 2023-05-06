@@ -5,7 +5,6 @@ use json::{self, JsonValue};
 use std::env::VarError;
 use std::ffi::OsStr;
 use std::fs;
-use std::os::unix::prelude::OsStrExt;
 use std::path::{PathBuf, Path};
 
 pub(crate) struct CliConfig(pub(crate) BlocklessConfig);
@@ -18,15 +17,12 @@ struct EnvVar {
 impl CliConfig {
 
     fn defaut_logger_file(filen: &OsStr) -> Option<String> {
-        let filen = filen.as_bytes();
+        let filen = filen.to_str().unwrap().as_bytes();
         let p = match filen.iter().position(|b| *b == b'.') {
             Some(p) => p,
             None => return Some("runtime".to_string()),
         };
-        OsStr::from_bytes(&filen[..p])
-            .to_os_string()
-            .to_str()
-            .map(String::from)
+        String::from_utf8(filen[..p].to_vec()).ok()
     }
 
     /// config the wasm file as entry file
