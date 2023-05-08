@@ -39,8 +39,8 @@ impl V86config {
 
 pub(crate) fn load_v86conf_extract_from_car(f: File) -> Result<V86config> {
     let rs = load_extract_from_car(f, |raw_json, root_suffix| {
-        let mut cfg = V86config::from_data(raw_json.clone(), root_suffix)?;
-        cfg.raw_config = Some(raw_json);
+        let mut cfg = V86config::from_data(raw_json.clone(), root_suffix.clone())?;
+        cfg.raw_config = replace_vars(raw_json, root_suffix).ok();
         Ok(Config::V86config(cfg))
     });
     rs.map(|r| match r {

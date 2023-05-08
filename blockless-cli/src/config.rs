@@ -278,8 +278,10 @@ where
         let root_path: PathBuf = rootfs.into();
         let root_path = root_path.join(rcid.to_string());
         if !root_path.exists() {
-            fs::create_dir(&root_path)?;
+            let msg = format!("create directory error: {}", root_path.to_str().unwrap());
+            fs::create_dir(&root_path).expect(&msg);
         }
+        
         extract_ipld(&mut reader, rcid, Some(root_path))?;
     }
     Ok(cfg)

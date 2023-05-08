@@ -123,7 +123,7 @@ fn v86_runtime(path: &str) -> u8 {
     let file = fs::OpenOptions::new()
         .read(true)
         .open(path)
-        .unwrap();
+        .expect("the v86 car file is not exist or not readable.");
     let cfg = load_v86conf_extract_from_car(file).unwrap();
     let v86 = V86Lib::load(&cfg.dynamic_lib_path).unwrap();
     let raw_config_json = &cfg.raw_config.unwrap();
