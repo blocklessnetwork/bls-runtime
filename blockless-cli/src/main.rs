@@ -1,5 +1,7 @@
+mod v86;
 mod cli_clap;
 mod config;
+mod v86config;
 use blockless::{
     blockless_run, 
     LoggerLevel
@@ -9,9 +11,11 @@ use cli_clap::CliCommandOpts;
 #[allow(unused_imports)]
 use config::CliConfig;
 use anyhow::Result;
+use config::load_cli_config_extract_from_car;
+use v86::V86Lib;
+use v86config::load_v86conf_extract_from_car;
 use std::{
     io::{self, Read}, 
-    fs::File, 
     path::PathBuf, 
     time::Duration, 
     process::ExitCode,
@@ -25,10 +29,6 @@ use log::{
 };
 use std::fs;
 use std::path::Path;
-use rust_car::{
-    reader::{self, CarReader},
-    utils::{ipld_write, extract_ipld}
-};
 
 fn logger_init_with_config(cfg: &CliConfig) {
     let rt_logger = cfg.0.runtime_logger_path();
@@ -62,37 +62,6 @@ fn logger_init(rt_logger: Option<PathBuf>, rt_logger_level: LoggerLevel) {
 
     builder.target(target);
     builder.init();
-}
-
-fn load_from_car<T>(car_reader: &mut T) -> Result<CliConfig>
-where
-    T: CarReader
-{
-    let cid = car_reader.search_file_cid("config.json")?;
-    let mut data = Vec::new();
-    ipld_write(car_reader, cid, &mut data)?;
-    let raw_json = String::from_utf8(data)?;
-    let roots = car_reader.header().roots();
-    let root_suffix = roots.iter().nth(0).map(|c| c.to_string());
-    let mut cli_cfg = CliConfig::from_data(raw_json, root_suffix)?;
-    cli_cfg.0.set_is_carfile(true);
-    Ok(cli_cfg)
-}
-
-fn load_extract_from_car(f: File) -> Result<CliConfig> {
-    let mut reader = reader::new_v1(f)?;
-    let cfg = load_from_car(&mut reader)?;
-    let header = reader.header();
-    let rootfs = cfg.0.fs_root_path_ref().expect("root path must be config in car file");
-    for rcid in header.roots() {
-        let root_path: PathBuf = rootfs.into();
-        let root_path = root_path.join(rcid.to_string());
-        if !root_path.exists() {
-            fs::create_dir(&root_path)?;
-        }
-        extract_ipld(&mut reader, rcid, Some(root_path))?;
-    }
-    Ok(cfg)
 }
 
 fn file_md5(f: impl AsRef<Path>) -> String {
@@ -140,7 +109,7 @@ fn load_cli_config(file_path: &str) -> Result<CliConfig> {
             let file = fs::OpenOptions::new()
                 .read(true)
                 .open(file_path)?;
-            Some(load_extract_from_car(file))
+            Some(load_cli_config_extract_from_car(file))
         },
         Some(ext) if ext == "wasm" || ext == "wasi" || ext == "wat" => {
             Some(load_wasm_directly(file_path))
@@ -150,11 +119,18 @@ fn load_cli_config(file_path: &str) -> Result<CliConfig> {
     cli_config.unwrap_or_else(|| CliConfig::from_file(file_path))
 }
 
-fn v86_runtime(cfg: CliConfig) -> i32 {
-    0
+fn v86_runtime(path: &str) -> u8 {
+    let file = fs::OpenOptions::new()
+        .read(true)
+        .open(path)
+        .unwrap();
+    let cfg = load_v86conf_extract_from_car(file).unwrap();
+    let v86 = V86Lib::load(&cfg.dynamic_lib_path).unwrap();
+    let raw_config_json = &cfg.raw_config.unwrap();
+    v86.v86_wasi_run(raw_config_json) as u8
 }
 
-fn wasm_runtime(mut cfg: CliConfig, cli_command_opts: CliCommandOpts) -> i32 {
+fn wasm_runtime(mut cfg: CliConfig, cli_command_opts: CliCommandOpts) -> u8 {
     logger_init_with_config(&cfg);
     let mut std_buffer = String::new();
     if cfg.0.stdin_ref().is_empty() {
@@ -183,23 +159,22 @@ fn wasm_runtime(mut cfg: CliConfig, cli_command_opts: CliCommandOpts) -> i32 {
         }));
         let exit_code = blockless_run(cfg.0).await;
         info!("The wasm execute finish, the exit code: {}", exit_code.code);
-        exit_code.code
+        exit_code.code as u8
     })
 }
 
 fn main() -> ExitCode {
     let cli_command_opts = CliCommandOpts::parse();
     let path = cli_command_opts.input_ref();
-    let cfg = load_cli_config(path).unwrap();
-    if let Some(code) = check_module_sum(&cfg) {
-        return ExitCode::from(code as u8);
-    }
     let code = if cli_command_opts.is_v86() {
-        0
+        v86_runtime(path) as u8
     } else {
+        let cfg = load_cli_config(path).unwrap();
+        if let Some(code) = check_module_sum(&cfg) {
+            return ExitCode::from(code as u8);
+        }
         wasm_runtime(cfg, cli_command_opts) as u8
     };
-    
     ExitCode::from(code)
 }
 
@@ -212,8 +187,10 @@ mod test {
         header::CarHeader,
         writer::{self as  car_writer, CarWriter}, 
         unixfs::{UnixFs, Link}, 
-        codec::Encoder
+        codec::Encoder, reader::{self, CarReader}
     };
+    use crate::config::load_cli_config_from_car;
+
     use super::*;
 
     #[test]
@@ -273,7 +250,7 @@ mod test {
         let input = std::io::Cursor::new(&mut buf);
         let mut car_reader = reader::new_v1(input).unwrap();
         let root_cid = car_reader.header().roots()[0];
-        let cfg = load_from_car(&mut car_reader).unwrap();
+        let cfg = load_cli_config_from_car(&mut car_reader).unwrap();
         assert_eq!(cfg.0.fs_root_path_ref(), Some("target"));
         assert_eq!(cfg.0.drivers_root_path_ref(), Some("target/drivers"));
     }

@@ -1,14 +1,44 @@
 use anyhow::Result;
-use blockless::{self, LoggerLevel, BlocklessModule, ModuleType};
-use blockless::{BlocklessConfig, DriverConfig, MultiAddr, Permission};
+use blockless::{
+    self, 
+    LoggerLevel, 
+    BlocklessModule, 
+    ModuleType
+};
+use blockless::{
+    BlocklessConfig, 
+    DriverConfig, 
+    MultiAddr, 
+    Permission
+};
 use json::{self, JsonValue};
+use rust_car::reader::{self, CarReader};
+use rust_car::utils::{ipld_write, extract_ipld};
 use std::env::VarError;
 use std::ffi::OsStr;
-use std::fs;
+use std::fs::{self, File};
 use std::os::unix::prelude::OsStrExt;
 use std::path::{PathBuf, Path};
 
+use crate::v86config::V86config;
+
 pub(crate) struct CliConfig(pub(crate) BlocklessConfig);
+
+pub(crate) enum Config  {
+    CliConfig(CliConfig),
+    V86config(V86config)
+}
+
+impl Config {
+
+    fn root_path(&self) -> Option<&str> {
+        match self {
+            Config::CliConfig(c) => c.0.fs_root_path_ref(),
+            Config::V86config(c) => Some(&c.fs_root_path),
+        }
+    }
+    
+}
 
 struct EnvVar {
     name: String,
@@ -166,48 +196,107 @@ impl CliConfig {
         Ok(CliConfig(bc))
     }
 
-    fn env_variables(cid: Option<String>) -> Result<Vec<EnvVar>> {
-        let mut vars = Vec::new();
-        match std::env::var("ENV_ROOT_PATH") {
-            Ok(s) => {
-                let env_root = s.clone();
-                let path: PathBuf = s.into();
-                let root_path = path.join(cid.unwrap_or_default());
-                let path: String = root_path.to_str().unwrap_or_default().into();
-                vars.push(EnvVar { 
-                    name: "$ROOT".to_string(), 
-                    value: path,
-                });
-                vars.push(EnvVar {
-                    name: "$ENV_ROOT_PATH".to_string(),
-                    value: env_root,
-                });
-            },
-            Err(VarError::NotPresent) => {},
-            Err(e) => return Err(e.into()),
-        }
-        Ok(vars)
-    }
-
-    fn replace_vars(json_str: String,  root_suffix: Option<String>) -> Result<String> {
-        let vars = Self::env_variables(root_suffix)?;
-        let mut raw_json = json_str;
-        for var in vars {
-            raw_json = raw_json.replace(&var.name, &var.value);
-        }
-        Ok(raw_json)
-    }
-
     pub fn from_data(data: String, root_suffix: Option<String>) -> Result<Self> {
-        let data = Self::replace_vars(data, root_suffix)?;
+        let data = replace_vars(data, root_suffix)?;
         Self::from_json_string(data)
     }
 
     pub fn from_file(path: impl AsRef<Path>) -> Result<Self> {
         let values = fs::read_to_string(path)?;
-        let json_string = Self::replace_vars(values, None)?;
+        let json_string = replace_vars(values, None)?;
         Self::from_json_string(json_string)
     }
+}
+
+fn env_variables(cid: Option<String>) -> Result<Vec<EnvVar>> {
+    let mut vars = Vec::new();
+    match std::env::var("ENV_ROOT_PATH") {
+        Ok(s) => {
+            let env_root = s.clone();
+            let path: PathBuf = s.into();
+            let root_path = path.join(cid.unwrap_or_default());
+            let path: String = root_path.to_str().unwrap_or_default().into();
+            vars.push(EnvVar { 
+                name: "$ROOT".to_string(), 
+                value: path,
+            });
+            vars.push(EnvVar {
+                name: "$ENV_ROOT_PATH".to_string(),
+                value: env_root,
+            });
+        },
+        Err(VarError::NotPresent) => {},
+        Err(e) => return Err(e.into()),
+    }
+    Ok(vars)
+}
+
+pub(crate) fn replace_vars(json_str: String,  cid: Option<String>) -> Result<String> {
+    let vars = env_variables(cid)?;
+    let mut raw_json = json_str;
+    for var in vars {
+        raw_json = raw_json.replace(&var.name, &var.value);
+    }
+    Ok(raw_json)
+}
+
+pub(crate)  fn load_from_car<T, F>(car_reader: &mut T, call: F) -> Result<Config>
+where
+    F: Fn(String, Option<String>) -> Result<Config>,
+    T: CarReader
+{
+    let cid = car_reader.search_file_cid("config.json")?;
+    let mut data = Vec::new();
+    ipld_write(car_reader, cid, &mut data)?;
+    let raw_json = String::from_utf8(data)?;
+    let roots = car_reader.header().roots();
+    let root_suffix = roots.iter().nth(0).map(|c| c.to_string());
+    call(raw_json, root_suffix)
+}
+
+#[allow(dead_code)]
+pub(crate)  fn load_cli_config_from_car<T>(car_reader: &mut T) -> Result<CliConfig>
+where
+    T: CarReader
+{
+    let rs = load_from_car(car_reader, new_cliconfig);
+    rs.map(|r| match r {
+        Config::CliConfig(c) => c,
+        _ => unreachable!("can be reach!")
+    })
+}
+
+pub(crate) fn load_extract_from_car<F>(f: File, call: F) -> Result<Config> 
+where
+    F: Fn(String, Option<String>) -> Result<Config>,
+{
+    let mut reader = reader::new_v1(f)?;
+    let cfg = load_from_car(&mut reader, call)?;
+    let header = reader.header();
+    let rootfs = cfg.root_path().expect("root path must be config in car file");
+    for rcid in header.roots() {
+        let root_path: PathBuf = rootfs.into();
+        let root_path = root_path.join(rcid.to_string());
+        if !root_path.exists() {
+            fs::create_dir(&root_path)?;
+        }
+        extract_ipld(&mut reader, rcid, Some(root_path))?;
+    }
+    Ok(cfg)
+}
+
+fn new_cliconfig(raw_json: String, root_suffix: Option<String>) -> Result<Config> {
+    let mut cli_cfg = CliConfig::from_data(raw_json, root_suffix)?;
+    cli_cfg.0.set_is_carfile(true);
+    Ok(Config::CliConfig(cli_cfg))
+}
+
+pub(crate) fn load_cli_config_extract_from_car(f: File) -> Result<CliConfig> {
+    let rs = load_extract_from_car(f, new_cliconfig);
+    rs.map(|r| match r {
+        Config::CliConfig(c) => c,
+        _ => unreachable!("can be reach!")
+    })
 }
 
 #[cfg(test)]
