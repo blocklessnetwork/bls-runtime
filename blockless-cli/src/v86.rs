@@ -1,4 +1,5 @@
 use core::ffi;
+use std::path::Path;
 
 use dlopen::raw::Library;
 use anyhow::Result;
@@ -12,12 +13,12 @@ type V86WasiRunFuncType = unsafe extern "C" fn(conf :*const ffi::c_char, len: ff
 
 impl V86Lib {
 
-    pub fn load(path: &str) -> Result<Self> {
-        let lib = Library::open(&path)?;
+    pub fn load<T: AsRef<Path>>(path: &str) -> Result<Self> {
+        let lib = Library::open(path)?;
         let v86_wasi_run_func = unsafe {
             lib.symbol("run_v86_wasi")?
         };
-        Ok(Self { 
+        Ok(Self {
             _lib: lib,
             v86_wasi_run_func,
         })
