@@ -117,6 +117,11 @@ pub(crate) struct CliCommandOpts {
 
 
 impl CliCommandOpts {
+
+    #[inline(always)]
+    pub fn fs_root_path(&self) -> Option<&String> {
+        self.fs_root_path.as_ref()
+    }
     
     #[inline(always)]
     pub fn is_v86(&self) -> bool {

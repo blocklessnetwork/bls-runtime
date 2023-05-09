@@ -30,6 +30,8 @@ use log::{
 use std::fs;
 use std::path::Path;
 
+const ENV_ROOT_PATH_NAME: &str = "ENV_ROOT_PATH";
+
 fn logger_init_with_config(cfg: &CliConfig) {
     let rt_logger = cfg.0.runtime_logger_path();
     let rt_logger_level = cfg.0.get_runtime_logger_level();
@@ -163,9 +165,16 @@ fn wasm_runtime(mut cfg: CliConfig, cli_command_opts: CliCommandOpts) -> u8 {
     })
 }
 
+fn cover_env(cli_command_opts: &CliCommandOpts) {
+    cli_command_opts
+        .fs_root_path()
+        .map(|s| std::env::set_var(ENV_ROOT_PATH_NAME, s.as_str()));
+}
+
 fn main() -> ExitCode {
     let cli_command_opts = CliCommandOpts::parse();
     let path = cli_command_opts.input_ref();
+    cover_env(&cli_command_opts);
     let code = if cli_command_opts.is_v86() {
         v86_runtime(path) as u8
     } else {
