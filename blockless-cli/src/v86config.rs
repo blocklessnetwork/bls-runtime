@@ -74,8 +74,8 @@ mod test {
             "dynamic_lib_path": "$ROOT/test.so"
         }
         "#;
-        let cfg = V86config::from_data(data.into(), None);
         std::env::set_var("ENV_ROOT_PATH", "/temp/v86");
+        let cfg = V86config::from_data(data.into(), None);
         let cfg = cfg.unwrap();
         assert_eq!(&cfg.dynamic_lib_path, "/temp/v86//test.so");
     }
