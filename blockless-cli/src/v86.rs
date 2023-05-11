@@ -13,8 +13,8 @@ type V86WasiRunFuncType = unsafe extern "C" fn(conf :*const ffi::c_char, len: ff
 
 impl V86Lib {
 
-    pub fn load<T: AsRef<Path>>(path: &str) -> Result<Self> {
-        let lib = Library::open(path)?;
+    pub fn load<T: AsRef<Path>>(path: T) -> Result<Self> {
+        let lib = Library::open(path.as_ref())?;
         let v86_wasi_run_func = unsafe {
             lib.symbol("run_v86_wasi")?
         };
