@@ -9,6 +9,7 @@ use std::{
 
 const ENTRY: &str = "_start";
 
+#[derive(Clone, Debug)]
 pub enum LoggerLevel {
     INFO,
     WARN,
@@ -227,8 +228,8 @@ impl BlocklessConfig {
     }
 
     #[inline(always)]
-    pub fn runtime_logger_level_ref(&self) -> &LoggerLevel {
-        &self.runtime_logger_level
+    pub fn get_runtime_logger_level(&self) -> LoggerLevel {
+        self.runtime_logger_level.clone()
     }
 
     #[inline(always)]
@@ -337,7 +338,7 @@ impl BlocklessConfig {
     /// the runtime log will ouput to Stdout.
     /// the file is in fs_root_path
     #[inline(always)]
-    pub fn runtime_logger_ref(&self) -> Option<PathBuf> {
+    pub fn runtime_logger_path(&self) -> Option<PathBuf> {
         self.fs_root_path
             .as_ref()
             .zip(self.runtime_logger.as_ref())
@@ -453,7 +454,7 @@ mod test {
         let test = Some("test.log".into());
         config.runtime_logger(test);
         let result = PathBuf::new().join("/root").join("test.log");
-        assert_eq!(config.runtime_logger_ref().unwrap(), result);
+        assert_eq!(config.runtime_logger_path().unwrap(), result);
 
         assert_eq!(config.entry_ref(), "test");
         config.entry("_start".into());
