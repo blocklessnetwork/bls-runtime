@@ -2,9 +2,16 @@ use blockless_drivers::{CdylibDriver, DriverConetxt};
 use blockless_env;
 use cap_std::ambient_authority;
 use log::{debug, error};
+use wasmtime::{
+    Config, 
+    PoolingAllocationConfig, 
+    InstanceAllocationStrategy, 
+    AsContextMut,
+    Store, 
+    Trap, Engine, Linker, Module
+};
 use std::{env, path::Path};
 pub use wasi_common::*;
-use wasmtime::*;
 use wasmtime_wasi::sync::WasiCtxBuilder;
 
 const ENTRY: &str = "_start";
