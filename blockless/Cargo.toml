@@ -15,7 +15,7 @@ cap-std = {workspace = true}
 blockless-drivers = {workspace = true}
 blockless-env = {path = "../crates/blockless-env"}
 anyhow = {workspace = true}
-log = "0.4"
+log = {workspace = true}
 
 [dev-dependencies]
 tempdir = {workspace = true}

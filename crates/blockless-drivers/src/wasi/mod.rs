@@ -9,7 +9,7 @@ use crate::ErrorKind;
 use crate::{Driver, DriverConetxt};
 pub use guest_ptr::ArrayTuple;
 use std::sync::Arc;
-use wasi_common::file::{FileCaps, FileEntry};
+use wasi_common::file::{FileAccessMode, FileEntry};
 use wasi_common::WasiCtx;
 use wiggle::GuestPtr;
 
@@ -101,15 +101,11 @@ impl blockless_drivers::BlocklessDrivers for WasiCtx {
             Some(d) => d,
             None => return Err(ErrorKind::DriverNotFound),
         };
-        let caps = FileCaps::FDSTAT_SET_FLAGS
-            | FileCaps::FILESTAT_GET
-            | FileCaps::READ
-            | FileCaps::WRITE
-            | FileCaps::POLL_READWRITE;
+        let mode = FileAccessMode::READ|FileAccessMode::WRITE;
         match drv
             .open(path, opts)
             .await
-            .map(|f| Arc::new(FileEntry::new(caps, f)))
+            .map(|f| Arc::new(FileEntry::new(f, mode)))
         {
             Ok(f) => {
                 let fd_num = self.table().push(f).unwrap();

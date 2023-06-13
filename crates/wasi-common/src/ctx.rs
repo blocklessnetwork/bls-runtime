@@ -1,15 +1,14 @@
 use crate::clocks::WasiClocks;
-use crate::dir::{DirCaps, DirEntry, WasiDir};
-use crate::file::{FileCaps, FileEntry, WasiFile};
+use crate::dir::{DirEntry, WasiDir};
+use crate::file::{FileAccessMode, FileEntry, WasiFile};
 use crate::sched::WasiSched;
 use crate::string_array::StringArray;
 use crate::table::Table;
 use crate::{Error, StringArrayError};
 use cap_rand::RngCore;
-use std::ops::{Deref, DerefMut};
+use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-
 use crate::BlocklessConfig;
 
 /// An `Arc`-wrapper around the wasi-common context to allow mutable access to
@@ -57,14 +56,14 @@ impl WasiCtx {
 
     pub fn set_blockless_config(&mut self, c: Option<BlocklessConfig>) {
         let mut lock = self.0.blockless_config.lock().unwrap();
-        c.map(|c| lock.deref_mut().replace(c));
+        c.map(|c| lock.replace(c));
     }
-
+    
     pub fn config_drivers_root_path_ref(&mut self) -> Option<String> {
         let lock = self.0.blockless_config.lock().unwrap();
         lock.as_ref().and_then(|l| l.drivers_root_path_ref().map(String::from))
     }
-
+    
     pub fn config_stdin_ref(&mut self) -> Option<String> {
         let lock = self.0.blockless_config.lock().unwrap();
         lock.as_ref().and_then(|l| Some(String::from(l.stdin_ref().as_str())))
@@ -79,38 +78,27 @@ impl WasiCtx {
         }
     }
 
-    pub fn insert_file(&self, fd: u32, file: Box<dyn WasiFile>, caps: FileCaps) {
+    pub fn insert_file(&self, fd: u32, file: Box<dyn WasiFile>, access_mode: FileAccessMode) {
         self.table()
-            .insert_at(fd, Arc::new(FileEntry::new(caps, file)));
+            .insert_at(fd, Arc::new(FileEntry::new(file, access_mode)));
     }
 
-    pub fn push_file(&self, file: Box<dyn WasiFile>, caps: FileCaps) -> Result<u32, Error> {
-        self.table().push(Arc::new(FileEntry::new(caps, file)))
-    }
-
-    pub fn insert_dir(
+    pub fn push_file(
         &self,
-        fd: u32,
-        dir: Box<dyn WasiDir>,
-        caps: DirCaps,
-        file_caps: FileCaps,
-        path: PathBuf,
-    ) {
-        self.table().insert_at(
-            fd,
-            Arc::new(DirEntry::new(caps, file_caps, Some(path), dir)),
-        );
-    }
-
-    pub fn push_dir(
-        &self,
-        dir: Box<dyn WasiDir>,
-        caps: DirCaps,
-        file_caps: FileCaps,
-        path: PathBuf,
+        file: Box<dyn WasiFile>,
+        access_mode: FileAccessMode,
     ) -> Result<u32, Error> {
         self.table()
-            .push(Arc::new(DirEntry::new(caps, file_caps, Some(path), dir)))
+            .push(Arc::new(FileEntry::new(file, access_mode)))
+    }
+
+    pub fn insert_dir(&self, fd: u32, dir: Box<dyn WasiDir>, path: PathBuf) {
+        self.table()
+            .insert_at(fd, Arc::new(DirEntry::new(Some(path), dir)));
+    }
+
+    pub fn push_dir(&self, dir: Box<dyn WasiDir>, path: PathBuf) -> Result<u32, Error> {
+        self.table().push(Arc::new(DirEntry::new(Some(path), dir)))
     }
 
     pub fn table(&self) -> &Table {
@@ -136,32 +124,16 @@ impl WasiCtx {
         Ok(())
     }
 
-    pub fn set_stdin(&self, mut f: Box<dyn WasiFile>) {
-        let rights = Self::stdio_rights(&mut *f);
-        self.insert_file(0, f, rights);
+    pub fn set_stdin(&self, f: Box<dyn WasiFile>) {
+        self.insert_file(0, f, FileAccessMode::READ);
     }
 
-    pub fn set_stdout(&self, mut f: Box<dyn WasiFile>) {
-        let rights = Self::stdio_rights(&mut *f);
-        self.insert_file(1, f, rights);
+    pub fn set_stdout(&self, f: Box<dyn WasiFile>) {
+        self.insert_file(1, f, FileAccessMode::WRITE);
     }
 
-    pub fn set_stderr(&self, mut f: Box<dyn WasiFile>) {
-        let rights = Self::stdio_rights(&mut *f);
-        self.insert_file(2, f, rights);
-    }
-
-    fn stdio_rights(f: &mut dyn WasiFile) -> FileCaps {
-        let mut rights = FileCaps::all();
-
-        // If `f` is a tty, restrict the `tell` and `seek` capabilities, so
-        // that wasi-libc's `isatty` correctly detects the file descriptor
-        // as a tty.
-        if f.isatty() {
-            rights &= !(FileCaps::TELL | FileCaps::SEEK);
-        }
-
-        rights
+    pub fn set_stderr(&self, f: Box<dyn WasiFile>) {
+        self.insert_file(2, f, FileAccessMode::WRITE);
     }
 
     pub fn push_preopened_dir(
@@ -169,14 +141,8 @@ impl WasiCtx {
         dir: Box<dyn WasiDir>,
         path: impl AsRef<Path>,
     ) -> Result<(), Error> {
-        let caps = DirCaps::all();
-        let file_caps = FileCaps::all();
-        self.table().push(Arc::new(DirEntry::new(
-            caps,
-            file_caps,
-            Some(path.as_ref().to_owned()),
-            dir,
-        )))?;
+        self.table()
+            .push(Arc::new(DirEntry::new(Some(path.as_ref().to_owned()), dir)))?;
         Ok(())
     }
 }
