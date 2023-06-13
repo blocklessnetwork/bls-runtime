@@ -181,3 +181,25 @@ impl std::fmt::Display for CgiErrorKind {
         }
     }
 }
+
+
+#[derive(Debug)]
+pub enum BlocklessSocketErrorKind {
+    ConnectRefused,
+    ParameterError,
+    ConnectionReset,
+    AddressInUse,
+}
+
+impl std::error::Error for BlocklessSocketErrorKind {}
+
+impl std::fmt::Display for BlocklessSocketErrorKind {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            &Self::ConnectRefused => write!(f, "Connect Refused error"),
+            &Self::ConnectionReset => write!(f, "Connection Reset Error"),
+            &Self::AddressInUse => write!(f, "Address In Use"),
+            &Self::ParameterError => write!(f, "Parameter Error"),
+        }
+    }
+}
