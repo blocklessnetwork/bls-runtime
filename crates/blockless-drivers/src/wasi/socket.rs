@@ -9,7 +9,7 @@ use wasi_common::{
 
 use crate::BlocklessSocketErrorKind;
 use wiggle::GuestPtr;
-use tokio::net::{TcpStream, TcpListener};
+use std::net::{TcpStream, TcpListener};
 use log::error;
 
 wiggle::from_witx!({
@@ -47,31 +47,31 @@ impl From<BlocklessSocketErrorKind> for types::SocketError {
 }
 
 async fn tcp_connect(addr: &str) -> Result<Box<dyn WasiFile>, BlocklessSocketErrorKind> {
-    let stream = match TcpStream::connect(addr).await {
+    let stream = match TcpStream::connect(addr) {
         Ok(s) => s,
         Err(e) => {
             error!("error connect in driver {}: {}", addr, e);
             return Err(BlocklessSocketErrorKind::ConnectRefused);
         }
     };
-    let stream = cap_std::net::TcpStream::from_std(stream.into_std().unwrap());
+    let stream = cap_std::net::TcpStream::from_std(stream);
     let socket: Socket = Socket::from(stream);
-    let stream: Box<dyn WasiFile> = Box::<dyn WasiFile>::from(socket);
-    Ok(stream)
+    let wasi_file: Box<dyn WasiFile> = Box::<dyn WasiFile>::from(socket);
+    Ok(wasi_file)
 }
 
 async fn tcp_bind(addr: &str) -> Result<Box<dyn WasiFile>, BlocklessSocketErrorKind> {
-    let stream = match TcpListener::bind(addr).await {
+    let listener = match TcpListener::bind(addr) {
         Ok(s) => s,
         Err(e) => {
             error!("error connect in driver {}: {}", addr, e);
             return Err(BlocklessSocketErrorKind::ConnectRefused);
         }
     };
-    let stream = cap_std::net::TcpListener::from_std(stream.into_std().unwrap());
-    let socket: Socket = Socket::from(stream);
-    let stream: Box<dyn WasiFile> = Box::<dyn WasiFile>::from(socket);
-    Ok(stream)
+    let listener = cap_std::net::TcpListener::from_std(listener);
+    let socket: Socket = Socket::from(listener);
+    let wasi_file: Box<dyn WasiFile> = Box::<dyn WasiFile>::from(socket);
+    Ok(wasi_file)
 }
 
 #[wiggle::async_trait]
