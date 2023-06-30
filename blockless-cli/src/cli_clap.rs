@@ -2,8 +2,18 @@
 use std::str::FromStr;
 
 use anyhow::{bail, Result};
-use blockless::{BlocklessConfig, BlocklessModule, Permission, ModuleType};
-use clap::{Arg, ArgMatches, Command, Parser};
+use blockless::{
+    BlocklessConfig, 
+    BlocklessModule, 
+    Permission, 
+    ModuleType
+};
+use clap::{
+    Arg, 
+    ArgMatches, 
+    Command, 
+    Parser
+};
 use url::Url;
 
 use crate::config::CliConfig;
