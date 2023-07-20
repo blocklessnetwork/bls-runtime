@@ -73,6 +73,12 @@ fn parse_module(module: &str) -> Result<BlocklessModule> {
     })
 }
 
+#[derive(Debug)]
+pub enum RuntimeType {
+    V86,
+    Wasm,
+}
+
 #[derive(Parser, Debug)]
 pub(crate) struct CliCommandOpts {
     #[clap(long = "v86", value_name = "V86", required = false, help = V86_HELP )]
@@ -124,8 +130,12 @@ impl CliCommandOpts {
     }
     
     #[inline(always)]
-    pub fn is_v86(&self) -> bool {
-        self.v86
+    pub fn runtime_type(&self) -> RuntimeType {
+        if self.v86 {
+            RuntimeType::V86
+        } else {
+            RuntimeType::Wasm
+        }
     }
 
     #[inline(always)]
