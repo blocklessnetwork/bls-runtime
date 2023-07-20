@@ -1,7 +1,7 @@
 use std::fs::File;
 
-use crate::config::{replace_vars, load_extract_from_car, Config};
-use anyhow::{Result, Ok};
+use crate::{config::{replace_vars, load_extract_from_car, Config}, error::CLIExitCode};
+use anyhow::Result;
 
 pub(crate) struct V86config {
     pub raw_config: Option<String>,
@@ -37,16 +37,18 @@ impl V86config {
     }
 }
 
-pub(crate) fn load_v86conf_extract_from_car(f: File) -> Result<V86config> {
-    let rs = load_extract_from_car(f, |raw_json, root_suffix| {
+pub(crate) fn load_v86conf_extract_from_car(f: File) -> Result<V86config, CLIExitCode> {
+    let config = load_extract_from_car(f, |raw_json, root_suffix| {
         let mut cfg = V86config::from_data(raw_json.clone(), root_suffix.clone())?;
         cfg.raw_config = replace_vars(raw_json, root_suffix).ok();
         Ok(Config::V86config(cfg))
-    });
-    rs.map(|r| match r {
-        Config::V86config(c) => c,
-        _ => unreachable!("can be reach!")
     })
+    .map_err(|err| CLIExitCode::UnknownError(err.to_string()))?;
+
+    match config {
+        Config::V86config(cfg) => Ok(cfg),
+        _ => Err(CLIExitCode::UnknownError("the v86 car file does not exist or is unreadable.".to_string())),
+    }
 }
 
 
