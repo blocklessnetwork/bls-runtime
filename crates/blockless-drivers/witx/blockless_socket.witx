@@ -1,0 +1,40 @@
+(typename $socket_error
+  (enum (@witx tag u16)
+    ;;; Success
+    $success
+    ;;; parameter error
+    $parameter_error
+    ;;; Invalid handle
+    $connection_refused
+    ;;; Runtime error
+    $connection_reset
+    ;;; Invalid parameter
+    $address_in_use
+  )
+)
+
+(typename $ip-address-family
+  (enum (@witx tag u8)
+    ;;; Success
+    $ipv4
+    ;;; Invalid handle
+    $ipv6
+  )
+)
+
+(typename $socket_handle (handle))
+
+(module $blockless_socket
+    
+    (@interface func (export "create_tcp_bind_socket")
+        (param $target string)
+        (result $error (expected $socket_handle (error $socket_error)))
+    )
+
+    (@interface func (export "tcp_connect")
+        (param $target string)
+        (result $error (expected $socket_handle (error $socket_error)))
+    )
+
+)
+

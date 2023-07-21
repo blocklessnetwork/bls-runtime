@@ -2,8 +2,18 @@
 use std::str::FromStr;
 
 use anyhow::{bail, Result};
-use blockless::{BlocklessConfig, BlocklessModule, Permission, ModuleType};
-use clap::{Arg, ArgMatches, Command, Parser};
+use blockless::{
+    BlocklessConfig, 
+    BlocklessModule, 
+    Permission, 
+    ModuleType
+};
+use clap::{
+    Arg, 
+    ArgMatches, 
+    Command, 
+    Parser
+};
 use url::Url;
 
 use crate::config::CliConfig;
@@ -15,10 +25,13 @@ const DEBUG_INFO_HELP: &str  =
     "the debug info for the runtime.";
 
 const APP_ARGS_HELP: &str = 
-    "the app args will pass into the app";
+    "the app args will pass into the app.";
 
 const FS_ROOT_PATH_HELP: &str = 
     "the root directory for the runtime.";
+
+const DRIVERS_ROOT_PATH_HELP: &str = 
+    "the drivers root directory for the runtime.";
 
 const RUNTIME_LOGGER_HELP: &str = 
     "the logger file for the runtime.";
@@ -93,6 +106,9 @@ pub(crate) struct CliCommandOpts {
     #[clap(long = "fs-root-path", value_name = "FS-ROOT-PATH", help = FS_ROOT_PATH_HELP)]
     fs_root_path: Option<String>,
 
+    #[clap(long = "drivers-root-path", value_name = "DRIVERS-ROOT-PATH", help = DRIVERS_ROOT_PATH_HELP)]
+    drivers_root_path: Option<String>,
+
     #[clap(long = "runtime-logger", value_name = "RUNTIME-LOGGER", help = RUNTIME_LOGGER_HELP)]
     runtime_logger: Option<String>,
 
@@ -153,6 +169,7 @@ impl CliCommandOpts {
         conf.0.set_stdin_args(self.args);
         conf.0.permisions(self.permissions);
         conf.0.set_envs(self.envs);
+        conf.0.drivers_root_path(self.drivers_root_path);
         let mut modules = self.modules;
         let mut has_entry = false;
         self.entry.map(|e| {

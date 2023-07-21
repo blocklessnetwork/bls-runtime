@@ -102,7 +102,7 @@ pub struct BlocklessModule {
     pub md5: String,
 }
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 pub enum BlocklessConfigVersion {
     Version0,
     Version1,
