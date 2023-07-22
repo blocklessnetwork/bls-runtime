@@ -199,7 +199,7 @@ fn wasm_runtime(mut cfg: CliConfig, cli_command_opts: CliCommandOpts) -> CLIExit
 }
 
 
-fn cover_env(cli_command_opts: &CliCommandOpts) {
+fn set_root_path_env_var(cli_command_opts: &CliCommandOpts) {
     cli_command_opts
         .fs_root_path()
         .map(|s| std::env::set_var(ENV_ROOT_PATH_NAME, s.as_str()));
@@ -207,7 +207,7 @@ fn cover_env(cli_command_opts: &CliCommandOpts) {
 
 fn main() -> CLIExitCode {
     let cli_command_opts = CliCommandOpts::parse();
-    cover_env(&cli_command_opts);
+    set_root_path_env_var(&cli_command_opts);
     let path = cli_command_opts.input_ref();
 
     match cli_command_opts.runtime_type() {
@@ -250,6 +250,13 @@ mod test {
     use crate::config::load_cli_config_from_car;
 
     use super::*;
+
+    #[test]
+    fn test_set_root_path_env_var() {
+        let cli_opts = CliCommandOpts::try_parse_from(["cli", "test", "--fs-root-path=./test"]).unwrap();;
+        set_root_path_env_var(&cli_opts);
+        assert_eq!(std::env::var(ENV_ROOT_PATH_NAME).unwrap(), *cli_opts.fs_root_path().unwrap());
+    }
 
     #[test]
     fn test_load_cli_wasm_config() {
