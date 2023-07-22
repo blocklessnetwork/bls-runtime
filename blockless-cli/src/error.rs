@@ -1,4 +1,4 @@
-use std::{fmt, process::ExitCode};
+use std::{fmt, process::{ExitCode, Termination}};
 
 #[derive(Debug)]
 pub enum CLIExitCode {
@@ -104,10 +104,11 @@ impl Into<i32> for CLIExitCode {
   }
 }
 
-impl Into<ExitCode> for CLIExitCode {
-  fn into(self) -> ExitCode {
-    ExitCode::from(Into::<u8>::into(self))
-  }
-}
-
 impl std::error::Error for CLIExitCode {}
+
+impl Termination for CLIExitCode {
+    #[inline]
+    fn report(self) -> ExitCode {
+        ExitCode::from(Into::<u8>::into(self))
+    }
+}

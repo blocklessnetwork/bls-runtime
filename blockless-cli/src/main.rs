@@ -19,7 +19,6 @@ use std::{
     io::{self, Read}, 
     path::PathBuf, 
     time::Duration, 
-    process::ExitCode,
 };
 use env_logger::Target;
 use tokio::runtime::Builder;
@@ -143,7 +142,7 @@ fn v86_runtime(path: &str) -> Result<i32, CLIExitCode> {
 
     let raw_config_json = &cfg.raw_config
         .ok_or_else(|| CLIExitCode::UnknownError("the v86 config file does not exist or is unreadable.".to_string()))?;
-    Ok(v86.v86_wasi_run(raw_config_json).into())
+    Ok(v86.v86_wasi_run(raw_config_json))
 }
 
 fn wasm_runtime(mut cfg: CliConfig, cli_command_opts: CliCommandOpts) -> CLIExitCode {
@@ -206,7 +205,7 @@ fn cover_env(cli_command_opts: &CliCommandOpts) {
         .map(|s| std::env::set_var(ENV_ROOT_PATH_NAME, s.as_str()));
 }
 
-fn main() -> ExitCode {
+fn main() -> CLIExitCode {
     let cli_command_opts = CliCommandOpts::parse();
     cover_env(&cli_command_opts);
     let path = cli_command_opts.input_ref();
@@ -214,10 +213,10 @@ fn main() -> ExitCode {
     match cli_command_opts.runtime_type() {
         RuntimeType::V86 => {
             match v86_runtime(&path) {
-                Ok(exit_code_err) => return (exit_code_err as u8).into(),
+                Ok(exit_code_err) => return exit_code_err.into(),
                 Err(e) => {
                     eprintln!("{}", e);
-                    return ExitCode::from(Into::<u8>::into(e));
+                    return e
                 }
             }
         },
@@ -226,13 +225,13 @@ fn main() -> ExitCode {
                 Ok(cfg) => cfg,
                 Err(e) => {
                     eprintln!("failed to load CLI config: {}", e);
-                    return e.into();
+                    return e;
                 }
             };
             if let Err(code) = check_module_sum(&cfg) {
-                return code.into();
+                return code;
             }
-            return wasm_runtime(cfg, cli_command_opts).into();
+            return wasm_runtime(cfg, cli_command_opts);
         }
     };
 }
