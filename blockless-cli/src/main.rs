@@ -134,11 +134,8 @@ fn v86_runtime(path: &str) -> Result<i32, CLIExitCode> {
         .open(path)
         .map_err(|e| CLIExitCode::UnknownError(format!("the v86 car file does not exist or is unreadable: {}", e)))?;
 
-    let cfg = load_v86conf_extract_from_car(file)
-        .map_err(|e| CLIExitCode::UnknownError(format!("failed to extract conf from car file: {}", e)))?;
-
-    let v86 = V86Lib::load(&cfg.dynamic_lib_path)
-        .map_err(|e| CLIExitCode::UnknownError(format!("failed to load v86 lib: {}", e)))?;
+    let cfg = load_v86conf_extract_from_car(file)?;
+    let v86 = V86Lib::load(&cfg.dynamic_lib_path)?;
 
     let raw_config_json = &cfg.raw_config
         .ok_or_else(|| CLIExitCode::UnknownError("the v86 config file does not exist or is unreadable.".to_string()))?;
