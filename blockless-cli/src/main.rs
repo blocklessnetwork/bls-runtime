@@ -19,7 +19,6 @@ use std::{
     io::{self, Read}, 
     path::PathBuf, 
     time::Duration, 
-    process::ExitCode,
 };
 use env_logger::Target;
 use tokio::runtime::Builder;
@@ -100,10 +99,6 @@ fn check_module_sum(cfg: &CliConfig) -> Result<(), CLIExitCode> {
     Ok(())
 }
 
-fn load_wasm_directly(wasmfile: &str) -> CliConfig {
-    CliConfig::new_with_wasm(wasmfile)
-}
-
 /// the cli support 3 type file, 
 /// 1. the car file format, all files archive into the car file.
 /// 2. the wasm or wasi file format, will run wasm directly.
@@ -120,7 +115,7 @@ fn load_cli_config(file_path: &str) -> Result<CliConfig, CLIExitCode> {
             Some(load_cli_config_extract_from_car(file))
         },
         Some(ext) if ext == "wasm" || ext == "wasi" || ext == "wat" => {
-            Some(Ok(load_wasm_directly(file_path)))
+            Some(Ok(CliConfig::new_with_wasm(file_path)))
         },
         _ => None,
     };
@@ -135,15 +130,12 @@ fn v86_runtime(path: &str) -> Result<i32, CLIExitCode> {
         .open(path)
         .map_err(|e| CLIExitCode::UnknownError(format!("the v86 car file does not exist or is unreadable: {}", e)))?;
 
-    let cfg = load_v86conf_extract_from_car(file)
-        .map_err(|e| CLIExitCode::UnknownError(format!("failed to extract conf from car file: {}", e)))?;
-
-    let v86 = V86Lib::load(&cfg.dynamic_lib_path)
-        .map_err(|e| CLIExitCode::UnknownError(format!("failed to load v86 lib: {}", e)))?;
+    let cfg = load_v86conf_extract_from_car(file)?;
+    let v86 = V86Lib::load(&cfg.dynamic_lib_path)?;
 
     let raw_config_json = &cfg.raw_config
         .ok_or_else(|| CLIExitCode::UnknownError("the v86 config file does not exist or is unreadable.".to_string()))?;
-    Ok(v86.v86_wasi_run(raw_config_json).into())
+    Ok(v86.v86_wasi_run(raw_config_json))
 }
 
 fn wasm_runtime(mut cfg: CliConfig, cli_command_opts: CliCommandOpts) -> CLIExitCode {
@@ -200,24 +192,24 @@ fn wasm_runtime(mut cfg: CliConfig, cli_command_opts: CliCommandOpts) -> CLIExit
 }
 
 
-fn cover_env(cli_command_opts: &CliCommandOpts) {
+fn set_root_path_env_var(cli_command_opts: &CliCommandOpts) {
     cli_command_opts
         .fs_root_path()
         .map(|s| std::env::set_var(ENV_ROOT_PATH_NAME, s.as_str()));
 }
 
-fn main() -> ExitCode {
+fn main() -> CLIExitCode {
     let cli_command_opts = CliCommandOpts::parse();
-    cover_env(&cli_command_opts);
+    set_root_path_env_var(&cli_command_opts);
     let path = cli_command_opts.input_ref();
 
     match cli_command_opts.runtime_type() {
         RuntimeType::V86 => {
             match v86_runtime(&path) {
-                Ok(exit_code_err) => return (exit_code_err as u8).into(),
+                Ok(exit_code_err) => return exit_code_err.into(),
                 Err(e) => {
                     eprintln!("{}", e);
-                    return ExitCode::from(Into::<u8>::into(e));
+                    return e
                 }
             }
         },
@@ -226,13 +218,13 @@ fn main() -> ExitCode {
                 Ok(cfg) => cfg,
                 Err(e) => {
                     eprintln!("failed to load CLI config: {}", e);
-                    return e.into();
+                    return e;
                 }
             };
             if let Err(code) = check_module_sum(&cfg) {
-                return code.into();
+                return code;
             }
-            return wasm_runtime(cfg, cli_command_opts).into();
+            return wasm_runtime(cfg, cli_command_opts);
         }
     };
 }
@@ -251,6 +243,13 @@ mod test {
     use crate::config::load_cli_config_from_car;
 
     use super::*;
+
+    #[test]
+    fn test_set_root_path_env_var() {
+        let cli_opts = CliCommandOpts::try_parse_from(["cli", "test", "--fs-root-path=./test"]).unwrap();;
+        set_root_path_env_var(&cli_opts);
+        assert_eq!(std::env::var(ENV_ROOT_PATH_NAME).unwrap(), *cli_opts.fs_root_path().unwrap());
+    }
 
     #[test]
     fn test_load_cli_wasm_config() {
