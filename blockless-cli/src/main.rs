@@ -99,10 +99,6 @@ fn check_module_sum(cfg: &CliConfig) -> Result<(), CLIExitCode> {
     Ok(())
 }
 
-fn load_wasm_directly(wasmfile: &str) -> CliConfig {
-    CliConfig::new_with_wasm(wasmfile)
-}
-
 /// the cli support 3 type file, 
 /// 1. the car file format, all files archive into the car file.
 /// 2. the wasm or wasi file format, will run wasm directly.
@@ -119,7 +115,7 @@ fn load_cli_config(file_path: &str) -> Result<CliConfig, CLIExitCode> {
             Some(load_cli_config_extract_from_car(file))
         },
         Some(ext) if ext == "wasm" || ext == "wasi" || ext == "wat" => {
-            Some(Ok(load_wasm_directly(file_path)))
+            Some(Ok(CliConfig::new_with_wasm(file_path)))
         },
         _ => None,
     };
