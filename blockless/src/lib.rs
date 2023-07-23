@@ -108,8 +108,8 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
     let fuel = b_conf.get_limited_fuel();
     let mut entry: String = b_conf.entry_ref().into();
     let version = b_conf.version();
-    ctx.set_blockless_config(Some(b_conf));
 
+    ctx.set_blockless_config(Some(b_conf));
     let mut store = Store::new(&engine, ctx);
     //set the fuel from the configure.
     if let Some(f) = fuel {
@@ -120,7 +120,6 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
     let (module, entry) = match version {
         BlocklessConfigVersion::Version0 => {
             let module = Module::from_file(store.engine(), &entry).unwrap();
-            linker.module_async(store.as_context_mut(), "", &module).await.unwrap();
             (module, ENTRY.to_string())
         },
         BlocklessConfigVersion::Version1 => {
@@ -163,9 +162,10 @@ async fn link_modules(linker: &mut Linker<WasiCtx>, store: &mut Store<WasiCtx>) 
             ModuleType::Entry => ("", true),
         };
         let module = Module::from_file(store.engine(), &m.file).unwrap();
-        linker.module_async(store.as_context_mut(), m_name, &module).await.unwrap();
         if is_entry {
             entry = Some(module);
+        } else {
+            linker.module_async(store.as_context_mut(), m_name, &module).await.unwrap();
         }
     }
     entry
