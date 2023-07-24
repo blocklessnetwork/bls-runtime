@@ -1,12 +1,16 @@
-use blockless_drivers::{CdylibDriver, DriverConetxt};
+mod modules;
+use blockless_drivers::{
+    CdylibDriver, 
+    DriverConetxt
+};
 use blockless_env;
 use cap_std::ambient_authority;
 use log::{debug, error};
+use modules::link_modules;
 use wasmtime::{
     Config, 
     PoolingAllocationConfig, 
     InstanceAllocationStrategy, 
-    AsContextMut,
     Store, 
     Trap, Engine, Linker, Module
 };
@@ -146,29 +150,6 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
         fuel: store.fuel_consumed(),
         code: exit_code,
     }
-}
-
-async fn link_modules(linker: &mut Linker<WasiCtx>, store: &mut Store<WasiCtx>) -> Option<Module> {
-    let mut modules: Vec<BlocklessModule> = {
-        let lock = store.data().blockless_config.lock().unwrap();
-        let cfg = lock.as_ref().unwrap();
-        cfg.modules_ref().iter().map(|m| (*m).clone()).collect()
-    };
-    modules.sort_by(|a, b| a.module_type.partial_cmp(&b.module_type).unwrap());
-    let mut entry = None;
-    for m in modules {
-        let (m_name, is_entry) = match m.module_type {
-            ModuleType::Module => (m.name.as_str(), false),
-            ModuleType::Entry => ("", true),
-        };
-        let module = Module::from_file(store.engine(), &m.file).unwrap();
-        if is_entry {
-            entry = Some(module);
-        } else {
-            linker.module_async(store.as_context_mut(), m_name, &module).await.unwrap();
-        }
-    }
-    entry
 }
 
 fn load_driver(cfs: &[DriverConfig]) {
