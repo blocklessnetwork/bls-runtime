@@ -62,10 +62,10 @@ impl CliConfig {
         let file_name = file_path.file_name().unwrap();
         let log_file = Self::defaut_logger_file(file_name);
         let mut bconf = BlocklessConfig::new(file_path.to_str().unwrap());
-        bconf.fs_root_path(Some(".".to_string()));
-        bconf.runtime_logger_level(LoggerLevel::WARN);
+        bconf.set_fs_root_path(Some(".".to_string()));
+        bconf.set_runtime_logger_level(LoggerLevel::WARN);
         log_file.as_ref().map(|log_file| {
-            bconf.runtime_logger(Some(format!("{log_file}.log")));
+            bconf.set_runtime_logger(Some(format!("{log_file}.log")));
         });
         CliConfig(bconf)
     }
@@ -170,17 +170,17 @@ impl CliConfig {
         let mut bc = BlocklessConfig::new(entry);
         bc.set_modules(modules);
         bc.extensions_path(extensions_path);
-        bc.fs_root_path(fs_root_path);
+        bc.set_fs_root_path(fs_root_path);
         bc.drivers(drvs);
         stdout.map(|filename: String| {
             bc.stdout(blockless::Stdout::FileName(filename));
         });
         // the set debug mode
-        debug_info.map(|b| bc.debug_info(b));
-        runtime_logger_level.map(|l| bc.runtime_logger_level(l));
-        bc.permisions(perms);
-        bc.runtime_logger(runtime_logger);
-        bc.drivers_root_path(drivers_root_path);
+        debug_info.map(|b| bc.set_debug_info(b));
+        runtime_logger_level.map(|l| bc.set_runtime_logger_level(l));
+        bc.set_permisions(perms);
+        bc.set_runtime_logger(runtime_logger);
+        bc.set_drivers_root_path(drivers_root_path);
         bc.limited_fuel(limited_fuel);
         bc.limited_memory(limited_memory);
         bc.set_run_time(run_time);

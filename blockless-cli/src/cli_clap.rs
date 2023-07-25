@@ -160,21 +160,21 @@ impl CliCommandOpts {
     }
 
     pub fn into_config(self, conf: &mut CliConfig) {
-        conf.0.debug_info(self.debug_info);
-        conf.0.fs_root_path(self.fs_root_path);
-        conf.0.runtime_logger(self.runtime_logger);
+        conf.0.set_debug_info(self.debug_info);
+        conf.0.set_fs_root_path(self.fs_root_path);
+        conf.0.set_runtime_logger(self.runtime_logger);
         conf.0.limited_memory(self.limited_memory);
         conf.0.limited_fuel(self.limited_fuel);
         conf.0.set_run_time(self.run_time);
         conf.0.set_stdin_args(self.args);
-        conf.0.permisions(self.permissions);
+        conf.0.set_permisions(self.permissions);
         conf.0.set_envs(self.envs);
-        conf.0.drivers_root_path(self.drivers_root_path);
+        conf.0.set_drivers_root_path(self.drivers_root_path);
         let mut modules = self.modules;
         let mut has_entry = false;
         self.entry.map(|e| {
             has_entry = true;
-            conf.0.entry(e)
+            conf.0.set_entry(e)
         });
         if modules.len() > 0 {
             modules.push(BlocklessModule { 
