@@ -137,156 +137,13 @@ pub struct BlocklessConfig {
     runtime_logger: Option<String>,
     extensions_path: Option<String>,
     // the config version
-    veriosn: BlocklessConfigVersion,
+    version: BlocklessConfigVersion,
     drivers_root_path: Option<String>,
     runtime_logger_level: LoggerLevel,
     group_permisions: HashMap<String, Vec<Permission>>,
 }
 
 impl BlocklessConfig {
-    #[inline(always)]
-    pub fn version(&self) -> BlocklessConfigVersion {
-        self.veriosn
-    }
-
-    #[inline(always)]
-    pub fn set_envs(&mut self, envs: Vec<(String, String)>) {
-        self.envs = envs;
-    }
-
-    #[inline(always)]
-    pub fn envs(&self) -> Vec<(String, String)> {
-        self.envs.clone()
-    }
-
-    #[inline(always)]
-    pub fn set_stdin_args(&mut self, args: Vec<String>) {
-        self.stdin_args = args;
-    }
-
-    #[inline(always)]
-    pub fn stdin_args(&self) -> Vec<String> {
-        self.stdin_args.clone()
-    }
-
-    #[inline(always)]
-    pub fn entry(&mut self, entry: String) {
-        self.entry = entry;
-    }
-
-    pub fn entry_module(&self) -> Option<String> {
-        let entry_module = match self.veriosn {
-            BlocklessConfigVersion::Version0 => Some(self.entry.as_str()),
-            BlocklessConfigVersion::Version1 => self
-                .modules
-                .iter()
-                .find(|m| {
-                    matches!(m.module_type, ModuleType::Entry)
-                })
-                .map(|s| s.file.as_str()),
-        };
-        entry_module.and_then(|s| {
-            #[allow(clippy::map_flatten)]
-            PathBuf::from_str(s).ok().and_then(|p| {
-                p.file_name()
-                    .map(|name| name.to_str().map(|s| s.to_string()))
-                    .flatten()
-            })
-        })
-    }
-
-    #[inline(always)]
-    pub fn set_version(&mut self, version: BlocklessConfigVersion) {
-        self.veriosn = version;
-    }
-
-    #[inline(always)]
-    pub fn run_time(&self) -> Option<u64> {
-        self.run_time
-    }
-
-    #[inline(always)]
-    pub fn set_run_time(&mut self, run_time: Option<u64>) {
-        self.run_time = run_time;
-    }
-
-    #[inline(always)]
-    pub fn get_debug_info(&self) -> bool {
-        self.debug_info
-    }
-
-    #[inline(always)]
-    pub fn debug_info(&mut self, b: bool) {
-        self.debug_info = b
-    }
-
-    #[inline(always)]
-    pub fn entry_ref(&self) -> &str {
-        &self.entry
-    }
-
-    #[inline(always)]
-    pub fn get_runtime_logger_level(&self) -> LoggerLevel {
-        self.runtime_logger_level.clone()
-    }
-
-    #[inline(always)]
-    pub fn runtime_logger_level(&mut self, level: LoggerLevel) {
-        self.runtime_logger_level = level;
-    }
-
-    #[inline(always)]
-    pub fn fs_root_path(&mut self, r: Option<String>) {
-        self.fs_root_path = r;
-    }
-
-    #[inline(always)]
-    pub fn permisions_ref(&self) -> &Vec<Permission> {
-        &self.permisions
-    }
-
-    #[inline(always)]
-    pub fn runtime_logger(&mut self, l: Option<String>) {
-        self.runtime_logger = l;
-    }
-
-    pub fn permisions(&mut self, perms: Vec<Permission>) {
-        let mut g_perms: HashMap<String, Vec<_>> = HashMap::new();
-        perms.iter().for_each(|p| {
-            g_perms
-                .entry(p.schema.clone())
-                .or_insert_with(Vec::new)
-                .push(p.clone());
-        });
-        self.permisions = perms;
-        self.group_permisions = g_perms;
-    }
-
-    #[inline(always)]
-    pub fn fs_root_path_ref(&self) -> Option<&str> {
-        self.fs_root_path.as_ref().map(String::as_ref)
-    }
-
-    #[inline(always)]
-    pub fn drivers_root_path_ref(&self) -> Option<&str> {
-        self.drivers_root_path.as_ref().map(String::as_ref)
-    }
-
-    #[inline(always)]
-    pub fn drivers_root_path(&mut self, r: Option<String>) {
-        self.drivers_root_path = r;
-    }
-
-    #[inline(always)]
-    pub fn set_is_carfile(&mut self, is_carfile: bool) {
-        self.is_carfile = is_carfile;
-    }
-
-    #[inline(always)]
-    pub fn is_carfile(&self) -> bool {
-        self.is_carfile
-    }
-
     pub fn new(entry: &str) -> BlocklessConfig {
         Self {
             run_time: None,
@@ -311,8 +168,151 @@ impl BlocklessConfig {
             permisions: Default::default(),
             group_permisions: HashMap::new(),
             runtime_logger_level: LoggerLevel::WARN,
-            veriosn: BlocklessConfigVersion::Version0,
+            version: BlocklessConfigVersion::Version0,
         }
+    }
+
+    #[inline(always)]
+    pub fn version(&self) -> BlocklessConfigVersion {
+        self.version
+    }
+
+    #[inline(always)]
+    pub fn envs_ref(&self) -> &Vec<(String, String)> {
+        self.envs.as_ref()
+    }
+
+    #[inline(always)]
+    pub fn stdin_args_ref(&self) -> &Vec<String> {
+        self.stdin_args.as_ref()
+    }
+
+    #[inline(always)]
+    pub fn set_envs(&mut self, envs: Vec<(String, String)>) {
+        self.envs = envs;
+    }
+
+    #[inline(always)]
+    pub fn set_stdin_args(&mut self, args: Vec<String>) {
+        self.stdin_args = args;
+    }
+
+    #[inline(always)]
+    pub fn set_entry(&mut self, entry: String) {
+        self.entry = entry;
+    }
+
+    pub fn entry_module(&self) -> Option<String> {
+        let entry_module = match self.version {
+            BlocklessConfigVersion::Version0 => Some(self.entry.as_str()),
+            BlocklessConfigVersion::Version1 => self
+                .modules
+                .iter()
+                .find(|m| {
+                    matches!(m.module_type, ModuleType::Entry)
+                })
+                .map(|s| s.file.as_str()),
+        };
+        entry_module.and_then(|s| {
+            #[allow(clippy::map_flatten)]
+            PathBuf::from_str(s).ok().and_then(|p| {
+                p.file_name()
+                    .map(|name| name.to_str().map(|s| s.to_string()))
+                    .flatten()
+            })
+        })
+    }
+
+    #[inline(always)]
+    pub fn set_version(&mut self, version: BlocklessConfigVersion) {
+        self.version = version;
+    }
+
+    #[inline(always)]
+    pub fn run_time(&self) -> Option<u64> {
+        self.run_time
+    }
+
+    #[inline(always)]
+    pub fn set_run_time(&mut self, run_time: Option<u64>) {
+        self.run_time = run_time;
+    }
+
+    #[inline(always)]
+    pub fn get_debug_info(&self) -> bool {
+        self.debug_info
+    }
+
+    #[inline(always)]
+    pub fn set_debug_info(&mut self, b: bool) {
+        self.debug_info = b
+    }
+
+    #[inline(always)]
+    pub fn entry_ref(&self) -> &str {
+        &self.entry
+    }
+
+    #[inline(always)]
+    pub fn get_runtime_logger_level(&self) -> LoggerLevel {
+        self.runtime_logger_level.clone()
+    }
+
+    #[inline(always)]
+    pub fn set_runtime_logger_level(&mut self, level: LoggerLevel) {
+        self.runtime_logger_level = level;
+    }
+
+    #[inline(always)]
+    pub fn set_fs_root_path(&mut self, r: Option<String>) {
+        self.fs_root_path = r;
+    }
+
+    #[inline(always)]
+    pub fn permisions_ref(&self) -> &Vec<Permission> {
+        &self.permisions
+    }
+
+    #[inline(always)]
+    pub fn set_runtime_logger(&mut self, l: Option<String>) {
+        self.runtime_logger = l;
+    }
+
+    pub fn set_permisions(&mut self, perms: Vec<Permission>) {
+        let mut g_perms: HashMap<String, Vec<_>> = HashMap::new();
+        perms.iter().for_each(|p| {
+            g_perms
+                .entry(p.schema.clone())
+                .or_insert_with(Vec::new)
+                .push(p.clone());
+        });
+        self.permisions = perms;
+        self.group_permisions = g_perms;
+    }
+
+    #[inline(always)]
+    pub fn fs_root_path_ref(&self) -> Option<&str> {
+        self.fs_root_path.as_ref().map(String::as_ref)
+    }
+
+    #[inline(always)]
+    pub fn drivers_root_path_ref(&self) -> Option<&str> {
+        self.drivers_root_path.as_ref().map(String::as_ref)
+    }
+
+    #[inline(always)]
+    pub fn set_drivers_root_path(&mut self, r: Option<String>) {
+        self.drivers_root_path = r;
+    }
+
+    #[inline(always)]
+    pub fn set_is_carfile(&mut self, is_carfile: bool) {
+        self.is_carfile = is_carfile;
+    }
+
+    #[inline(always)]
+    pub fn get_is_carfile(&self) -> bool {
+        self.is_carfile
     }
 
     #[inline(always)]
@@ -418,6 +418,12 @@ impl BlocklessConfig {
     pub fn get_limited_memory(&self) -> Option<u64> {
         self.limited_memory
     }
+
+    pub fn resource_permission(&self, url: &str) -> bool {
+        self.permisions
+            .iter()
+            .any(|p| p.is_permision(url))
+    }
 }
 
 #[cfg(test)]
@@ -440,7 +446,7 @@ mod test {
                 schema: "http".to_string(),
             },
         ];
-        config.permisions(permisions);
+        config.set_permisions(permisions);
         let grps = config.group_permisions.get("http");
         if let Some(grps) = grps {
             assert_eq!(grps.len(), 2);
@@ -448,14 +454,14 @@ mod test {
             unreachable!("should not reach.");
         }
         let root = Some("/root".into());
-        config.fs_root_path(root);
+        config.set_fs_root_path(root);
         let test = Some("test.log".into());
-        config.runtime_logger(test);
+        config.set_runtime_logger(test);
         let result = PathBuf::new().join("/root").join("test.log");
         assert_eq!(config.runtime_logger_path().unwrap(), result);
 
         assert_eq!(config.entry_ref(), "test");
-        config.entry("_start".into());
+        config.set_entry("_start".into());
         assert_eq!(config.entry_ref(), "_start");
     }
 

@@ -95,9 +95,9 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
     }
     let entry_module = b_conf.entry_module().unwrap();
     let mut args = vec![entry_module];
-    args.extend_from_slice(&b_conf.stdin_args()[..]);
+    args.extend_from_slice(&b_conf.stdin_args_ref()[..]);
     builder = builder.args(&args[..]).unwrap();
-    builder = builder.envs(&b_conf.envs()[..]).unwrap();
+    builder = builder.envs(&b_conf.envs_ref()[..]).unwrap();
     if let Some(d) = root_dir {
         builder = builder.preopened_dir(d, "/").unwrap();
     }
@@ -299,7 +299,7 @@ mod test {
                 call $double
                 drop
             )
-          )
+        )
         "#;
         let run_md5 = format!("{:x}", md5::compute(code));
         fs::write(&run_wasm, code).unwrap();
@@ -314,7 +314,7 @@ mod test {
                 i32.mul
             )
             (memory (export "memory") 2)
-          )
+        )
         "#;
         let module_md5 = format!("{:x}", md5::compute(code));
         fs::write(&file_path, code).unwrap();
