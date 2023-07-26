@@ -45,7 +45,7 @@ tokio-test = "0.4.2"
 
 
 [dependencies.lazy_static]
-version = "1.4.0"
+workspace = true
 
 [dependencies.tokio]
 version = "1"

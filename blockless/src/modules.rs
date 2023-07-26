@@ -1,5 +1,5 @@
-use std::collections::HashMap;
-
+use std::{collections::HashMap, sync::{Mutex, Once}};
+use lazy_static::lazy_static;
 use anyhow::Context;
 use wasi_common::{
     WasiCtx, 
@@ -16,14 +16,51 @@ use wasmtime::{
     AsContextMut, Memory, TypedFunc, Func, 
 };
 
-struct ModuleInfo {
-    mem: Memory,
-    alloc: Option<TypedFunc<u32, u32>>,
-    dealloc: Option<TypedFunc<u32, ()>>,
-    funcs: HashMap<String, Func>,
+
+struct StorePtr(*mut Store<WasiCtx>);
+
+impl StorePtr {
+    unsafe fn store(&self) -> &Store<WasiCtx> {
+        &*self.0
+    }
+
+    unsafe fn store_mut(&self) -> &mut Store<WasiCtx> {
+        &mut *self.0
+    }
 }
 
-pub(crate) async fn link_modules(linker: &mut Linker<WasiCtx>, store: &mut Store<WasiCtx>) -> Option<Module> {
+unsafe impl Sync for StorePtr {}
+
+static mut STORE_PTR: StorePtr = StorePtr(std::ptr::null_mut());
+
+static STORE_PTR_ONCE: Once = Once::new();
+
+lazy_static! {
+    static ref MODULES: Mutex<HashMap::<String,  InstanceInfo>> = Mutex::new(HashMap::new());
+}
+
+struct InstanceInfo {
+    mem: Memory,
+    alloc: Option<TypedFunc<u32, i32>>,
+    dealloc: Option<TypedFunc<(i32, u32), ()>>,
+    export_funcs: HashMap<String, Func>,
+    funcs: HashMap<String, TypedFunc<(i32, u32), u32>>,
+}
+
+impl InstanceInfo {
+
+}
+
+struct InstanceCaller<'a> {
+    mem: &'a mut Memory,
+    alloc: &'a TypedFunc<u32, i32>,
+    dealloc: &'a TypedFunc<(i32, u32), ()>,
+    func: &'a mut TypedFunc<(i32, u32), u32>
+}
+
+pub(crate) async fn link_modules(linker: &mut Linker<WasiCtx>, store_ptr: * mut Store<WasiCtx>) -> Option<Module> {
+    STORE_PTR_ONCE.call_once(|| unsafe {STORE_PTR = StorePtr(store_ptr)});
+    let store = unsafe {STORE_PTR.store_mut()};
     let mut modules: Vec<BlocklessModule> = {
         let lock = store.data().blockless_config.lock().unwrap();
         let cfg = lock.as_ref().unwrap();
@@ -35,11 +72,13 @@ pub(crate) async fn link_modules(linker: &mut Linker<WasiCtx>, store: &mut Store
         Box::new(async move {
             if let Some(Extern::Memory(mem)) = caller.get_export("memory") {
                 let mem_slice = mem.data(caller.as_context());
-                let mem = &mem_slice[(addr as usize)..((addr+addr_len) as usize)];
-                unsafe {
-                    let str = std::str::from_utf8_unchecked(mem);
-                    println!("{str}")   
-                }
+                let start = addr as usize;
+                let end = (addr + addr_len) as usize;
+                let mem = &mem_slice[start..end];
+                let str = unsafe {
+                    std::str::from_utf8_unchecked(mem)
+                };
+
             }
         })
     }).unwrap();
@@ -69,8 +108,13 @@ async fn instance_module(
     let mut funcs = HashMap::<String, Func>::new();
     let mut alloc = None;
     let mut dealloc = None;
+    let mut mem = None;
     for export in instance.exports(store.as_context_mut()) {
         let name = export.name().to_string();
+        if &name == "memory" {
+            mem = export.into_memory();
+            continue;
+        }
         if let Some(func) = export.into_func() {
             match name.as_str() {
                 "_initialize" => {
@@ -90,7 +134,7 @@ async fn instance_module(
     }
 
     let alloc = match alloc.map(|alloc| alloc
-        .typed::<i32, i32>(&mut store)
+        .typed::<u32, i32>(&mut store)
         .context("loading the alloc function")) {
         Some(Ok(r)) => Some(r),
         Some(Err(e)) => return Err(e),
@@ -98,14 +142,28 @@ async fn instance_module(
     };
 
     let dealloc = match dealloc.map(|dealloc| dealloc
-        .typed::<i32, ()>(&mut store)
+        .typed::<(i32, u32), ()>(&mut store)
         .context("loading the dealloc function")) {
         Some(Ok(r)) => Some(r),
         Some(Err(e)) => return Err(e),
         None => None,
     };
-    
+    if mem.is_none() {
+        anyhow::bail!("memory is not export in module.");
+    }
     linker.instance(store.as_context_mut(), m_name, instance)?;
+    let mod_info = InstanceInfo {
+        alloc,
+        export_funcs: funcs,
+        dealloc,
+        mem: mem.unwrap(),
+        funcs: HashMap::new(),
+    };
+    //must release the lock, the initial method will access the modules.
+    MODULES.lock()
+        .as_mut()
+        .map(|mods| mods.insert(m_name.to_string(), mod_info))
+        .unwrap();
     if let Some(func) = initial {
         let func = func
             .typed::<(), ()>(&mut store)

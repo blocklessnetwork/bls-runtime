@@ -12,7 +12,7 @@ use wasmtime::{
     PoolingAllocationConfig, 
     InstanceAllocationStrategy, 
     Store, 
-    Trap, Engine, Linker, Module
+    Trap, Engine, Linker, Module, AsContextMut
 };
 use std::{env, path::Path};
 pub use wasi_common::*;
@@ -121,6 +121,9 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
             error!("add fuel error: {}", e);
         });
     }
+
+    //WARNING: make sure the store is not move in stack util the program exits.
+    let store_ptr = &mut store as *mut Store<WasiCtx>;
     let (module, entry) = match version {
         BlocklessConfigVersion::Version0 => {
             let module = Module::from_file(store.engine(), &entry).unwrap();
@@ -130,7 +133,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
             if entry == "" {
                 entry = ENTRY.to_string();
             }
-            let module = link_modules(&mut linker, &mut store).await.unwrap();
+            let module = link_modules(&mut linker, store_ptr).await.unwrap();
             (module, entry)
         },
     };
