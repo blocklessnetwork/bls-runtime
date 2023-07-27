@@ -141,14 +141,14 @@ fn error_json(msg: &str) -> String {
     obj.dump()
 }
 
-struct ResponseJson<'a> {
+struct ResponseErrorJson<'a> {
     mem: &'a Memory,
     store: StoreContextMut<'a, WasiCtx>,
     ptr: u32,
     len: u32,
 }
 
-impl<'a> ResponseJson<'a> {
+impl<'a> ResponseErrorJson<'a> {
     fn new(mem: &'a Memory, store: StoreContextMut<'a, WasiCtx>, ptr: u32, len: u32) -> Self {
         Self { 
             store,
@@ -191,12 +191,12 @@ fn mcall_fn<'a>(mut caller: Caller<'a, WasiCtx>, addr: u32, addr_len: u32, buf: 
             };
             macro_rules! responseError {
                 ($msg: literal) => {
-                    ResponseJson::new(&mem, caller.as_context_mut(), buf, buf_len)
+                    ResponseErrorJson::new(&mem, caller.as_context_mut(), buf, buf_len)
                         .response($msg);
                     return RegisterResult::Fail.into();
                 };
                 ($msg: expr) => {
-                    ResponseJson::new(&mem, caller.as_context_mut(), buf, buf_len)
+                    ResponseErrorJson::new(&mem, caller.as_context_mut(), buf, buf_len)
                         .response($msg);
                     return RegisterResult::Fail.into();
                 };
@@ -233,12 +233,12 @@ fn register_fn<'a>(mut caller: Caller<'a, WasiCtx>, addr: u32, addr_len: u32, bu
             };
             macro_rules! responseError {
                 ($msg: literal) => {
-                    ResponseJson::new(&mem, caller.as_context_mut(), buf, buf_len)
+                    ResponseErrorJson::new(&mem, caller.as_context_mut(), buf, buf_len)
                         .response($msg);
                     return MCallResult::Fail.into();
                 };
                 ($msg: expr) => {
-                    ResponseJson::new(&mem, caller.as_context_mut(), buf, buf_len)
+                    ResponseErrorJson::new(&mem, caller.as_context_mut(), buf, buf_len)
                         .response($msg);
                     return MCallResult::Fail.into();
                 };
