@@ -1,4 +1,5 @@
-use std::{collections::HashMap, sync::{Mutex, Once}, cmp::min};
+use std::{collections::HashMap, cmp::min};
+use tokio::sync::Mutex;
 use json::JsonValue;
 use lazy_static::lazy_static;
 use anyhow::Context;
@@ -17,38 +18,9 @@ use wasmtime::{
     Memory, 
     TypedFunc, 
     AsContext,
-    AsContextMut, StoreContextMut, 
+    AsContextMut, 
+    StoreContextMut, 
 };
-
-struct StorePtr(*mut Store<WasiCtx>);
-
-impl StorePtr {
-    #[inline]
-    unsafe fn store(&self) -> &Store<WasiCtx> {
-        &*self.0
-    }
-
-    #[inline]
-    unsafe fn store_mut(&self) -> &mut Store<WasiCtx> {
-        &mut *self.0
-    }
-}
-
-fn get_store() ->  &'static Store<WasiCtx> {
-    unsafe {STORE_PTR.store()}
-}
-
-
-fn get_store_mut() ->  &'static mut Store<WasiCtx> {
-    unsafe {STORE_PTR.store_mut()}
-}
-
-unsafe impl Sync for StorePtr {}
-unsafe impl Send for StorePtr {}
-
-static mut STORE_PTR: StorePtr = StorePtr(std::ptr::null_mut());
-
-static STORE_PTR_ONCE: Once = Once::new();
 
 lazy_static! {
     static ref INS_CTX: Mutex<InstanceCtx> = Mutex::new(InstanceCtx::new());
@@ -78,15 +50,20 @@ struct InstanceInfo {
 }
 
 impl InstanceInfo {
-    fn instance_caller(&self, method: &str) -> Option<InstanceCaller> {
+    fn instance_caller(&self, method: &str, store: impl AsContext<Data = WasiCtx>) -> anyhow::Result<InstanceCaller> {
+        let export_func = self.export_funcs.get(method)
+            .ok_or(anyhow::anyhow!(format!("method: {method} not found")))?;
+            
         let mem = self.mem.clone();
-        self.export_funcs.get(method)
-            .map(|func| InstanceCaller {
-                mem,
-                alloc: self.alloc.unwrap().clone(),
-                dealloc: self.dealloc.unwrap().clone(),
-                func: func.typed::<(i32, u32), u32>(get_store()).unwrap(),
-            })
+        let alloc = self.alloc.ok_or(anyhow::anyhow!("alloc is not found"))?.clone();
+        let dealloc = self.dealloc.ok_or(anyhow::anyhow!("dealloc is not found"))?.clone();
+        let func = export_func.typed::<(i32, u32), u32>(store)?;
+        Ok(InstanceCaller {
+            mem,
+            func,
+            alloc,
+            dealloc,
+        })
     }
 }
 
@@ -95,6 +72,38 @@ struct InstanceCaller {
     alloc: TypedFunc<u32, i32>,
     dealloc: TypedFunc<(i32, u32), ()>,
     func: TypedFunc<(i32, u32), u32>
+}
+
+impl InstanceCaller {
+    async fn call(&self, 
+        mut store: impl AsContextMut<Data = WasiCtx>,
+        param: &str,
+    ) -> u32 {
+        let mut rscode = 0;
+        let bs = param.as_bytes();
+        let ptr = self.alloc.call_async(store.as_context_mut(), bs.len() as u32).await;
+        let ptr = match ptr {
+            Ok(ptr) => ptr,
+            Err(_) => return 1,
+        };
+        let mem_slice = self.mem.data_mut(store.as_context_mut());
+        let start = ptr as usize;
+        let end = start + bs.len();
+        mem_slice[start..end].copy_from_slice(&bs);
+        let rs = self.func.call_async(store.as_context_mut(), (ptr, bs.len() as u32)).await;
+        if rs.is_err() {
+            rscode = 2;
+        } else {
+            rscode = rs.unwrap();
+        }
+        let rs = self.dealloc.call_async(store.as_context_mut(), (ptr, bs.len() as u32)).await;
+        if rscode == 0 {
+            if rs.is_err() {
+                rscode = 3
+            }
+        }
+        return rscode;
+    }
 }
 
 struct RegisterReq {
@@ -120,7 +129,6 @@ fn process_register_req(json_str: &str) -> anyhow::Result<RegisterReq> {
 
 enum RegisterErrorKind {
     Success,
-    JSON_ERROR,
 }
 
 fn error_json(msg: &str) -> String {
@@ -159,10 +167,17 @@ impl<'a> ResponseJson<'a> {
     }
 }
 
+fn parse_mcall(param: &str) -> anyhow::Result<(String, String)> {
+    let mcall_json = json::parse(param)?;
+    let mcall_name = match mcall_json["mcall"].as_str() {
+        Some(n) => n.to_string(),
+        None => anyhow::bail!("mcall node not found"),
+    };
+    let params = mcall_json["params"].dump();
+    Ok((mcall_name, params))
+}
 
-pub(crate) async fn link_modules(linker: &mut Linker<WasiCtx>, store_ptr: * mut Store<WasiCtx>) -> Option<Module> {
-    STORE_PTR_ONCE.call_once(|| unsafe {STORE_PTR = StorePtr(store_ptr)});
-    let store = unsafe {STORE_PTR.store_mut()};
+pub(crate) async fn link_modules(linker: &mut Linker<WasiCtx>, store: & mut Store<WasiCtx>) -> Option<Module> {
     let mut modules: Vec<BlocklessModule> = {
         let lock = store.data().blockless_config.lock().unwrap();
         let cfg = lock.as_ref().unwrap();
@@ -170,6 +185,48 @@ pub(crate) async fn link_modules(linker: &mut Linker<WasiCtx>, store_ptr: * mut 
     };
     modules.sort_by(|a, b| a.module_type.partial_cmp(&b.module_type).unwrap());
     let mut entry = None;
+    linker.func_wrap4_async("blockless", "mcall", |mut caller: Caller<'_, WasiCtx>, addr: u32, addr_len: u32, buf: u32, buf_len: u32| {
+        Box::new(async move {
+            if let Some(Extern::Memory(mem)) = caller.get_export("memory") {
+                let mem_slice = mem.data(caller.as_context());
+                let start = addr as usize;
+                let end = (addr + addr_len) as usize;
+                let req_mem = &mem_slice[start..end];
+                let json_str = unsafe {
+                    std::str::from_utf8_unchecked(req_mem)
+                };
+
+                macro_rules! responseError {
+                    ($msg: literal) => {
+                        ResponseJson::new(&mem, caller.as_context_mut(), buf, buf_len)
+                            .response($msg);
+                        return 1;
+                    };
+                    ($msg: expr) => {
+                        ResponseJson::new(&mem, caller.as_context_mut(), buf, buf_len)
+                            .response($msg);
+                        return 1;
+                    };
+                }
+                let (mcall_name, params) = match parse_mcall(json_str) {
+                    Ok((n, k)) => (n, k),
+                    Err(e) => {
+                        let emsg = format!("error parse json: {}", e.to_string());
+                        responseError!(&emsg);
+                    },
+                };
+                let ctx = INS_CTX.lock().await;
+                let mcaller = ctx.module_caller.get(&mcall_name);
+                let mcaller = if mcaller.is_none() {
+                    responseError!("no mcall register.");
+                } else {
+                    mcaller.unwrap()
+                };
+                return mcaller.call(caller.as_context_mut(), &params).await;
+            }
+            1
+        })
+    }).unwrap();
     linker.func_wrap4_async("blockless", "register", |mut caller: Caller<'_, WasiCtx>, addr: u32, addr_len: u32, buf: u32, buf_len: u32| {
         Box::new(async move {
             if let Some(Extern::Memory(mem)) = caller.get_export("memory") {
@@ -186,6 +243,11 @@ pub(crate) async fn link_modules(linker: &mut Linker<WasiCtx>, store_ptr: * mut 
                             .response($msg);
                         return 1;
                     };
+                    ($msg: expr) => {
+                        ResponseJson::new(&mem, caller.as_context_mut(), buf, buf_len)
+                            .response($msg);
+                        return 1;
+                    };
                 }
                 let req = match process_register_req(str) {
                     Ok(req) => req,
@@ -193,21 +255,28 @@ pub(crate) async fn link_modules(linker: &mut Linker<WasiCtx>, store_ptr: * mut 
                         responseError!("error parse json");
                     },
                 };
-                
-                return INS_CTX.lock().map(|mut ctx| {
-                    for method in req.methods.iter() {
-                        let module = ctx.instance_infos.get_mut(&req.module);
-                        if module.is_none() {
-                            responseError!("no module found");
-                        }
-                        let module = module.unwrap();
-                        let caller = module.instance_caller(method);
-                        ctx.module_caller.insert(format!("{}::{method}", &req.module), caller.unwrap());
+                let  mut ctx = INS_CTX.lock().await;
+                for method in req.methods.iter() {
+                    let module = ctx.instance_infos.get_mut(&req.module);
+                    if module.is_none() {
+                        responseError!("no module found");
                     }
-                    0
-                }).unwrap();
+                    let module = module.unwrap();
+                    let caller = module.instance_caller(method, caller.as_context_mut());
+                    let caller = match caller {
+                        Ok(c) => c,
+                        Err(e) => {
+                            let e = format!("caller instance fail, {}", e.to_string());
+                            responseError!(&e);
+                        },
+                    };
+                    ctx.module_caller.insert(format!("{}::{method}", &req.module), caller);
+                }
+                0
+            } else {
+                1
             }
-            1
+            
         })
     }).unwrap();
     for m in modules {
@@ -270,7 +339,7 @@ async fn instance_module(
     };
 
     let dealloc = match dealloc.map(|dealloc| dealloc
-        .typed::<(i32, u32), ()>(&mut store)
+        .typed::<(i32, u32), ()>(store.as_context_mut())
         .context("loading the dealloc function")) {
         Some(Ok(r)) => Some(r),
         Some(Err(e)) => return Err(e),
@@ -287,10 +356,7 @@ async fn instance_module(
         mem: mem.unwrap(),
     };
     //must release the lock, the initial method will access the modules.
-    INS_CTX.lock()
-        .as_mut()
-        .map(|mods| mods.instance_infos.insert(m_name.to_string(), mod_info))
-        .unwrap();
+    INS_CTX.lock().await.instance_infos.insert(m_name.to_string(), mod_info);
     if let Some(func) = initial {
         let func = func
             .typed::<(), ()>(store.as_context())
