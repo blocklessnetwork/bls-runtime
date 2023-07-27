@@ -1,4 +1,6 @@
 mod modules;
+mod error;
+pub use error::*;
 use blockless_drivers::{
     CdylibDriver, 
     DriverConetxt
