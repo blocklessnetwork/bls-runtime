@@ -8,7 +8,7 @@ use blockless_drivers::{
 use blockless_env;
 use cap_std::ambient_authority;
 use log::{debug, error};
-use modules::link_modules;
+use modules::ModuleLinker;
 use wasmtime::{
     Config, 
     PoolingAllocationConfig, 
@@ -133,7 +133,8 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
             if entry == "" {
                 entry = ENTRY.to_string();
             }
-            let module = link_modules(&mut linker, &mut store).await.unwrap();
+            let mut module_linker = ModuleLinker::new(&mut linker, &mut store);
+            let module = module_linker.link_modules().await.unwrap();
             (module, entry)
         },
     };
