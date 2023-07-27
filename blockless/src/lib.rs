@@ -551,4 +551,72 @@ mod test {
         let code = run_blockless(config);
         assert_eq!(code.code, 0);
     }
+
+    #[test]
+    fn test_blockless_reactor_module_can_call_reactor_module_with_callback_endless_loop() {
+        let primary_code = r#"
+        (module
+            (import "reactor1" "double1" (func $double1 (param i32) (result i32)))
+            (func (export "_start")
+                i32.const 2
+                call $double1
+                drop
+            )
+          )
+        "#;
+        let reactor_1_code = r#"
+        (module
+            (import "reactor2" "double2" (func $double2 (param i32) (result i32)))
+            (func (export "double1") (param i32) (result i32)
+                local.get 0
+                call $double2
+            )
+        )
+        "#;
+        let reactor_2_code = r#"
+        (module
+            (import "reactor1" "double1" (func $double1 (param i32) (result i32)))
+            (func (export "double2") (param i32) (result i32)
+                local.get 0
+                call $double1
+            )
+        )
+        "#;
+
+        let temp_dir = TempDir::new("blockless_run").unwrap();
+
+        let primary_path = temp_dir.path().join("run.wasm");
+        let reactor_1_path = temp_dir.path().join("reactor1.wasm");
+        let reactor_2_path = temp_dir.path().join("reactor2.wasm");
+        
+        fs::write(&primary_path, primary_code).unwrap();
+        fs::write(&reactor_1_path, reactor_1_code).unwrap();
+        fs::write(&reactor_2_path, reactor_2_code).unwrap();
+        
+        let modules = vec![
+            BlocklessModule { 
+                module_type: ModuleType::Entry, 
+                name: "".to_string(), 
+                file: primary_path.to_str().unwrap().to_string(), 
+                md5: format!("{:x}", md5::compute(primary_code)), 
+            },
+            BlocklessModule { 
+                module_type: ModuleType::Module, 
+                name: "reactor1".to_string(), 
+                file: reactor_1_path.to_str().unwrap().to_string(), 
+                md5: format!("{:x}", md5::compute(reactor_1_code)) 
+            },
+            BlocklessModule { 
+                module_type: ModuleType::Module, 
+                name: "reactor2".to_string(), 
+                file: reactor_2_path.to_str().unwrap().to_string(), 
+                md5: format!("{:x}", md5::compute(reactor_2_code)) 
+            },
+        ];
+        let mut config =  BlocklessConfig::new("_start");
+        config.set_version(BlocklessConfigVersion::Version1);
+        config.set_modules(modules);
+        let code = run_blockless(config);
+        assert_eq!(code.code, 0);
+    }
 }
