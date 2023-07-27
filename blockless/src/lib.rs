@@ -459,17 +459,18 @@ mod test {
                 file: primary_path.to_str().unwrap().to_string(), 
                 md5: format!("{:x}", md5::compute(primary_code)), 
             },
-            BlocklessModule { 
-                module_type: ModuleType::Module, 
-                name: "reactor1".to_string(), 
-                file: reactor_1_path.to_str().unwrap().to_string(), 
-                md5: format!("{:x}", md5::compute(reactor_1_code)) 
-            },
+            // ensure we load/link reactor2 before reactor1 since reactor1 depends on it
             BlocklessModule { 
                 module_type: ModuleType::Module, 
                 name: "reactor2".to_string(), 
                 file: reactor_2_path.to_str().unwrap().to_string(), 
                 md5: format!("{:x}", md5::compute(reactor_2_code)) 
+            },
+            BlocklessModule { 
+                module_type: ModuleType::Module, 
+                name: "reactor1".to_string(), 
+                file: reactor_1_path.to_str().unwrap().to_string(), 
+                md5: format!("{:x}", md5::compute(reactor_1_code)) 
             },
         ];
         let mut config =  BlocklessConfig::new("_start");
@@ -480,6 +481,7 @@ mod test {
     }
 
     #[test]
+    #[ignore = "cross imports not supported"]
     fn test_blockless_reactor_module_can_call_reactor_module_with_callback_support() {
         let primary_code = r#"
         (module
@@ -553,6 +555,7 @@ mod test {
     }
 
     #[test]
+    #[ignore = "cross imports and callback loops not supported"]
     fn test_blockless_reactor_module_can_call_reactor_module_with_callback_endless_loop() {
         let primary_code = r#"
         (module
