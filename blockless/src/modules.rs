@@ -229,8 +229,6 @@ impl<'a> ResponseErrorJson<'a> {
     }
 }
 
-
-
 pub(crate) struct ModuleLinker<'a> {
     linker: &'a mut Linker<WasiCtx>, 
     store: &'a mut Store<WasiCtx>
@@ -255,6 +253,7 @@ impl<'a>  ModuleLinker<'a>  {
         Ok((mcall_name, params))
     }
 
+    #[inline]
     fn mcall_fn<'b>(
         mut caller: Caller<'b, WasiCtx>, 
         addr: u32, 
@@ -304,6 +303,7 @@ impl<'a>  ModuleLinker<'a>  {
         })
     }
     
+    #[inline]
     fn register_fn<'b>(
         mut caller: Caller<'b, WasiCtx>, 
         addr: u32, 
