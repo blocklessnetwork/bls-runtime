@@ -49,7 +49,7 @@ type DeallocTypedFunc = TypedFunc<(i32, u32), ()>;
 type CallerTypedFunc = TypedFunc<(i32, u32, i32, u32), u32>;
 
 struct InstanceInfo {
-    mem: Memory,
+    mem: Option<Memory>,
     alloc: Option<AllocTypedFunc>,
     dealloc: Option<DeallocTypedFunc>,
     export_funcs: HashMap<String, Func>,
@@ -60,9 +60,9 @@ impl InstanceInfo {
         let export_func = self.export_funcs.get(method)
             .ok_or(anyhow::anyhow!(format!("method: {method} not found")))?;
             
-        let mem = self.mem.clone();
-        let alloc = self.alloc.ok_or(anyhow::anyhow!("alloc is not found"))?.clone();
-        let dealloc = self.dealloc.ok_or(anyhow::anyhow!("dealloc is not found"))?.clone();
+        let mem = self.mem.ok_or(anyhow::anyhow!("memory is not exported in module."))?.clone();
+        let alloc = self.alloc.ok_or(anyhow::anyhow!("alloc is not exported in module."))?.clone();
+        let dealloc = self.dealloc.ok_or(anyhow::anyhow!("dealloc is not exported in module."))?.clone();
         let func: CallerTypedFunc = export_func.typed(store)?;
         Ok(InstanceCaller {
             mem,
@@ -438,15 +438,12 @@ impl<'a>  ModuleLinker<'a>  {
             Some(Err(e)) => return Err(e),
             None => None,
         };
-        if mem.is_none() {
-            anyhow::bail!("memory is not export in module.");
-        }
         self.linker.instance(self.store.as_context_mut(), m_name, instance)?;
         let mod_info = InstanceInfo {
             alloc,
             export_funcs: funcs,
             dealloc,
-            mem: mem.unwrap(),
+            mem: mem,
         };
         //must release the lock, the initial method will access the modules.
         INS_CTX.lock().await.instance_infos.insert(m_name.to_string(), mod_info);
