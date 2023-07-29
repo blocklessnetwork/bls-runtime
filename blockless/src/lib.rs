@@ -1,5 +1,5 @@
 mod modules;
-mod error;
+pub mod error;
 pub use error::*;
 use blockless_drivers::{
     CdylibDriver, 

@@ -4,10 +4,7 @@ use json::JsonValue;
 use lazy_static::lazy_static;
 use anyhow::Context;
 use std::future::Future;
-use crate::{
-    RegisterResult, 
-    MCallResult
-};
+use crate::error::McallError;
 use wasi_common::{
     WasiCtx, 
     BlocklessModule, 
@@ -130,13 +127,13 @@ impl InstanceCaller {
         param: &str,
         caller_mem: MemBuf<'a>,
     ) -> u32 {
-        let mut result = MCallResult::Success;
+        let mut result = McallError::None;
         let params_bs = param.as_bytes();
         let params_len = params_bs.len() as u32;
         let ptr = self.alloc.call_async(store.as_context_mut(), params_len).await;
         let ptr = match ptr {
             Ok(ptr) => ptr,
-            Err(_) => return MCallResult::AllocError.into(),
+            Err(_) => return McallError::AllocError.into(),
         };
         let caller_result_len = caller_mem.buf_len;
         let caller_result_ptr = self.alloc.call_async(store.as_context_mut(), caller_result_len).await;
@@ -144,28 +141,28 @@ impl InstanceCaller {
             Ok(ptr) => ptr,
             Err(_) => {
                 let _ = self.dealloc.call_async(store.as_context_mut(), (ptr, params_len)).await;
-                return MCallResult::AllocError.into();
+                return McallError::AllocError.into();
             },
         };
         let param_buf = MemBuf::new(&self.mem, ptr as u32, params_len);
         param_buf.copy_from_slice(store.as_context_mut(), &params_bs);
         let rs = self.func.call_async(store.as_context_mut(), (ptr, params_len, caller_result_ptr, caller_result_len)).await;
         if rs.is_err() {
-            result = MCallResult::MCallError.into();
+            result = McallError::MCallError.into();
         } else {
             let result_mem = MemBuf::new(&self.mem, caller_result_ptr as u32, caller_result_len);
             caller_mem.copy_from(store.as_context_mut(), &result_mem);
         }
         let rs = self.dealloc.call_async(store.as_context_mut(), (ptr, params_len)).await;
         if rs.is_err() {
-            if let MCallResult::Success = result {
-                result = MCallResult::DeallocError;
+            if let McallError::None = result {
+                result = McallError::DeallocError;
             }
         }
         let rs = self.dealloc.call_async(store.as_context_mut(), (caller_result_ptr, caller_result_len)).await;
         if rs.is_err() {
-            if let MCallResult::Success = result {
-                result = MCallResult::DeallocError;
+            if let McallError::None = result {
+                result = McallError::DeallocError;
             }
         }
         result.into()
@@ -274,12 +271,12 @@ impl<'a>  ModuleLinker<'a>  {
                     ($msg: literal) => {
                         ResponseErrorJson::new(&mem, caller.as_context_mut(), buf, buf_len)
                             .response($msg);
-                        return RegisterResult::Fail.into();
+                        return McallError::Fail.into();
                     };
                     ($msg: expr) => {
                         ResponseErrorJson::new(&mem, caller.as_context_mut(), buf, buf_len)
                             .response($msg);
-                        return RegisterResult::Fail.into();
+                        return McallError::Fail.into();
                     };
                 }
                 let (mcall_name, params) = match Self::parse_mcall(json_str) {
@@ -299,7 +296,7 @@ impl<'a>  ModuleLinker<'a>  {
                 let dest_mem = MemBuf::new(&mem, buf, buf_len);
                 return mcaller.call(caller.as_context_mut(), &params, dest_mem).await;
             }
-            RegisterResult::MemoryNotFound.into()
+            McallError::MemoryNotFound.into()
         })
     }
     
@@ -324,12 +321,12 @@ impl<'a>  ModuleLinker<'a>  {
                     ($msg: literal) => {
                         ResponseErrorJson::new(&mem, caller.as_context_mut(), buf, buf_len)
                             .response($msg);
-                        return MCallResult::Fail.into();
+                        return McallError::Fail.into();
                     };
                     ($msg: expr) => {
                         ResponseErrorJson::new(&mem, caller.as_context_mut(), buf, buf_len)
                             .response($msg);
-                        return MCallResult::Fail.into();
+                        return McallError::Fail.into();
                     };
                 }
                 let req = match process_register_req(str) {
@@ -355,9 +352,9 @@ impl<'a>  ModuleLinker<'a>  {
                     };
                     ctx.module_caller.insert(format!("{}::{method}", &req.module), caller);
                 }
-                MCallResult::Success.into()
+                McallError::None.into()
             } else {
-                MCallResult::MemoryNotFound.into()
+                McallError::MemoryNotFound.into()
             }
         })
     }

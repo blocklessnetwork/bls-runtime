@@ -1,21 +1,9 @@
-pub enum RegisterResult {
-    Success,
-    MemoryNotFound,
-    Fail,
-}
+use std::fmt::Display;
 
-impl From<RegisterResult> for u32 {
-    fn from(value: RegisterResult) -> Self {
-        match value {
-            RegisterResult::Success => 0,
-            RegisterResult::MemoryNotFound => 1,
-            RegisterResult::Fail => 2,
-        }
-    }
-}
-
-pub enum MCallResult {
-    Success,
+#[non_exhaustive]
+#[derive(Debug)]
+pub enum McallError {
+    None,
     MemoryNotFound,
     AllocError,
     DeallocError,
@@ -23,15 +11,30 @@ pub enum MCallResult {
     Fail,
 }
 
-impl From<MCallResult> for u32 {
-    fn from(value: MCallResult) -> Self {
+impl From<McallError> for u32 {
+    fn from(value: McallError) -> Self {
         match value {
-            MCallResult::Success => 0,
-            MCallResult::MemoryNotFound => 1,
-            MCallResult::AllocError => 2,
-            MCallResult::DeallocError => 3,
-            MCallResult::MCallError => 4,
-            MCallResult::Fail => 5,
+            McallError::None => 0,
+            McallError::MemoryNotFound => 1,
+            McallError::AllocError => 2,
+            McallError::DeallocError => 3,
+            McallError::MCallError => 4,
+            McallError::Fail => 5,
+        }
+    }
+}
+
+impl std::error::Error for McallError{}
+
+impl Display for McallError {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match *self {
+            McallError::None => write!(f, "No Error"),
+            McallError::MemoryNotFound => write!(f, "Memory not export"),
+            McallError::AllocError => write!(f, "Alloc error"),
+            McallError::DeallocError => write!(f, "Dealloc error"),
+            McallError::MCallError => write!(f, "MCall error"),
+            McallError::Fail => write!(f, "Call faill"),
         }
     }
 }
