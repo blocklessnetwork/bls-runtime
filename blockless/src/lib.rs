@@ -101,9 +101,9 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
     }
     let entry_module = b_conf.entry_module().unwrap();
     let mut args = vec![entry_module];
-    args.extend_from_slice(&b_conf.stdin_args()[..]);
+    args.extend_from_slice(&b_conf.stdin_args_ref()[..]);
     builder = builder.args(&args[..]).unwrap();
-    builder = builder.envs(&b_conf.envs()[..]).unwrap();
+    builder = builder.envs(&b_conf.envs_ref()[..]).unwrap();
     if let Some(d) = root_dir {
         builder = builder.preopened_dir(d, "/").unwrap();
     }
@@ -213,7 +213,7 @@ where
 mod test {
     #[allow(unused_imports)]
     use super::*;
-    use std::{fs, path::PathBuf};
+    use std::fs;
     use tempdir::TempDir;
     use tokio::runtime::Builder;
     
@@ -236,23 +236,17 @@ mod test {
         })
     }
 
-    fn simple_run_wat(temp_dir: &TempDir) -> PathBuf {
+    #[test]
+    fn test_outof_fuel() {
+        let temp_dir = TempDir::new("blockless_run").unwrap();
         let file_path = temp_dir.path().join("test_blockless_run.wasm");
         let code = r#"
         (module
-            (func (export "_start")
-            )
+            (func (export "_start"))
             (memory (export "memory") 1)
         )
         "#;
         fs::write(&file_path, code).unwrap();
-        file_path
-    }
-
-    #[test]
-    fn test_outof_fuel() {
-        let temp = TempDir::new("blockless_run").unwrap();
-        let file_path = simple_run_wat(&temp);
         let path = file_path.to_str().unwrap();
         let mut config =  BlocklessConfig::new(path);
         config.limited_fuel(Some(1));
@@ -263,8 +257,15 @@ mod test {
 
     #[test]
     fn test_blockless_normal() {
-        let temp = TempDir::new("blockless_run").unwrap();
-        let file_path = simple_run_wat(&temp);
+        let temp_dir = TempDir::new("blockless_run").unwrap();
+        let file_path = temp_dir.path().join("test_blockless_run.wasm");
+        let code = r#"
+        (module
+            (func (export "_start"))
+            (memory (export "memory") 1)
+        )
+        "#;
+        fs::write(&file_path, code).unwrap();
         let path = file_path.to_str().unwrap();
         let mut config =  BlocklessConfig::new(path);
         config.set_version(BlocklessConfigVersion::Version0);
@@ -273,49 +274,46 @@ mod test {
     }
 
     #[test]
-    fn test_blockless_run_modules() {
-        let temp_dir = TempDir::new("blockless_run").unwrap();
-        let run_wasm = temp_dir.path().join("run.wasm");
-        let code = r#"
+    fn test_blockless_run_primary_module_can_call_reactor_module() {
+        let primary_code = r#"
         (module
-            (import "module" "double" (func $double (param i32) (result i32)))
+            (import "reactor1" "double" (func $double (param i32) (result i32)))
             (func (export "_start")
                 i32.const 2
                 call $double
                 drop
             )
-          )
+        )
         "#;
-        let run_md5 = format!("{:x}", md5::compute(code));
-        fs::write(&run_wasm, code).unwrap();
-        let run_wasm_str = run_wasm.to_str().unwrap();
-        
-        let file_path = temp_dir.path().join("module.wasm");
-        let code = r#"
+        let reactor_1_code = r#"
         (module
             (func (export "double") (param i32) (result i32)
                 local.get 0
                 i32.const 2
                 i32.mul
             )
-            (memory (export "memory") 2)
-          )
+        )
         "#;
-        let module_md5 = format!("{:x}", md5::compute(code));
-        fs::write(&file_path, code).unwrap();
-        let module_wasm  = file_path.to_str().unwrap();
+        let temp_dir = TempDir::new("blockless_run").unwrap();
+
+        let primary_path = temp_dir.path().join("run.wasm");
+        let reactor_1_path = temp_dir.path().join("reactor1.wasm");
+
+        fs::write(&primary_path, primary_code).unwrap();
+        fs::write(&reactor_1_path, reactor_1_code).unwrap();
+
         let modules = vec![
             BlocklessModule { 
                 module_type: ModuleType::Entry, 
                 name: "".to_string(), 
-                file: run_wasm_str.to_string(), 
-                md5: run_md5 
+                file: primary_path.to_str().unwrap().to_string(), 
+                md5: format!("{:x}", md5::compute(primary_code)), 
             },
             BlocklessModule { 
                 module_type: ModuleType::Module, 
-                name: "module".to_string(), 
-                file: module_wasm.to_string(), 
-                md5: module_md5 
+                name: "reactor1".to_string(), 
+                file: reactor_1_path.to_str().unwrap().to_string(), 
+                md5: format!("{:x}", md5::compute(reactor_1_code)) 
             },
         ];
         let mut config =  BlocklessConfig::new("_start");
@@ -325,4 +323,288 @@ mod test {
         assert_eq!(code.code, 0);
     }
 
+    #[test]
+    fn test_blockless_primary_module_can_call_multiple_reactor_modules() {
+        let primary_code = r#"
+        (module
+            (import "reactor1" "double1" (func $double1 (param i32) (result i32)))
+            (import "reactor2" "double2" (func $double2 (param i32) (result i32)))
+            (func (export "_start")
+                i32.const 2
+                call $double1
+                drop
+            
+                i32.const 4
+                call $double2
+                drop
+            )
+        )
+        "#;
+        let reactor_1_code = r#"
+        (module
+            (func (export "double1") (param i32) (result i32)
+                local.get 0
+                i32.const 2
+                i32.mul
+            )
+        )
+        "#;
+        let reactor_2_code = r#"
+        (module
+            (func (export "double2") (param i32) (result i32)
+                local.get 0
+                i32.const 2
+                i32.mul
+            )
+        )
+        "#;
+
+        let temp_dir = TempDir::new("blockless_run").unwrap();
+
+        let primary_path = temp_dir.path().join("run.wasm");
+        let reactor_1_path = temp_dir.path().join("reactor1.wasm");
+        let reactor_2_path = temp_dir.path().join("reactor2.wasm");
+        
+        fs::write(&primary_path, primary_code).unwrap();
+        fs::write(&reactor_1_path, reactor_1_code).unwrap();
+        fs::write(&reactor_2_path, reactor_2_code).unwrap();
+        
+        let modules = vec![
+            BlocklessModule { 
+                module_type: ModuleType::Entry, 
+                name: "".to_string(), 
+                file: primary_path.to_str().unwrap().to_string(), 
+                md5: format!("{:x}", md5::compute(primary_code)), 
+            },
+            BlocklessModule { 
+                module_type: ModuleType::Module, 
+                name: "reactor1".to_string(), 
+                file: reactor_1_path.to_str().unwrap().to_string(), 
+                md5: format!("{:x}", md5::compute(reactor_1_code)) 
+            },
+            BlocklessModule { 
+                module_type: ModuleType::Module, 
+                name: "reactor2".to_string(), 
+                file: reactor_2_path.to_str().unwrap().to_string(), 
+                md5: format!("{:x}", md5::compute(reactor_2_code)) 
+            },
+        ];
+        let mut config =  BlocklessConfig::new("_start");
+        config.set_version(BlocklessConfigVersion::Version1);
+        config.set_modules(modules);
+        let code = run_blockless(config);
+        assert_eq!(code.code, 0);
+    }
+
+    #[test]
+    fn test_blockless_reactor_module_can_call_reactor_module() {
+        let primary_code = r#"
+        (module
+            (import "reactor1" "double1" (func $double1 (param i32) (result i32)))
+            (func (export "_start")
+                i32.const 2
+                call $double1
+                drop
+            )
+        )
+        "#;
+        let reactor_1_code = r#"
+        (module
+            (import "reactor2" "double2" (func $double2 (param i32) (result i32)))
+            (func (export "double1") (param i32) (result i32)
+                local.get 0
+                call $double2
+            )
+        )
+        "#;
+        let reactor_2_code = r#"
+        (module
+            (func $double2 (export "double2") (param i32) (result i32)
+                local.get 0
+                i32.const 2
+                i32.mul
+            )
+        )
+        "#;
+
+        let temp_dir = TempDir::new("blockless_run").unwrap();
+
+        let primary_path = temp_dir.path().join("run.wasm");
+        let reactor_1_path = temp_dir.path().join("reactor1.wasm");
+        let reactor_2_path = temp_dir.path().join("reactor2.wasm");
+        
+        fs::write(&primary_path, primary_code).unwrap();
+        fs::write(&reactor_1_path, reactor_1_code).unwrap();
+        fs::write(&reactor_2_path, reactor_2_code).unwrap();
+        
+        let modules = vec![
+            BlocklessModule { 
+                module_type: ModuleType::Entry, 
+                name: "".to_string(), 
+                file: primary_path.to_str().unwrap().to_string(), 
+                md5: format!("{:x}", md5::compute(primary_code)), 
+            },
+            // ensure we load/link reactor2 before reactor1 since reactor1 depends on it
+            BlocklessModule { 
+                module_type: ModuleType::Module, 
+                name: "reactor2".to_string(), 
+                file: reactor_2_path.to_str().unwrap().to_string(), 
+                md5: format!("{:x}", md5::compute(reactor_2_code)) 
+            },
+            BlocklessModule { 
+                module_type: ModuleType::Module, 
+                name: "reactor1".to_string(), 
+                file: reactor_1_path.to_str().unwrap().to_string(), 
+                md5: format!("{:x}", md5::compute(reactor_1_code)) 
+            },
+        ];
+        let mut config =  BlocklessConfig::new("_start");
+        config.set_version(BlocklessConfigVersion::Version1);
+        config.set_modules(modules);
+        let code = run_blockless(config);
+        assert_eq!(code.code, 0);
+    }
+
+    #[test]
+    #[ignore = "cross imports not supported"]
+    fn test_blockless_reactor_module_can_call_reactor_module_with_callback_support() {
+        let primary_code = r#"
+        (module
+            (import "reactor1" "double1" (func $double1 (param i32) (result i32)))
+            (func (export "_start")
+                i32.const 2
+                call $double1
+                drop
+            )
+        )
+        "#;
+        let reactor_1_code = r#"
+        (module
+            (import "reactor2" "double2" (func $double2 (param i32) (result i32)))
+            (func (export "double1") (param i32) (result i32)
+                local.get 0
+                call $double2
+            )
+            (func (export "double1callback") (param i32) (result i32)
+                local.get 0
+                i32.const 2
+                i32.mul
+            )
+        )
+        "#;
+        let reactor_2_code = r#"
+        (module
+            (import "reactor1" "double1callback" (func $double1callback (param i32) (result i32)))
+            (func (export "double2") (param i32) (result i32)
+                local.get 0
+                call $double1callback
+            )
+        )
+        "#;
+
+        let temp_dir = TempDir::new("blockless_run").unwrap();
+
+        let primary_path = temp_dir.path().join("run.wasm");
+        let reactor_1_path = temp_dir.path().join("reactor1.wasm");
+        let reactor_2_path = temp_dir.path().join("reactor2.wasm");
+        
+        fs::write(&primary_path, primary_code).unwrap();
+        fs::write(&reactor_1_path, reactor_1_code).unwrap();
+        fs::write(&reactor_2_path, reactor_2_code).unwrap();
+        
+        let modules = vec![
+            BlocklessModule { 
+                module_type: ModuleType::Entry, 
+                name: "".to_string(), 
+                file: primary_path.to_str().unwrap().to_string(), 
+                md5: format!("{:x}", md5::compute(primary_code)), 
+            },
+            BlocklessModule { 
+                module_type: ModuleType::Module, 
+                name: "reactor1".to_string(), 
+                file: reactor_1_path.to_str().unwrap().to_string(), 
+                md5: format!("{:x}", md5::compute(reactor_1_code)) 
+            },
+            BlocklessModule { 
+                module_type: ModuleType::Module, 
+                name: "reactor2".to_string(), 
+                file: reactor_2_path.to_str().unwrap().to_string(), 
+                md5: format!("{:x}", md5::compute(reactor_2_code)) 
+            },
+        ];
+        let mut config =  BlocklessConfig::new("_start");
+        config.set_version(BlocklessConfigVersion::Version1);
+        config.set_modules(modules);
+        let code = run_blockless(config);
+        assert_eq!(code.code, 0);
+    }
+
+    #[test]
+    #[ignore = "cross imports and callback loops not supported"]
+    fn test_blockless_reactor_module_can_call_reactor_module_with_callback_endless_loop() {
+        let primary_code = r#"
+        (module
+            (import "reactor1" "double1" (func $double1 (param i32) (result i32)))
+            (func (export "_start")
+                i32.const 2
+                call $double1
+                drop
+            )
+          )
+        "#;
+        let reactor_1_code = r#"
+        (module
+            (import "reactor2" "double2" (func $double2 (param i32) (result i32)))
+            (func (export "double1") (param i32) (result i32)
+                local.get 0
+                call $double2
+            )
+        )
+        "#;
+        let reactor_2_code = r#"
+        (module
+            (import "reactor1" "double1" (func $double1 (param i32) (result i32)))
+            (func (export "double2") (param i32) (result i32)
+                local.get 0
+                call $double1
+            )
+        )
+        "#;
+
+        let temp_dir = TempDir::new("blockless_run").unwrap();
+
+        let primary_path = temp_dir.path().join("run.wasm");
+        let reactor_1_path = temp_dir.path().join("reactor1.wasm");
+        let reactor_2_path = temp_dir.path().join("reactor2.wasm");
+        
+        fs::write(&primary_path, primary_code).unwrap();
+        fs::write(&reactor_1_path, reactor_1_code).unwrap();
+        fs::write(&reactor_2_path, reactor_2_code).unwrap();
+        
+        let modules = vec![
+            BlocklessModule { 
+                module_type: ModuleType::Entry, 
+                name: "".to_string(), 
+                file: primary_path.to_str().unwrap().to_string(), 
+                md5: format!("{:x}", md5::compute(primary_code)), 
+            },
+            BlocklessModule { 
+                module_type: ModuleType::Module, 
+                name: "reactor1".to_string(), 
+                file: reactor_1_path.to_str().unwrap().to_string(), 
+                md5: format!("{:x}", md5::compute(reactor_1_code)) 
+            },
+            BlocklessModule { 
+                module_type: ModuleType::Module, 
+                name: "reactor2".to_string(), 
+                file: reactor_2_path.to_str().unwrap().to_string(), 
+                md5: format!("{:x}", md5::compute(reactor_2_code)) 
+            },
+        ];
+        let mut config =  BlocklessConfig::new("_start");
+        config.set_version(BlocklessConfigVersion::Version1);
+        config.set_modules(modules);
+        let code = run_blockless(config);
+        assert_eq!(code.code, 0);
+    }
 }
