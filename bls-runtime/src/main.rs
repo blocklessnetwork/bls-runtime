@@ -16,7 +16,7 @@ use config::load_cli_config_extract_from_car;
 use v86::V86Lib;
 use v86config::load_v86conf_extract_from_car;
 use std::{
-    io::{self, Read}, 
+    io::Read, 
     path::PathBuf, 
     time::Duration, 
 };
@@ -144,14 +144,6 @@ fn wasm_runtime(mut cfg: CliConfig, cli_command_opts: CliCommandOpts) -> CLIExit
         return err;
     }
 
-    let mut std_buffer = String::new();
-    if cfg.0.stdin_ref().is_empty() {
-        if let Err(err) = io::stdin().read_line(&mut std_buffer) {
-            eprintln!("failed to read from stdin: {}", err);
-            return CLIExitCode::UnknownError("failed to read from stdin".into());
-        }
-        cfg.0.stdin(std_buffer);
-    }
     let run_time = cfg.0.run_time();
     cli_command_opts.into_config(&mut cfg);
     let async_runtime = match Builder::new_current_thread()

@@ -186,8 +186,8 @@ impl CliConfig {
         bc.set_run_time(run_time);
         version.map(|v| bc.set_version(v.into()));
 
-        if stdin.is_some() {
-            bc.stdin(stdin.unwrap().to_string());
+        if let Some(stdin) = stdin {
+            bc.stdin(stdin.to_string());
         }
         Ok(CliConfig(bc))
     }
