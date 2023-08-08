@@ -21,7 +21,6 @@ use std::{
     time::Duration, 
 };
 use env_logger::Target;
-use tokio::runtime::Builder;
 use log::{
     error, 
     info, 
@@ -138,7 +137,7 @@ fn v86_runtime(path: &str) -> Result<i32, CLIExitCode> {
     Ok(v86.v86_wasi_run(raw_config_json))
 }
 
-fn wasm_runtime(mut cfg: CliConfig, cli_command_opts: CliCommandOpts) -> CLIExitCode {
+async fn wasm_runtime(mut cfg: CliConfig, cli_command_opts: CliCommandOpts) -> CLIExitCode {
     if let Err(err) = logger_init_with_config(&cfg) {
         eprintln!("failed to init logger: {}", err);
         return err;
@@ -146,41 +145,24 @@ fn wasm_runtime(mut cfg: CliConfig, cli_command_opts: CliCommandOpts) -> CLIExit
 
     let run_time = cfg.0.run_time();
     cli_command_opts.into_config(&mut cfg);
-    let async_runtime = match Builder::new_current_thread()
-        .enable_io()
-        .enable_time()
-        .build() {
-        Ok(rt) => rt,
-        Err(e) => {
-            eprintln!("failed to build async runtime: {}", e);
-            return CLIExitCode::UnknownError("failed to build async runtime".into());
-        }
-    };
-            
-    let runtime_res: Result<u8, CLIExitCode> = async_runtime.block_on(async {
-        if let Some(time) = run_time {
-            let _ = tokio::spawn(async move {
-                tokio::time::sleep(Duration::from_millis(time)).await;
-                info!("The wasm execute finish, the exit code: 15");
-                std::process::exit(CLIExitCode::AppTimeout.into());
-            }).await;
-        }
-        info!("The wasm app started.");
-        std::panic::set_hook(Box::new(|panic_info| {
-            error!("{}", panic_info);
-            eprintln!("WASM app crashed, please check the runtime.log file");
-        }));
-        let exit_code = blockless_run(cfg.0).await;
-        info!("The wasm execute finish, the exit code: {}", exit_code.code);
-        Ok(exit_code.code as u8)
-    });
-    match runtime_res {
-        Ok(exit_code) => exit_code.into(),
-        Err(e) => {
-            eprintln!("failed to run wasm: {}", e);
-            CLIExitCode::UnknownError("failed to run wasm".into())
-        }
+
+    if let Some(time) = run_time {
+        let _ = tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(time)).await;
+            info!("The wasm execute finish, the exit code: 15");
+            std::process::exit(CLIExitCode::AppTimeout.into());
+        }).await;
     }
+
+    info!("The wasm app started.");
+    std::panic::set_hook(Box::new(|panic_info| {
+        error!("{}", panic_info);
+        eprintln!("WASM app crashed, please check the runtime.log file");
+    }));
+
+    let exit_status = blockless_run(cfg.0).await;
+    info!("The wasm execute finish, the exit code: {}", exit_status.code);
+    (exit_status.code as u8).into()
 }
 
 
@@ -190,7 +172,8 @@ fn set_root_path_env_var(cli_command_opts: &CliCommandOpts) {
         .map(|s| std::env::set_var(ENV_ROOT_PATH_NAME, s.as_str()));
 }
 
-fn main() -> CLIExitCode {
+#[tokio::main]
+async fn main() -> CLIExitCode {
     let cli_command_opts = CliCommandOpts::parse();
     set_root_path_env_var(&cli_command_opts);
     let path = cli_command_opts.input_ref();
@@ -216,7 +199,7 @@ fn main() -> CLIExitCode {
             if let Err(code) = check_module_sum(&cfg) {
                 return code;
             }
-            return wasm_runtime(cfg, cli_command_opts);
+            return wasm_runtime(cfg, cli_command_opts).await;
         }
     };
 }
