@@ -186,8 +186,8 @@ impl CliConfig {
         bc.set_run_time(run_time);
         version.map(|v| bc.set_version(v.into()));
 
-        if stdin.is_some() {
-            bc.stdin(stdin.unwrap().to_string());
+        if let Some(stdin) = stdin {
+            bc.stdin(stdin.to_string());
         }
         Ok(CliConfig(bc))
     }
@@ -389,5 +389,37 @@ mod test {
         assert!(matches!(config.0.version(), BlocklessConfigVersion::Version0));
         assert_eq!(config.0.get_limited_memory(), Some(30));
         assert_eq!(config.0.get_limited_fuel(), Some(200000000));
+    }
+
+    #[test]
+    fn test_stdin_from_json() {
+        let bls_config = CliConfig::from_json_string(
+            r#"{
+                "fs_root_path": "/", 
+                "drivers_root_path": "/drivers", 
+                "runtime_logger": "runtime.log", 
+                "limited_fuel": 200000000,
+                "limited_memory": 30,
+                "debug_info": false,
+                "entry": "lib.wasm",
+                "permissions": []
+            }"#.to_string()
+        ).unwrap().0;
+        assert_eq!(bls_config.stdin_ref(), "");
+
+        let bls_config = CliConfig::from_json_string(
+            r#"{
+                "stdin": "test",
+                "fs_root_path": "/", 
+                "drivers_root_path": "/drivers", 
+                "runtime_logger": "runtime.log", 
+                "limited_fuel": 200000000,
+                "limited_memory": 30,
+                "debug_info": false,
+                "entry": "lib.wasm",
+                "permissions": []
+            }"#.to_string()
+        ).unwrap().0;
+        assert_eq!(bls_config.stdin_ref(), "test");
     }
 }
