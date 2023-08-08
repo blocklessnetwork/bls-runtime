@@ -167,7 +167,7 @@ async fn wasm_runtime(mut cfg: CliConfig, cli_command_opts: CliCommandOpts) -> C
         error!("{}", panic_info);
         eprintln!("WASM app crashed, please check the runtime.log file");
     }));
-    
+
     let exit_status = blockless_run(cfg.0).await;
     info!("The wasm execute finish, the exit code: {}", exit_status.code);
     (exit_status.code as u8).into()
