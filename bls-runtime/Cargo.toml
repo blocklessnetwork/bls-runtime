@@ -11,7 +11,7 @@ edition = "2021"
 blockless = {path = "../blockless"}
 anyhow = {workspace = true}
 json = "0.12"
-tokio = {version = "1", features = ["rt", "net", "time"]}
+tokio = {version = "1", features = ["net", "time", "macros", "rt-multi-thread"]}
 log = "0.4.17"
 rust-car = {workspace = true}
 md5 = {workspace = true}
