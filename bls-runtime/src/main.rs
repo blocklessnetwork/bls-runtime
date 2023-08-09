@@ -307,4 +307,22 @@ mod test {
         assert_eq!(cfg.0.fs_root_path_ref(), Some("target"));
         assert_eq!(cfg.0.drivers_root_path_ref(), Some("target/drivers"));
     }
+
+    #[tokio::test]
+    async fn test_no_input_non_blocking_read() {
+        let result = non_blocking_read(std::io::stdin()).await;
+        assert_eq!(result, None);
+    }
+
+    #[tokio::test]
+    async fn test_input_non_blocking_read() {
+        // test with a reader (a cursor over a static string)
+        let cursor = std::io::Cursor::new("");
+        let result = non_blocking_read(cursor).await;
+        assert_eq!(result, Some("".to_string()));
+
+        let cursor = std::io::Cursor::new("test input");
+        let result = non_blocking_read(cursor).await;
+        assert_eq!(result, Some("test input".to_string()));
+    }
 }
