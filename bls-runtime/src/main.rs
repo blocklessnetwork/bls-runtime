@@ -143,6 +143,11 @@ async fn wasm_runtime(mut cfg: CliConfig, cli_command_opts: CliCommandOpts) -> C
         return err;
     }
 
+    if cfg.0.stdin_ref().is_empty() {
+        if let Some(stdin_buffer) = non_blocking_read(std::io::stdin()).await {
+            cfg.0.stdin(stdin_buffer);
+        }
+    }
     let run_time = cfg.0.run_time();
     cli_command_opts.into_config(&mut cfg);
 
@@ -170,6 +175,21 @@ fn set_root_path_env_var(cli_command_opts: &CliCommandOpts) {
     cli_command_opts
         .fs_root_path()
         .map(|s| std::env::set_var(ENV_ROOT_PATH_NAME, s.as_str()));
+}
+
+async fn non_blocking_read<R: Read + Send + 'static>(mut reader: R) -> Option<String> {
+    let (tx, rx) = std::sync::mpsc::channel();
+
+    // spawn thread to read from the reader asynchronously
+    std::thread::spawn(move || {
+        let mut buffer = String::new();
+        if reader.read_to_string(&mut buffer).is_ok() { // blocks
+            let _ = tx.send(buffer);
+        }
+    });
+
+    // wait for either a message from the thread or timeout
+    rx.recv_timeout(std::time::Duration::from_millis(10)).ok()
 }
 
 #[tokio::main]
