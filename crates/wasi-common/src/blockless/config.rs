@@ -38,6 +38,15 @@ pub enum Stdout {
     FileName(String),
 }
 
+pub enum Stderr {
+    //no stderr.
+    Null,
+    //inherit stderr.
+    Inherit,
+    //stderr redirect to file.
+    FileName(String),
+}
+
 pub struct DriverConfig {
     schema: String,
     path: String,
@@ -121,6 +130,7 @@ impl From<usize> for BlocklessConfigVersion {
 pub struct BlocklessConfig {
     stdin: String,
     stdout: Stdout,
+    stderr: Stderr,
     debug_info: bool,
     is_carfile: bool,
     entry: String,
@@ -162,6 +172,7 @@ impl BlocklessConfig {
             //memory limit, 1 page = 64k.
             limited_memory: None,
             extensions_path: None,
+            stderr: Stderr::Inherit,
             drivers_root_path: None,
             stdout: Stdout::Inherit,
             entry: String::from(entry),
@@ -382,6 +393,11 @@ impl BlocklessConfig {
     #[inline(always)]
     pub fn stdout_ref(&self) -> &Stdout {
         &self.stdout
+    }
+
+    #[inline(always)]
+    pub fn stderr_ref(&self) -> &Stderr {
+        &self.stderr
     }
 
     #[inline(always)]
