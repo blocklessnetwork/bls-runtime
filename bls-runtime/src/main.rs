@@ -315,12 +315,14 @@ mod test {
     }
 
     #[tokio::test]
-    async fn test_input_non_blocking_read() {
-        // test with a reader (a cursor over a static string)
+    async fn test_empty_input_non_blocking_read() {
         let cursor = std::io::Cursor::new("");
         let result = non_blocking_read(cursor).await;
-        assert_eq!(result, Some("".to_string()));
+        assert_eq!(result, None);
+    }
 
+    #[tokio::test]
+    async fn test_input_non_blocking_read() {
         let cursor = std::io::Cursor::new("test input");
         let result = non_blocking_read(cursor).await;
         assert_eq!(result, Some("test input".to_string()));
