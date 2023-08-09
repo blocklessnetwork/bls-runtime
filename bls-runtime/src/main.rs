@@ -143,6 +143,11 @@ async fn wasm_runtime(mut cfg: CliConfig, cli_command_opts: CliCommandOpts) -> C
         return err;
     }
 
+    if cfg.0.stdin_ref().is_empty() {
+        if let Some(stdin_buffer) = non_blocking_read(std::io::stdin()).await {
+            cfg.0.stdin(stdin_buffer);
+        }
+    }
     let run_time = cfg.0.run_time();
     cli_command_opts.into_config(&mut cfg);
 
@@ -170,6 +175,21 @@ fn set_root_path_env_var(cli_command_opts: &CliCommandOpts) {
     cli_command_opts
         .fs_root_path()
         .map(|s| std::env::set_var(ENV_ROOT_PATH_NAME, s.as_str()));
+}
+
+async fn non_blocking_read<R: Read + Send + 'static>(mut reader: R) -> Option<String> {
+    let (tx, rx) = std::sync::mpsc::channel();
+
+    // spawn thread to read from the reader asynchronously
+    std::thread::spawn(move || {
+        let mut buffer = String::new();
+        if reader.read_to_string(&mut buffer).is_ok() && !buffer.is_empty() { // blocks
+            let _ = tx.send(buffer);
+        }
+    });
+
+    // wait for either a message from the thread or timeout
+    rx.recv_timeout(std::time::Duration::from_millis(10)).ok()
 }
 
 #[tokio::main]
@@ -286,5 +306,25 @@ mod test {
         let cfg = load_cli_config_from_car(&mut car_reader).unwrap();
         assert_eq!(cfg.0.fs_root_path_ref(), Some("target"));
         assert_eq!(cfg.0.drivers_root_path_ref(), Some("target/drivers"));
+    }
+
+    #[tokio::test]
+    async fn test_no_input_non_blocking_read() {
+        let result = non_blocking_read(std::io::stdin()).await;
+        assert_eq!(result, None);
+    }
+
+    #[tokio::test]
+    async fn test_empty_input_non_blocking_read() {
+        let cursor = std::io::Cursor::new("");
+        let result = non_blocking_read(cursor).await;
+        assert_eq!(result, None);
+    }
+
+    #[tokio::test]
+    async fn test_input_non_blocking_read() {
+        let cursor = std::io::Cursor::new("test input");
+        let result = non_blocking_read(cursor).await;
+        assert_eq!(result, Some("test input".to_string()));
     }
 }
