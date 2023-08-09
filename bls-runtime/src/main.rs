@@ -183,7 +183,7 @@ async fn non_blocking_read<R: Read + Send + 'static>(mut reader: R) -> Option<St
     // spawn thread to read from the reader asynchronously
     std::thread::spawn(move || {
         let mut buffer = String::new();
-        if reader.read_to_string(&mut buffer).is_ok() { // blocks
+        if reader.read_to_string(&mut buffer).is_ok() && !buffer.is_empty() { // blocks
             let _ = tx.send(buffer);
         }
     });
