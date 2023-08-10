@@ -27,6 +27,87 @@ pub struct ExitStatus {
     pub code: i32,
 }
 
+trait BlocklessConfig2WasiBuilder {
+    fn to_builder(&self) -> WasiCtxBuilder;
+    fn set_stdouterr(&self, builder: WasiCtxBuilder, is_err: bool) -> WasiCtxBuilder;
+}
+
+
+impl BlocklessConfig2WasiBuilder for BlocklessConfig {
+
+    fn set_stdouterr(
+        &self, 
+        mut builder: WasiCtxBuilder, 
+        is_err: bool,
+    ) -> WasiCtxBuilder 
+    {
+        let b_conf = self;
+        match b_conf.stdout_ref() {
+            &Stdout::FileName(ref file_name) => {
+                let mut is_set_fileout = false;
+                if let Some(r) = b_conf.fs_root_path_ref() {
+                    let root = Path::new(r);
+                    let file_name = root.join(file_name);
+                    let mut file_opts = std::fs::File::options();
+                    file_opts.create(true);
+                    file_opts.append(true);
+                    file_opts.write(true);
+    
+                    if let Some(f) = file_opts.open(file_name).ok().map(|file| {
+                        let file = cap_std::fs::File::from_std(file);
+                        let f = wasmtime_wasi::file::File::from_cap_std(file);
+                        Box::new(f)
+                    }) {
+                        is_set_fileout = true;
+                        builder = if is_err {
+                            builder.stdout(f)
+                        } else {
+                            builder.stderr(f)
+                        }
+                    }
+                }
+                if !is_set_fileout {
+                    builder = if is_err { 
+                        builder.inherit_stdout()
+                    } else {
+                        builder.inherit_stderr()
+                    }
+                }
+            }
+            &Stdout::Inherit => {
+                builder = if is_err { 
+                    builder.inherit_stdout()
+                } else {
+                    builder.inherit_stderr()
+                }
+            }
+            &Stdout::Null => {}
+        }
+        builder
+    }
+
+    fn to_builder(&self) -> WasiCtxBuilder {
+        let b_conf = self;
+        let root_dir = b_conf.fs_root_path_ref()
+        .and_then(|path| {
+            wasmtime_wasi::Dir::open_ambient_dir(path, ambient_authority()).ok()
+        });
+        let mut builder = WasiCtxBuilder::new();
+        //stdout file process for setting.
+        builder = b_conf.set_stdouterr(builder, false);
+        builder = b_conf.set_stdouterr(builder, true);
+        let entry_module = b_conf.entry_module().unwrap();
+        let mut args = vec![entry_module];
+        args.extend_from_slice(&b_conf.stdin_args_ref()[..]);
+        builder = builder.args(&args[..]).unwrap();
+        builder = builder.envs(&b_conf.envs_ref()[..]).unwrap();
+        if let Some(d) = root_dir {
+            builder = builder.preopened_dir(d, "/").unwrap();
+        }
+        builder
+    }
+}
+
 pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
     let max_fuel = b_conf.get_limited_fuel();
     //set the drivers root path, if not setting use exe file path.
@@ -64,51 +145,8 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
     blockless_env::add_cgi_to_linker(&mut linker);
     blockless_env::add_socket_to_linker(&mut linker);
     wasmtime_wasi::add_to_linker(&mut linker, |s| s).unwrap();
-    let root_dir = b_conf.fs_root_path_ref()
-        .and_then(|path| {
-            wasmtime_wasi::Dir::open_ambient_dir(path, ambient_authority()).ok()
-        });
-    let mut builder = WasiCtxBuilder::new();
-    //stdout file process for setting.
-    match b_conf.stdout_ref() {
-        &Stdout::FileName(ref file_name) => {
-            let mut is_set_stdout = false;
-            if let Some(r) = b_conf.fs_root_path_ref() {
-                let root = Path::new(r);
-                let file_name = root.join(file_name);
-                let mut file_opts = std::fs::File::options();
-                file_opts.create(true);
-                file_opts.append(true);
-                file_opts.write(true);
-
-                if let Some(f) = file_opts.open(file_name).ok().map(|file| {
-                    let file = cap_std::fs::File::from_std(file);
-                    let f = wasmtime_wasi::file::File::from_cap_std(file);
-                    Box::new(f)
-                }) {
-                    is_set_stdout = true;
-                    builder = builder.stdout(f)
-                }
-            }
-            if !is_set_stdout {
-                builder = builder.inherit_stdout();
-            }
-        }
-        &Stdout::Inherit => {
-            builder = builder.inherit_stdout();
-        }
-        &Stdout::Null => {}
-    }
-    let entry_module = b_conf.entry_module().unwrap();
-    let mut args = vec![entry_module];
-    args.extend_from_slice(&b_conf.stdin_args_ref()[..]);
-    builder = builder.args(&args[..]).unwrap();
-    builder = builder.envs(&b_conf.envs_ref()[..]).unwrap();
-    if let Some(d) = root_dir {
-        builder = builder.preopened_dir(d, "/").unwrap();
-    }
+    let builder = b_conf.to_builder();
     let mut ctx = builder.build();
-
     let drivers = b_conf.drivers_ref();
     load_driver(drivers);
     let fuel = b_conf.get_limited_fuel();
