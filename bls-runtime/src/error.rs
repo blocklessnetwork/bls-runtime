@@ -2,6 +2,7 @@ use std::{fmt, process::{ExitCode, Termination}};
 
 #[derive(Debug)]
 pub enum CLIExitCode {
+    Success,
     FlueUsedOut,
     CallStackExhausted,
     OutOfBoundsMemoryAccess,
@@ -23,6 +24,7 @@ pub enum CLIExitCode {
 impl fmt::Display for CLIExitCode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
+            CLIExitCode::Success => write!(f, "Success"),
             CLIExitCode::FlueUsedOut => write!(f, "The flue used out"),
             CLIExitCode::CallStackExhausted => write!(f, "Call stack exhausted"),
             CLIExitCode::OutOfBoundsMemoryAccess => write!(f, "Out of bounds memory access"),
@@ -47,6 +49,7 @@ impl fmt::Display for CLIExitCode {
 impl From<i32> for CLIExitCode {
   fn from(exitcode: i32) -> Self {
     match exitcode {
+      0 => CLIExitCode::Success,
       1 => CLIExitCode::FlueUsedOut,
       2 => CLIExitCode::CallStackExhausted,
       3 => CLIExitCode::OutOfBoundsMemoryAccess,
@@ -77,6 +80,7 @@ impl From<u8> for CLIExitCode {
 impl Into<u8> for CLIExitCode {
   fn into(self) -> u8 {
     match self {
+      CLIExitCode::Success => 0,
       CLIExitCode::FlueUsedOut => 1,
       CLIExitCode::CallStackExhausted => 2,
       CLIExitCode::OutOfBoundsMemoryAccess => 3,
