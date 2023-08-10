@@ -116,3 +116,27 @@ impl Termination for CLIExitCode {
         ExitCode::from(Into::<u8>::into(self))
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::CLIExitCode;
+
+    #[test]
+    fn test_cli_exit_code_success() {
+        // testing conversion from i32
+        let from_i32: CLIExitCode = 0.into();
+        assert_eq!(from_i32, CLIExitCode::Success);
+
+        // testing conversion from u8
+        let from_u8: CLIExitCode = 0u8.into();
+        assert_eq!(from_u8, CLIExitCode::Success);
+
+        // testing conversion into u8
+        let into_u8: u8 = CLIExitCode::Success.into();
+        assert_eq!(into_u8, 0u8);
+
+        // testing conversion into i32
+        let into_i32: i32 = CLIExitCode::Success.into();
+        assert_eq!(into_i32, 0i32);
+    }
+}
