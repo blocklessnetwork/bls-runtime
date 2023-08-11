@@ -104,6 +104,7 @@ $ "echo "FOO" | env THIS_IS_MY_VAR=FOO BLS_LIST_VARS=THIS_IS_MY_VAR ~/.bls/runti
 
 |code|description|
 |----|-------------------|
+|Exit Code 0|Success|
 |Exit Code 1|The flue used out|
 |Exit Code 2|call stack exhausted|
 |Exit Code 3|out of bounds memory access|
@@ -117,5 +118,6 @@ $ "echo "FOO" | env THIS_IS_MY_VAR=FOO BLS_LIST_VARS=THIS_IS_MY_VAR ~/.bls/runti
 |Exit Code 11|wasm `unreachable` instruction executed|
 |Exit Code 12|interrupt|
 |Exit Code 13|degenerate component adapter called|
-|Exit Code 15|the app timeout.|
-|Exit Code 128|The configure error.|
+|Exit Code 15|the app timeout|
+|Exit Code 128|The configure error|
+|Exit Code 255|Unknown error|
