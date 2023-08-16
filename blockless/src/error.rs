@@ -7,6 +7,7 @@ pub enum McallError {
     MemoryNotFound,
     AllocError,
     DeallocError,
+    MCallMemoryNotFound,
     MCallError,
     Fail,
 }
@@ -20,6 +21,7 @@ impl From<McallError> for u32 {
             McallError::DeallocError => 3,
             McallError::MCallError => 4,
             McallError::Fail => 5,
+            McallError::MCallMemoryNotFound => 6,
         }
     }
 }
@@ -35,6 +37,7 @@ impl Display for McallError {
             McallError::DeallocError => write!(f, "Dealloc error"),
             McallError::MCallError => write!(f, "MCall error"),
             McallError::Fail => write!(f, "Call faill"),
+            McallError::MCallMemoryNotFound => write!(f, "mcall memory not found"),
         }
     }
 }

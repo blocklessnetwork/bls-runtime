@@ -29,6 +29,8 @@ lazy_static! {
 }
 
 struct InstanceCtx {
+    //key is mem, value is the register module name,
+    modules: HashMap<usize, String>,
     //key is module::method.
     module_caller: HashMap<String, InstanceCaller>,
     //key is module name.
@@ -38,6 +40,7 @@ struct InstanceCtx {
 impl InstanceCtx {
     fn new() -> Self {
         Self { 
+            modules: HashMap::new(),
             module_caller: HashMap::new(), 
             instance_infos: HashMap::new(),
         }
@@ -86,6 +89,7 @@ struct MemBuf<'a> {
     buf_len: u32
 }
 
+/// The mem wrapper for memory.
 impl<'a> MemBuf<'a> {
     fn new(mem: &'a Memory, buf: u32, buf_len: u32) -> Self {
         Self {
@@ -122,6 +126,8 @@ impl<'a> MemBuf<'a> {
 }
 
 impl InstanceCaller {
+
+    /// call the module function which registered
     async fn call<'a>(&self, 
         mut store: impl AsContextMut<Data = WasiCtx>,
         param: &str,
@@ -174,12 +180,9 @@ struct RegisterReq {
     methods: Vec<String>,
 }
 
-fn process_register_req(json_str: &str) -> anyhow::Result<RegisterReq> {
+fn process_register_req(module: &str, json_str: &str) -> anyhow::Result<RegisterReq> {
     let json_obj = json::parse(json_str)?;
-    let module = match json_obj["module"].as_str() {
-        Some(m) => m.to_lowercase(),
-        None => anyhow::bail!("not found module node"),
-    };
+    let module = module.to_string();
     let methods = json_obj["methods"]
         .members()
         .map(|m| m.to_string())
@@ -250,6 +253,7 @@ impl<'a>  ModuleLinker<'a>  {
         Ok((mcall_name, params))
     }
 
+    /// async function for invoke mcall . 
     #[inline]
     fn mcall_fn<'b>(
         mut caller: Caller<'b, WasiCtx>, 
@@ -300,6 +304,7 @@ impl<'a>  ModuleLinker<'a>  {
         })
     }
     
+    /// async function for register the mcall for modules. 
     #[inline]
     fn register_fn<'b>(
         mut caller: Caller<'b, WasiCtx>, 
@@ -329,7 +334,13 @@ impl<'a>  ModuleLinker<'a>  {
                         return McallError::Fail.into();
                     };
                 }
-                let req = match process_register_req(str) {
+                let mem_ptr = mem_slice.as_ptr() as usize;
+                let module = INS_CTX.lock().await.modules.get(&mem_ptr).map(String::from);
+                let module = match module {
+                    Some(m) => m,
+                    None => return McallError::MCallMemoryNotFound.into(),
+                };
+                let req = match process_register_req(&module, str) {
                     Ok(req) => req,
                     Err(_) => {
                         responseError!("error parse json");
@@ -352,6 +363,8 @@ impl<'a>  ModuleLinker<'a>  {
                     };
                     ctx.module_caller.insert(format!("{}::{method}", &req.module), caller);
                 }
+                
+
                 McallError::None.into()
             } else {
                 McallError::MemoryNotFound.into()
@@ -359,6 +372,8 @@ impl<'a>  ModuleLinker<'a>  {
         })
     }
 
+    /// export the ```blockless.mcall``` and ```blockless.register``` in the runtime.
+    /// The modules can be use the register to register the moudle's function for mcall.
     pub(crate) async fn link_modules(&mut self) -> Option<Module> {
         let mut modules: Vec<BlocklessModule> = {
             let lock = self.store.data().blockless_config.lock().unwrap();
@@ -388,6 +403,7 @@ impl<'a>  ModuleLinker<'a>  {
         entry
     }
     
+    ///instance module and inital the context.
     async fn instance_module(
         &mut self,
         m_name: &str,
@@ -405,6 +421,7 @@ impl<'a>  ModuleLinker<'a>  {
                 mem = export.into_memory();
                 continue;
             }
+
             if let Some(func) = export.into_func() {
                 match name.as_str() {
                     "_initialize" => {
@@ -422,7 +439,14 @@ impl<'a>  ModuleLinker<'a>  {
                 };
             }
         }
-    
+
+        let mem_ptr = mem.map(|m| {
+            m.data_ptr(self.store.as_context_mut()) as usize
+        });
+        if let Some(mem_ptr) = mem_ptr {
+            INS_CTX.lock().await.modules.insert(mem_ptr, m_name.to_string());
+        }
+
         let alloc: Option<AllocTypedFunc> = match alloc.map(|alloc| alloc
             .typed(self.store.as_context_mut())
             .context("loading the alloc function")) {
