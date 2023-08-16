@@ -33,6 +33,7 @@ rust-s3 = "0.32.0"
 futures-core = "0.3.25"
 futures-util = "0.3.25"
 md5 = "0.7.0"
+serde_json = "1.0.105"
 
 [dependencies.rusqlite]
 version = "0.28"

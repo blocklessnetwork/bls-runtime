@@ -137,6 +137,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
     conf.async_support(true);
     let engine = Engine::new(&conf).unwrap();
     let mut linker = Linker::new(&engine);
+    add_host_modules_to_linker(&mut linker);
     blockless_env::add_drivers_to_linker(&mut linker);
     blockless_env::add_http_to_linker(&mut linker);
     blockless_env::add_ipfs_to_linker(&mut linker);
@@ -176,7 +177,7 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
             (module, entry)
         },
     };
-    
+
     let inst = linker.instantiate_async(&mut store, &module).await.unwrap();
     let func = inst.get_typed_func::<(), ()>(&mut store, &entry).unwrap();
     let exit_code = match func.call_async(&mut store, ()).await {
@@ -191,6 +192,85 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
     ExitStatus {
         fuel: store.fuel_consumed(),
         code: exit_code,
+    }
+}
+
+fn add_host_modules_to_linker(linker: &mut Linker<WasiCtx>) {
+    // (i32, i32, i32, i32) -> (i32)
+    linker.func_new_async(
+        "blockless",
+        "module",
+        wasmtime::FuncType::new([wasmtime::ValType::I32; 4], [wasmtime::ValType::I32]),
+        |mut caller: wasmtime::Caller<'_, WasiCtx>, params: &[wasmtime::Val], results: &mut [wasmtime::Val]| {
+            Box::new(async move {
+                results[0] = wasmtime::Val::from(1); // store non-zero exit code
+
+                println!("blockless module called.");
+                println!("params: {:?}", params);
+                let (call_ptr, call_ptr_len, result_ptr, result_ptr_len) = {
+                    (params[0].unwrap_i32() as usize, params[1].unwrap_i32() as usize, params[2].unwrap_i32() as usize, params[3].unwrap_i32() as usize)
+                };
+                let memory = caller
+                    .get_export("memory")
+                    .and_then(|e| e.into_memory())
+                    .ok_or(anyhow::anyhow!("failed to find host memory"))?;
+        
+                let param_bytes = memory.data(&caller)
+                    .get(call_ptr..)
+                    .and_then(|arr| arr.get(..call_ptr_len))
+                    .ok_or(anyhow::anyhow!("pointer/length out of bounds"))?;
+                let param_str = std::str::from_utf8(param_bytes).map_err(|e| anyhow::anyhow!("invalid utf-8: {}", e))?;
+                println!("param_str: {:?}", param_str);
+
+                let module_call: ModuleCallType = param_str.to_string().try_into().unwrap();
+                match module_call {
+                    ModuleCallType::HTTP(url, opts) => {
+                        let (fd, code) = blockless_drivers::http_driver::http_req(&url, &opts).await.unwrap();
+                        println!("fd: {}; code: {}", fd, code);
+                        let mut dest_buf = vec![0u8; result_ptr_len];
+                        let _bytes_read: u32 = blockless_drivers::http_driver::http_read_body(fd.into(), &mut dest_buf[..]).await.unwrap();
+
+                        // write dest_buf to wasm memory
+                        memory.data_mut(&mut caller)
+                            .get_mut(result_ptr..)
+                            .and_then(|arr| arr.get_mut(..result_ptr_len))
+                            .ok_or(anyhow::anyhow!("pointer/length out of bounds"))?
+                            .copy_from_slice(&dest_buf);
+                    },
+                }
+                results[0] = wasmtime::Val::from(0); // set zero exit code (success)
+                Ok(())
+            })
+        },
+    )
+    .unwrap(); // TODO: handle error
+}
+
+
+pub enum ModuleCallType {
+    HTTP(String, String),
+    // IPFS(IPFSOpts),
+    // TODO: other BLS extensions..
+}
+
+// TODO: error handling
+// path {"module":"blockless::http_req", "params": {"url": "https://jsonplaceholder.typicode.com/todos/1", "opts": {"method":"GET","connectTimeout":30,"readTimeout":10,"headers":"{}","body":null}}}, opts 
+impl TryFrom<String> for ModuleCallType {
+    type Error = String;
+    fn try_from(s: String) -> Result<Self, Self::Error> {
+        let v: serde_json::Value = serde_json::from_str(&s).map_err(|e| e.to_string())?;
+        let module = v["module"].as_str().unwrap(); // TODO propagate up error
+        let params = v["params"].as_object().unwrap(); // TODO propagate up error
+        match module {
+            "blockless::http_req" => {
+                // TODO: permission validation
+                println!("params: {}", params["opts"]);
+                let url = params["url"].as_str().unwrap().to_string();
+                let params = params["opts"].to_string();
+                Ok(ModuleCallType::HTTP(url, params))
+            }
+            _ => Err("unknown module".to_string()),
+        }
     }
 }
 
