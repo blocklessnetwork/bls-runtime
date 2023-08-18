@@ -167,7 +167,9 @@ impl CliCommandOpts {
         conf.0.limited_fuel(self.limited_fuel);
         conf.0.set_run_time(self.run_time);
         conf.0.set_stdin_args(self.args);
-        conf.0.set_permisions(self.permissions);
+        if self.permissions.len() > 0 {
+            conf.0.set_permisions(self.permissions);
+        }
         conf.0.set_envs(self.envs);
         conf.0.set_drivers_root_path(self.drivers_root_path);
         let mut modules = self.modules;
