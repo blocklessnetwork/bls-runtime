@@ -645,13 +645,13 @@ mod test {
                 )
             )
 
-          (global $url_ptr i32 (i32.const 10256))
-          (global $param_ptr i32 (i32.const 10330))
-          (global $handle_ptr i32 (i32.const 112400))
-          (global $status_ptr i32 (i32.const 112940))
+            (global $url_ptr i32 (i32.const 10256))
+            (global $param_ptr i32 (i32.const 10330))
+            (global $handle_ptr i32 (i32.const 112400))
+            (global $status_ptr i32 (i32.const 112940))
 
-          (data (i32.const 10256) "https://reqres.in/api/products")
-          (data (i32.const 10330) "{\"method\":\"get\",\"headers\":\"{}\"}")
+            (data (i32.const 10256) "https://reqres.in/api/products")
+            (data (i32.const 10330) "{\"method\":\"get\",\"headers\":\"{}\"}")
         )
         "#;
 
