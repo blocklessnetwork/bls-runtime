@@ -627,23 +627,23 @@ mod test {
     fn test_blockless_extension_http_req() {
         let guest_wasm = r#"
         (module
-          (type $http_req_ty (func (param i32 i32 i32 i32 i32 i32) (result i32)))
-          (import "blockless_http" "http_req" (func $http_req (type $http_req_ty)))
+            (type $http_req_ty (func (param i32 i32 i32 i32 i32 i32) (result i32)))
+            (import "blockless_http" "http_req" (func $http_req (type $http_req_ty)))
 
-          (memory (export "memory") 10)
+            (memory (export "memory") 10)
 
-          (func (export "_start")
-            (drop
-                (call $http_req 
-                    (global.get $url_ptr)
-                    (i32.const 30)
-                    (global.get $param_ptr)
-                    (i32.const 31)
-                    (global.get $handle_ptr)
-                    (global.get $status_ptr)
+            (func (export "_start")
+                (drop
+                    (call $http_req 
+                        (global.get $url_ptr)
+                        (i32.const 30)
+                        (global.get $param_ptr)
+                        (i32.const 31)
+                        (global.get $handle_ptr)
+                        (global.get $status_ptr)
+                    )
                 )
             )
-          )
 
           (global $url_ptr i32 (i32.const 10256))
           (global $param_ptr i32 (i32.const 10330))
