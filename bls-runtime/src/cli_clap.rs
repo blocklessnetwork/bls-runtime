@@ -92,7 +92,11 @@ pub enum RuntimeType {
     Wasm,
 }
 
+/// The latest version from Cargo.toml
+pub(crate) const SHORT_VERSION: &str = concat!("v", env!("CARGO_PKG_VERSION"));
+
 #[derive(Parser, Debug)]
+#[command(author, version = SHORT_VERSION, long_version = SHORT_VERSION, about = "Blockless WebAssembly Runtime", long_about = None)]
 pub(crate) struct CliCommandOpts {
     #[clap(long = "v86", value_name = "V86", required = false, help = V86_HELP )]
     v86: bool,
@@ -204,7 +208,7 @@ mod test {
 
     #[test]
     fn test_cli_command_v86() {
-        let cli = CliCommandOpts::try_parse_from(["cli", "test", "--v86"]).unwrap();;
+        let cli = CliCommandOpts::try_parse_from(["cli", "test", "--v86"]).unwrap();
         assert_eq!(cli.v86, true);
     }
 
