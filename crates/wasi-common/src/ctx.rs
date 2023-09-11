@@ -43,10 +43,10 @@ impl WasiCtx {
             args: StringArray::new(),
             env: StringArray::new(),
             random: Mutex::new(random),
+            blockless_config: Mutex::new(None),
             clocks,
             sched,
             table,
-            blockless_config: Mutex::new(None),
         }));
         s.set_stdin(Box::new(crate::pipe::ReadPipe::new(std::io::empty())));
         s.set_stdout(Box::new(crate::pipe::WritePipe::new(std::io::sink())));
@@ -58,17 +58,17 @@ impl WasiCtx {
         let mut lock = self.0.blockless_config.lock().unwrap();
         c.map(|c| lock.replace(c));
     }
-    
+
     pub fn config_drivers_root_path_ref(&mut self) -> Option<String> {
         let lock = self.0.blockless_config.lock().unwrap();
         lock.as_ref().and_then(|l| l.drivers_root_path_ref().map(String::from))
     }
-    
+
     pub fn config_stdin_ref(&mut self) -> Option<String> {
         let lock = self.0.blockless_config.lock().unwrap();
         lock.as_ref().and_then(|l| Some(String::from(l.stdin_ref().as_str())))
     }
-    
+
     pub fn resource_permission(&self, resource: &str) -> bool {
         match self.blockless_config.lock().unwrap().deref() {
             Some(ref c) => {
