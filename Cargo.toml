@@ -1,5 +1,5 @@
 [workspace]
-
+resolver = '2'
 members = [
     "crates/wasi-common",
     "crates/blockless-drivers",
@@ -9,27 +9,32 @@ members = [
     "bls-runtime",
 ]
 
+[workspace.package]
+version = "12.0.1"
+authors = ["The Blockless Project Developers"]
+edition = "2021"
+
+
 [patch.crates-io]
 wasi-common = {path = "crates/wasi-common"}
 wasi-cap-std-sync = {path = "crates/wasi-common/cap-std-sync"}
 
-
 [workspace.dependencies]
-wasmtime = "9.0.3"
-wasmtime-wasi = "9.0.3"
+wasmtime = "12.0.1"
+wasmtime-wasi = "12.0.1"
 anyhow = "1.0.22"
-wiggle = "9.0.3"
-cap-std = "1.0.0"
-cap-fs-ext = "1.0.0"
-cap-time-ext = "1.0.0"
-cap-rand = "1.0.0"
-bitflags = "1.2"
-async-trait = "0.1.42"
+wiggle = "12.0.1"
+cap-std = "2.0.0"
+cap-fs-ext = "2.0.0"
+cap-time-ext = "2.0.0"
+cap-tempfile = "2.0.0"
+cap-rand = { version = "2.0.0", features = ["small_rng"] }
+bitflags = "2.0"
+async-trait = "0.1.71"
 tracing = "0.1.26"
-io-lifetimes = { version = "1.0.0", default-features = false }
+io-lifetimes = { version = "2.0.2", default-features = false }
 log = { version = "0.4.8", default-features = false }
-rustix = "0.37.13"
-thiserror = "1.0.15"
+thiserror = "1.0.43"
 wasi-common = {path = "crates/wasi-common"}
 wasi-cap-std-sync = {path = "crates/wasi-common/cap-std-sync"}
 blockless-drivers = {path = "crates/blockless-drivers"}
@@ -40,3 +45,10 @@ rust-car = "0.1.4"
 tempdir = "0.3.7"
 dlopen = "0.1"
 lazy_static = "1.4.0"
+
+tokio = { version = "1.26.0" }
+system-interface = { version = "0.26.0", features = ["cap_std_impls"] }
+fs-set-times = "0.20.0"
+io-extras = "0.18.0"
+rustix = "0.38.4"
+
