@@ -95,15 +95,7 @@ impl BlocklessConfig2WasiBuilder for BlocklessConfig {
     }
 }
 
-struct ModuleLinkerArgs<'a, T> {
-    version: String,
-    entry: String,
-    store: &'a mut Store<T>,
-    linker: &'a mut Linker<T>,
-}
-
 struct BlocklessRunner(BlocklessConfig);
-
 
 impl BlocklessRunner {
     async fn run(self) -> ExitStatus {
