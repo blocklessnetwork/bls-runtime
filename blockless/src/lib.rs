@@ -1,5 +1,6 @@
-pub mod error;
 mod modules;
+
+pub mod error;
 use blockless_drivers::{CdylibDriver, DriverConetxt};
 use blockless_env;
 use cap_std::ambient_authority;
@@ -22,8 +23,9 @@ pub struct ExitStatus {
 }
 
 trait BlocklessConfig2WasiBuilder {
-    fn to_builder(&self) -> WasiCtxBuilder;
+    fn ctx_builder(&self) -> WasiCtxBuilder;
     fn set_stdouterr(&self, builder: WasiCtxBuilder, is_err: bool) -> WasiCtxBuilder;
+    fn engine_config(&self) -> Config;
 }
 
 impl BlocklessConfig2WasiBuilder for BlocklessConfig {
@@ -73,7 +75,7 @@ impl BlocklessConfig2WasiBuilder for BlocklessConfig {
         builder
     }
 
-    fn to_builder(&self) -> WasiCtxBuilder {
+    fn ctx_builder(&self) -> WasiCtxBuilder {
         let b_conf = self;
         let root_dir = b_conf
             .fs_root_path_ref()
@@ -92,139 +94,158 @@ impl BlocklessConfig2WasiBuilder for BlocklessConfig {
         }
         builder
     }
+
+    fn engine_config(&self) -> Config {
+        let mut conf = Config::new();
+        conf.debug_info(self.get_debug_info());
+
+        if let Some(_) = self.get_limited_fuel() {
+            //fuel is enable.
+            conf.consume_fuel(true);
+        }
+
+        if let Some(m) = self.get_limited_memory() {
+            let mut allocation_config = PoolingAllocationConfig::default();
+            allocation_config.instance_memory_pages(m);
+            conf.allocation_strategy(InstanceAllocationStrategy::Pooling(allocation_config));
+        }
+        conf.async_support(true);
+        conf
+    }
+}
+
+struct BlocklessRunner(BlocklessConfig);
+
+impl BlocklessRunner {
+    async fn run(self) -> ExitStatus {
+        let b_conf = self.0;
+        let max_fuel = b_conf.get_limited_fuel();
+        //set the drivers root path, if not setting use exe file path.
+        let drivers_root_path = b_conf
+            .drivers_root_path_ref()
+            .map(|p| p.into())
+            .unwrap_or_else(|| {
+                let mut current_exe_path = env::current_exe().unwrap();
+                current_exe_path.pop();
+                String::from(current_exe_path.to_str().unwrap())
+            });
+        DriverConetxt::init_built_in_drivers(drivers_root_path);
+
+        let conf = b_conf.engine_config();
+        let engine = Engine::new(&conf).unwrap();
+        let mut linker = Linker::new(&engine);
+        Self::add_to_linker(&mut linker);
+        let builder = b_conf.ctx_builder();
+        let mut ctx = builder.build();
+        let drivers = b_conf.drivers_ref();
+        Self::load_driver(drivers);
+        let entry: String = b_conf.entry_ref().into();
+        let version = b_conf.version();
+        ctx.set_blockless_config(Some(b_conf));
+        let mut store = Store::new(&engine, ctx);
+        let (module, entry) = Self::module_linker(version, entry, &mut store, &mut linker).await;
+
+        let inst = linker.instantiate_async(&mut store, &module).await.unwrap();
+        let func = inst.get_typed_func::<(), ()>(&mut store, &entry).unwrap();
+        let exit_code = match func.call_async(&mut store, ()).await {
+            Err(ref t) => Self::error_process(t, || store.fuel_consumed().unwrap(), max_fuel),
+            Ok(_) => {
+                debug!("program exit normal.");
+                0
+            }
+        };
+        ExitStatus {
+            fuel: store.fuel_consumed(),
+            code: exit_code,
+        }
+    }
+
+    fn add_to_linker(linker: &mut Linker<WasiCtx>) {
+        blockless_env::add_drivers_to_linker(linker);
+        blockless_env::add_http_to_linker(linker);
+        blockless_env::add_ipfs_to_linker(linker);
+        blockless_env::add_s3_to_linker(linker);
+        blockless_env::add_memory_to_linker(linker);
+        blockless_env::add_cgi_to_linker(linker);
+        blockless_env::add_socket_to_linker(linker);
+        wasmtime_wasi::add_to_linker(linker, |s| s).unwrap();
+    }
+
+    async fn module_linker<'a>(
+        version: BlocklessConfigVersion,
+        mut entry: String,
+        store: &'a mut Store<WasiCtx>,
+        linker: &'a mut Linker<WasiCtx>
+    ) -> (Module, String) {
+        match version {
+            BlocklessConfigVersion::Version0 => {
+                let module = Module::from_file(store.engine(), &entry).unwrap();
+                (module, ENTRY.to_string())
+            }
+            BlocklessConfigVersion::Version1 => {
+                if entry == "" {
+                    entry = ENTRY.to_string();
+                }
+                let mut module_linker = ModuleLinker::new(linker, store);
+                let module = module_linker.link_modules().await.unwrap();
+                (module, entry)
+            }
+        }
+    }
+
+    fn load_driver(cfs: &[DriverConfig]) {
+        cfs.iter().for_each(|cfg| {
+            let drv = CdylibDriver::load(cfg.path(), cfg.schema()).unwrap();
+            DriverConetxt::insert_driver(drv);
+        });
+    }
+
+    fn error_process<F>(t: &anyhow::Error, used_fuel: F, max_fuel: Option<u64>) -> i32
+    where
+        F: FnOnce() -> u64,
+    {
+        let trap_code_2_exit_code = |trap_code: &Trap| -> Option<i32> {
+            match *trap_code {
+                Trap::OutOfFuel => Some(1),
+                Trap::StackOverflow => Some(2),
+                Trap::MemoryOutOfBounds => Some(3),
+                Trap::HeapMisaligned => Some(4),
+                Trap::TableOutOfBounds => Some(5),
+                Trap::IndirectCallToNull => Some(6),
+                Trap::BadSignature => Some(7),
+                Trap::IntegerOverflow => Some(8),
+                Trap::IntegerDivisionByZero => Some(9),
+                Trap::BadConversionToInteger => Some(10),
+                Trap::UnreachableCodeReached => Some(11),
+                Trap::Interrupt => Some(12),
+                Trap::AlwaysTrapAdapter => Some(13),
+                _ => None,
+            }
+        };
+        let trap = t.downcast_ref::<Trap>();
+        let rs = trap.and_then(|t| trap_code_2_exit_code(t)).unwrap_or(-1);
+        match trap {
+            Some(Trap::OutOfFuel) => {
+                let used_fuel = used_fuel();
+                let max_fuel = match max_fuel {
+                    Some(m) => m,
+                    None => 0,
+                };
+                error!(
+                    "All fuel is consumed, the app exited, fuel consumed {}, Max Fuel is {}.",
+                    used_fuel, max_fuel
+                );
+            }
+            _ => error!("error: {}", t),
+        };
+        rs
+    }
 }
 
 pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
-    let max_fuel = b_conf.get_limited_fuel();
-    //set the drivers root path, if not setting use exe file path.
-    let drivers_root_path = b_conf
-        .drivers_root_path_ref()
-        .map(|p| p.into())
-        .unwrap_or_else(|| {
-            let mut current_exe_path = env::current_exe().unwrap();
-            current_exe_path.pop();
-            String::from(current_exe_path.to_str().unwrap())
-        });
-    DriverConetxt::init_built_in_drivers(drivers_root_path);
-
-    let mut conf = Config::new();
-    conf.debug_info(b_conf.get_debug_info());
-
-    if let Some(_) = b_conf.get_limited_fuel() {
-        //fuel is enable.
-        conf.consume_fuel(true);
-    }
-
-    if let Some(m) = b_conf.get_limited_memory() {
-        let mut allocation_config = PoolingAllocationConfig::default();
-        allocation_config.instance_memory_pages(m);
-        conf.allocation_strategy(InstanceAllocationStrategy::Pooling(allocation_config));
-    }
-    conf.async_support(true);
-    let engine = Engine::new(&conf).unwrap();
-    let mut linker = Linker::new(&engine);
-    blockless_env::add_drivers_to_linker(&mut linker);
-    blockless_env::add_http_to_linker(&mut linker);
-    blockless_env::add_ipfs_to_linker(&mut linker);
-    blockless_env::add_s3_to_linker(&mut linker);
-    blockless_env::add_memory_to_linker(&mut linker);
-    blockless_env::add_cgi_to_linker(&mut linker);
-    blockless_env::add_socket_to_linker(&mut linker);
-    wasmtime_wasi::add_to_linker(&mut linker, |s| s).unwrap();
-    let builder = b_conf.to_builder();
-    let mut ctx = builder.build();
-    let drivers = b_conf.drivers_ref();
-    load_driver(drivers);
-    let fuel = b_conf.get_limited_fuel();
-    let mut entry: String = b_conf.entry_ref().into();
-    let version = b_conf.version();
-
-    ctx.set_blockless_config(Some(b_conf));
-    let mut store = Store::new(&engine, ctx);
-    //set the fuel from the configure.
-    if let Some(f) = fuel {
-        let _ = store.add_fuel(f).map_err(|e| {
-            error!("add fuel error: {}", e);
-        });
-    }
-
-    let (module, entry) = match version {
-        BlocklessConfigVersion::Version0 => {
-            let module = Module::from_file(store.engine(), &entry).unwrap();
-            (module, ENTRY.to_string())
-        }
-        BlocklessConfigVersion::Version1 => {
-            if entry == "" {
-                entry = ENTRY.to_string();
-            }
-            let mut module_linker = ModuleLinker::new(&mut linker, &mut store);
-            let module = module_linker.link_modules().await.unwrap();
-            (module, entry)
-        }
-    };
-
-    let inst = linker.instantiate_async(&mut store, &module).await.unwrap();
-    let func = inst.get_typed_func::<(), ()>(&mut store, &entry).unwrap();
-    let exit_code = match func.call_async(&mut store, ()).await {
-        Err(ref t) => error_process(t, || store.fuel_consumed().unwrap(), max_fuel),
-        Ok(_) => {
-            debug!("program exit normal.");
-            0
-        }
-    };
-    ExitStatus {
-        fuel: store.fuel_consumed(),
-        code: exit_code,
-    }
+    BlocklessRunner(b_conf).run().await
 }
 
-fn load_driver(cfs: &[DriverConfig]) {
-    cfs.iter().for_each(|cfg| {
-        let drv = CdylibDriver::load(cfg.path(), cfg.schema()).unwrap();
-        DriverConetxt::insert_driver(drv);
-    });
-}
-
-fn error_process<F>(t: &anyhow::Error, used_fuel: F, max_fuel: Option<u64>) -> i32
-where
-    F: FnOnce() -> u64,
-{
-    let trap_code_2_exit_code = |trap_code: &Trap| -> Option<i32> {
-        match *trap_code {
-            Trap::OutOfFuel => Some(1),
-            Trap::StackOverflow => Some(2),
-            Trap::MemoryOutOfBounds => Some(3),
-            Trap::HeapMisaligned => Some(4),
-            Trap::TableOutOfBounds => Some(5),
-            Trap::IndirectCallToNull => Some(6),
-            Trap::BadSignature => Some(7),
-            Trap::IntegerOverflow => Some(8),
-            Trap::IntegerDivisionByZero => Some(9),
-            Trap::BadConversionToInteger => Some(10),
-            Trap::UnreachableCodeReached => Some(11),
-            Trap::Interrupt => Some(12),
-            Trap::AlwaysTrapAdapter => Some(13),
-            _ => None,
-        }
-    };
-    let trap = t.downcast_ref::<Trap>();
-    let rs = trap.and_then(|t| trap_code_2_exit_code(t)).unwrap_or(-1);
-    match trap {
-        Some(Trap::OutOfFuel) => {
-            let used_fuel = used_fuel();
-            let max_fuel = match max_fuel {
-                Some(m) => m,
-                None => 0,
-            };
-            error!(
-                "All fuel is consumed, the app exited, fuel consumed {}, Max Fuel is {}.",
-                used_fuel, max_fuel
-            );
-        }
-        _ => error!("error: {}", t),
-    };
-    rs
-}
 
 #[cfg(test)]
 mod test {
@@ -237,7 +258,7 @@ mod test {
     #[test]
     fn test_exit_code() {
         let err = Trap::OutOfFuel.into();
-        let rs = error_process(&err, || 20u64, Some(30));
+        let rs = BlocklessRunner::error_process(&err, || 20u64, Some(30));
         assert_eq!(rs, 1);
     }
 
