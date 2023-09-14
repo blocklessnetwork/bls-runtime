@@ -23,8 +23,9 @@ pub struct ExitStatus {
 }
 
 trait BlocklessConfig2WasiBuilder {
-    fn to_builder(&self) -> WasiCtxBuilder;
+    fn ctx_builder(&self) -> WasiCtxBuilder;
     fn set_stdouterr(&self, builder: WasiCtxBuilder, is_err: bool) -> WasiCtxBuilder;
+    fn engine_config(&self) -> Config;
 }
 
 impl BlocklessConfig2WasiBuilder for BlocklessConfig {
@@ -74,7 +75,7 @@ impl BlocklessConfig2WasiBuilder for BlocklessConfig {
         builder
     }
 
-    fn to_builder(&self) -> WasiCtxBuilder {
+    fn ctx_builder(&self) -> WasiCtxBuilder {
         let b_conf = self;
         let root_dir = b_conf
             .fs_root_path_ref()
@@ -92,6 +93,24 @@ impl BlocklessConfig2WasiBuilder for BlocklessConfig {
             builder = builder.preopened_dir(d, "/").unwrap();
         }
         builder
+    }
+
+    fn engine_config(&self) -> Config {
+        let mut conf = Config::new();
+        conf.debug_info(self.get_debug_info());
+
+        if let Some(_) = self.get_limited_fuel() {
+            //fuel is enable.
+            conf.consume_fuel(true);
+        }
+
+        if let Some(m) = self.get_limited_memory() {
+            let mut allocation_config = PoolingAllocationConfig::default();
+            allocation_config.instance_memory_pages(m);
+            conf.allocation_strategy(InstanceAllocationStrategy::Pooling(allocation_config));
+        }
+        conf.async_support(true);
+        conf
     }
 }
 
@@ -112,24 +131,11 @@ impl BlocklessRunner {
             });
         DriverConetxt::init_built_in_drivers(drivers_root_path);
 
-        let mut conf = Config::new();
-        conf.debug_info(b_conf.get_debug_info());
-
-        if let Some(_) = b_conf.get_limited_fuel() {
-            //fuel is enable.
-            conf.consume_fuel(true);
-        }
-
-        if let Some(m) = b_conf.get_limited_memory() {
-            let mut allocation_config = PoolingAllocationConfig::default();
-            allocation_config.instance_memory_pages(m);
-            conf.allocation_strategy(InstanceAllocationStrategy::Pooling(allocation_config));
-        }
-        conf.async_support(true);
+        let conf = b_conf.engine_config();
         let engine = Engine::new(&conf).unwrap();
         let mut linker = Linker::new(&engine);
         Self::add_to_linker(&mut linker);
-        let builder = b_conf.to_builder();
+        let builder = b_conf.ctx_builder();
         let mut ctx = builder.build();
         let drivers = b_conf.drivers_ref();
         Self::load_driver(drivers);
