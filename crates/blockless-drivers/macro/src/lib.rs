@@ -4,18 +4,17 @@ use proc_macro::TokenStream;
 use proc_macro2::{Ident, Span};
 use quote::{format_ident, quote};
 use syn::parse_macro_input;
-use wiggle_generate::Names;
+use wiggle_generate::names;
 
 #[proc_macro]
 pub fn linker_integration(args: TokenStream) -> proc_macro::TokenStream {
     let config = parse_macro_input!(args as BlocklessConfig);
 
     let doc = config.load_document();
-    let names = Names::new(quote!(wiggle));
     let mut funcs = Vec::new();
     for module in doc.modules() {
         for f in module.funcs() {
-            funcs.push(generate_func(&module, &f, &names, Some(&config.target)));
+            funcs.push(generate_func(&module, &f, Some(&config.target)));
         }
     }
     let method_name = format_ident!("{}", config.link_method.value());
@@ -31,12 +30,10 @@ pub fn linker_integration(args: TokenStream) -> proc_macro::TokenStream {
 fn generate_func(
     module: &witx::Module,
     func: &witx::InterfaceFunc,
-    names: &Names,
     target_path: Option<&syn::Path>,
 ) -> proc_macro2::TokenStream {
-    let module_ident = names.module(&module.name);
+    let module_ident = names::module(&module.name);
     let module_name = module.name.as_str();
-    let rt = names.runtime_mod();
     let (params, results) = func.wasm_signature();
 
     let arg_names: Vec<Ident> = (0..params.len())
@@ -48,17 +45,17 @@ fn generate_func(
         .enumerate()
         .map(|(i, ty)| {
             let name = &arg_names[i];
-            let wasm = names.wasm_type(*ty);
+            let wasm = names::wasm_type(*ty);
             quote! { #name: #wasm }
         })
         .collect::<Vec<_>>();
 
     let wrapper = format_ident!("func_wrap{}_async", params.len());
     let func_name = func.name.as_str();
-    let func_ident = names.func(&func.name);
+    let func_ident = names::func(&func.name);
     let ret_ty = match results.len() {
         0 => quote!(()),
-        1 => names.wasm_type(results[0]),
+        1 => names::wasm_type(results[0]),
         _ => unimplemented!(),
     };
     let abi_func = quote!( #target_path::#module_ident::#func_ident );
@@ -66,16 +63,16 @@ fn generate_func(
         linker.#wrapper(
             #module_name,
             #func_name,
-            move |mut caller: #rt::wasmtime_crate::Caller<'_, WasiCtx> #(, #arg_decls)*| {
+            move |mut caller: wiggle::wasmtime_crate::Caller<'_, WasiCtx> #(, #arg_decls)*| {
                 Box::new(async move {
                     let mem = match caller.get_export("memory") {
-                        Some(#rt::wasmtime_crate::Extern::Memory(m)) => m,
+                        Some(wiggle::wasmtime_crate::Extern::Memory(m)) => m,
                         _ => {
                             wiggle::anyhow::bail!("missing required memory export");
                         }
                     };
                     let (mem, ctx) = mem.data_and_store_mut(&mut caller);
-                    let mem = #rt::wasmtime::WasmtimeGuestMemory::new(mem);
+                    let mem = wiggle::wasmtime::WasmtimeGuestMemory::new(mem);
                     Ok(<#ret_ty>::from(#abi_func(ctx, &mem #(, #arg_names)*).await ?))
                 })
             },
