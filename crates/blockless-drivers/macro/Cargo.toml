@@ -13,10 +13,10 @@ test = false
 
 
 [dependencies]
-wiggle-generate = { version = "=2.0.2" }
-syn = { version = "1.0", features = ["full"] }
+wiggle-generate = { workspace = true }
+syn = { workspace = true, features = ["full"] }
 proc-macro2 = "1.0"
-quote = "1.0.26"
+quote = "1.0"
 
 [dependencies.witx]
 version = "0.9.1"

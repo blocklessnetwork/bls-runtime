@@ -22,6 +22,7 @@ wasi-cap-std-sync = {path = "crates/wasi-common/cap-std-sync"}
 [workspace.dependencies]
 wasmtime = "12.0.1"
 wasmtime-wasi = "12.0.1"
+wiggle-generate = "12.0.1"
 anyhow = "1.0.22"
 wiggle = "12.0.1"
 cap-std = "2.0.0"
@@ -45,6 +46,7 @@ rust-car = "0.1.4"
 tempdir = "0.3.7"
 dlopen = "0.1"
 lazy_static = "1.4.0"
+syn = "2.0.25"
 
 tokio = { version = "1.26.0" }
 system-interface = { version = "0.26.0", features = ["cap_std_impls"] }

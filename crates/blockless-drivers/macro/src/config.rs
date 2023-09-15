@@ -54,7 +54,7 @@ impl Parse for BlocklessConfig {
         let contents;
         let _ = braced!(contents in input);
         let fields: Punctuated<BlocklessConfigField, Token![,]> =
-            contents.parse_terminated(BlocklessConfigField::parse)?;
+            contents.parse_terminated(BlocklessConfigField::parse, Token![,])?;
         Self::build(fields.into_iter())
     }
 }
