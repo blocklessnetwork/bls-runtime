@@ -2,11 +2,9 @@ use std::{collections::HashMap, cmp::min};
 use tokio::sync::Mutex;
 use json::JsonValue;
 use lazy_static::lazy_static;
-use anyhow::Context;
 use std::future::Future;
-use crate::error::McallError;
+use anyhow::Context;
 use wasi_common::{
-    WasiCtx, 
     BlocklessModule, 
     ModuleType
 };
@@ -23,6 +21,9 @@ use wasmtime::{
     AsContextMut, 
     StoreContextMut, 
 };
+
+use crate::error::McallError;
+use crate::context::BlocklessContext as BSContext;
 
 lazy_static! {
     static ref INS_CTX: Mutex<InstanceCtx> = Mutex::new(InstanceCtx::new());
@@ -59,7 +60,7 @@ struct InstanceInfo {
 }
 
 impl InstanceInfo {
-    fn instance_caller(&self, method: &str, store: impl AsContext<Data = WasiCtx>) -> anyhow::Result<InstanceCaller> {
+    fn instance_caller(&self, method: &str, store: impl AsContext<Data = BSContext>) -> anyhow::Result<InstanceCaller> {
         let export_func = self.export_funcs.get(method)
             .ok_or(anyhow::anyhow!(format!("method: {method} not found")))?;
             
@@ -99,7 +100,7 @@ impl<'a> MemBuf<'a> {
         }
     }
 
-    fn copy_to_slice(&self, mut store:impl AsContextMut<Data = WasiCtx>, dest: &mut [u8]) {
+    fn copy_to_slice(&self, mut store:impl AsContextMut<Data = BSContext>, dest: &mut [u8]) {
         let len = min(self.buf_len as usize, dest.len());
         let from_mem_slice = self.mem.data(store.as_context_mut());
         let from_start = self.buf as usize;
@@ -108,14 +109,14 @@ impl<'a> MemBuf<'a> {
         dest.copy_from_slice(from);
     }
 
-    fn copy_from(&self, mut store: impl AsContextMut<Data = WasiCtx>, other: &MemBuf) {
+    fn copy_from(&self, mut store: impl AsContextMut<Data = BSContext>, other: &MemBuf) {
         let len = min(self.buf_len, other.buf_len) as usize;
         let mut temp = vec![0u8; len];
         other.copy_to_slice(store.as_context_mut(), &mut temp);
         self.copy_from_slice(store, &temp);
     }
 
-    fn copy_from_slice(&self, mut store: impl AsContextMut<Data = WasiCtx>, from: &[u8]) {
+    fn copy_from_slice(&self, mut store: impl AsContextMut<Data = BSContext>, from: &[u8]) {
         let to_mem_slice = self.mem.data_mut(store.as_context_mut());
         let len = min(self.buf_len  as usize, from.len());
         let to_start = self.buf as usize;
@@ -129,7 +130,7 @@ impl InstanceCaller {
 
     /// call the module function which registered
     async fn call<'a>(&self, 
-        mut store: impl AsContextMut<Data = WasiCtx>,
+        mut store: impl AsContextMut<Data = BSContext>,
         param: &str,
         caller_mem: MemBuf<'a>,
     ) -> u32 {
@@ -195,13 +196,13 @@ fn process_register_req(module: &str, json_str: &str) -> anyhow::Result<Register
 
 struct ResponseErrorJson<'a> {
     mem: &'a Memory,
-    store: StoreContextMut<'a, WasiCtx>,
+    store: StoreContextMut<'a, BSContext>,
     ptr: u32,
     len: u32,
 }
 
 impl<'a> ResponseErrorJson<'a> {
-    fn new(mem: &'a Memory, store: StoreContextMut<'a, WasiCtx>, ptr: u32, len: u32) -> Self {
+    fn new(mem: &'a Memory, store: StoreContextMut<'a, BSContext>, ptr: u32, len: u32) -> Self {
         Self { 
             store,
             mem, 
@@ -230,13 +231,13 @@ impl<'a> ResponseErrorJson<'a> {
 }
 
 pub(crate) struct ModuleLinker<'a> {
-    linker: &'a mut Linker<WasiCtx>, 
-    store: &'a mut Store<WasiCtx>
+    linker: &'a mut Linker<BSContext>, 
+    store: &'a mut Store<BSContext>
 }
 
 impl<'a>  ModuleLinker<'a>  {
 
-    pub(crate) fn new(linker: &'a mut Linker<WasiCtx>, store: &'a mut Store<WasiCtx>) -> Self {
+    pub(crate) fn new(linker: &'a mut Linker<BSContext>, store: &'a mut Store<BSContext>) -> Self {
         Self {
             linker,
             store
@@ -256,7 +257,7 @@ impl<'a>  ModuleLinker<'a>  {
     /// async function for invoke mcall . 
     #[inline]
     fn mcall_fn<'b>(
-        mut caller: Caller<'b, WasiCtx>, 
+        mut caller: Caller<'b, BSContext>, 
         addr: u32, 
         addr_len: u32, 
         buf: u32, 
@@ -307,7 +308,7 @@ impl<'a>  ModuleLinker<'a>  {
     /// async function for register the mcall for modules. 
     #[inline]
     fn register_fn<'b>(
-        mut caller: Caller<'b, WasiCtx>, 
+        mut caller: Caller<'b, BSContext>, 
         addr: u32, 
         addr_len: u32, 
         buf: u32, 
@@ -376,16 +377,17 @@ impl<'a>  ModuleLinker<'a>  {
     /// The modules can be use the register to register the moudle's function for mcall.
     pub(crate) async fn link_modules(&mut self) -> Option<Module> {
         let mut modules: Vec<BlocklessModule> = {
-            let lock = self.store.data().blockless_config.lock().unwrap();
+            let preview1 = self.store.data().preview1_ctx.as_ref().unwrap();
+            let lock = preview1.blockless_config.lock().unwrap();
             let cfg = lock.as_ref().unwrap();
             cfg.modules_ref().iter().map(|m| (*m).clone()).collect()
         };
         modules.sort_by(|a, b| a.module_type.partial_cmp(&b.module_type).unwrap());
         let mut entry = None;
-        self.linker.func_wrap4_async("blockless", "mcall", |caller: Caller<'_, WasiCtx>, addr: u32, addr_len: u32, buf: u32, buf_len: u32| {
+        self.linker.func_wrap4_async("blockless", "mcall", |caller: Caller<'_, BSContext>, addr: u32, addr_len: u32, buf: u32, buf_len: u32| {
             Self::mcall_fn(caller, addr, addr_len, buf, buf_len)
         }).unwrap();
-        self.linker.func_wrap4_async("blockless", "register", |caller: Caller<'_, WasiCtx>, addr: u32, addr_len: u32, buf: u32, buf_len: u32| {
+        self.linker.func_wrap4_async("blockless", "register", |caller: Caller<'_, BSContext>, addr: u32, addr_len: u32, buf: u32, buf_len: u32| {
             Self::register_fn(caller, addr, addr_len, buf, buf_len)
         }).unwrap();
         for m in modules {

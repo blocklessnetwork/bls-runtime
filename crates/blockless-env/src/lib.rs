@@ -1,6 +1,4 @@
 use blockless_drivers_macro::linker_integration;
-
-use wasi_common::WasiCtx;
 use wasmtime::Linker;
 
 linker_integration!({

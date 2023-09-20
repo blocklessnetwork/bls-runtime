@@ -12,17 +12,33 @@ pub fn linker_integration(args: TokenStream) -> proc_macro::TokenStream {
 
     let doc = config.load_document();
     let mut funcs = Vec::new();
+    let mut bounds = Vec::new();
+    let mut module_ident = Vec::new();
     for module in doc.modules() {
         for f in module.funcs() {
             funcs.push(generate_func(&module, &f, Some(&config.target)));
         }
+        bounds.push(names::trait_name(&module.name));
+        module_ident.push(names::module(&module.name));
     }
     let method_name = format_ident!("{}", config.link_method.value());
-
+    let target_path = &config.target;
+    let mut ctx = bounds.iter().zip(module_ident.iter()).map(|(m, b)| {
+        quote!(+#target_path::#b::#m)
+    }).collect::<Vec<_>>();
+    ctx.push(quote!(+#target_path::types::UserErrorConversion));
     let s = quote!(
-        pub fn #method_name(linker: &mut Linker<WasiCtx>) {
+        pub fn #method_name<T, U>(
+            linker: &mut Linker<T>, 
+            get_ctx: impl Fn(&mut T) -> &mut U + Send + Copy + Sync + 'static 
+        )
+        where
+            T: Send,
+            U: Send #(#ctx)*
+        {
             #(#funcs)*
         }
+       
     );
     s.into()
 }
@@ -63,7 +79,7 @@ fn generate_func(
         linker.#wrapper(
             #module_name,
             #func_name,
-            move |mut caller: wiggle::wasmtime_crate::Caller<'_, WasiCtx> #(, #arg_decls)*| {
+            move |mut caller: wiggle::wasmtime_crate::Caller<'_, T> #(, #arg_decls)*| {
                 Box::new(async move {
                     let mem = match caller.get_export("memory") {
                         Some(wiggle::wasmtime_crate::Extern::Memory(m)) => m,
@@ -71,8 +87,9 @@ fn generate_func(
                             wiggle::anyhow::bail!("missing required memory export");
                         }
                     };
-                    let (mem, ctx) = mem.data_and_store_mut(&mut caller);
+                    let (mem, data) = mem.data_and_store_mut(&mut caller);
                     let mem = wiggle::wasmtime::WasmtimeGuestMemory::new(mem);
+                    let ctx = get_ctx(data);
                     Ok(<#ret_ty>::from(#abi_func(ctx, &mem #(, #arg_names)*).await ?))
                 })
             },

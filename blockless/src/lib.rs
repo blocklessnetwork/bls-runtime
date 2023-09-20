@@ -1,7 +1,12 @@
 mod modules;
-
+mod context;
 pub mod error;
-use blockless_drivers::{CdylibDriver, DriverConetxt};
+
+use context::BlocklessContext;
+use blockless_drivers::{
+    CdylibDriver, 
+    DriverConetxt
+};
 use blockless_env;
 use cap_std::ambient_authority;
 pub use error::*;
@@ -10,7 +15,13 @@ use modules::ModuleLinker;
 use std::{env, path::Path};
 pub use wasi_common::*;
 use wasmtime::{
-    Config, Engine, InstanceAllocationStrategy, Linker, Module, PoolingAllocationConfig, Store,
+    Config, 
+    Engine,
+    PoolingAllocationConfig, 
+    InstanceAllocationStrategy, 
+    Linker, 
+    Module,
+    Store,
     Trap,
 };
 use wasmtime_wasi::sync::WasiCtxBuilder;
@@ -22,14 +33,14 @@ pub struct ExitStatus {
     pub code: i32,
 }
 
-trait BlocklessConfig2WasiBuilder {
-    fn ctx_builder(&self) -> WasiCtxBuilder;
-    fn set_stdouterr(&self, builder: WasiCtxBuilder, is_err: bool) -> WasiCtxBuilder;
-    fn engine_config(&self) -> Config;
+trait BlocklessConfig2Preview1WasiBuilder {
+    fn preview1_builder(&self) -> WasiCtxBuilder;
+    fn preview1_set_stdouterr(&self, builder: WasiCtxBuilder, is_err: bool) -> WasiCtxBuilder;
+    fn preview1_engine_config(&self) -> Config;
 }
 
-impl BlocklessConfig2WasiBuilder for BlocklessConfig {
-    fn set_stdouterr(&self, mut builder: WasiCtxBuilder, is_err: bool) -> WasiCtxBuilder {
+impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
+    fn preview1_set_stdouterr(&self, mut builder: WasiCtxBuilder, is_err: bool) -> WasiCtxBuilder {
         let b_conf = self;
         match b_conf.stdout_ref() {
             &Stdout::FileName(ref file_name) => {
@@ -75,15 +86,15 @@ impl BlocklessConfig2WasiBuilder for BlocklessConfig {
         builder
     }
 
-    fn ctx_builder(&self) -> WasiCtxBuilder {
+    fn preview1_builder(&self) -> WasiCtxBuilder {
         let b_conf = self;
         let root_dir = b_conf
             .fs_root_path_ref()
             .and_then(|path| wasmtime_wasi::Dir::open_ambient_dir(path, ambient_authority()).ok());
         let mut builder = WasiCtxBuilder::new();
         //stdout file process for setting.
-        builder = b_conf.set_stdouterr(builder, false);
-        builder = b_conf.set_stdouterr(builder, true);
+        builder = b_conf.preview1_set_stdouterr(builder, false);
+        builder = b_conf.preview1_set_stdouterr(builder, true);
         let entry_module = b_conf.entry_module().unwrap();
         let mut args = vec![entry_module];
         args.extend_from_slice(&b_conf.stdin_args_ref()[..]);
@@ -95,7 +106,7 @@ impl BlocklessConfig2WasiBuilder for BlocklessConfig {
         builder
     }
 
-    fn engine_config(&self) -> Config {
+    fn preview1_engine_config(&self) -> Config {
         let mut conf = Config::new();
         conf.debug_info(self.get_debug_info());
 
@@ -131,18 +142,21 @@ impl BlocklessRunner {
             });
         DriverConetxt::init_built_in_drivers(drivers_root_path);
 
-        let conf = b_conf.engine_config();
+        let conf = b_conf.preview1_engine_config();
         let engine = Engine::new(&conf).unwrap();
         let mut linker = Linker::new(&engine);
-        Self::add_to_linker(&mut linker);
-        let builder = b_conf.ctx_builder();
-        let mut ctx = builder.build();
+        Self::preview1_linker(&mut linker);
+        let builder = b_conf.preview1_builder();
+        let mut preview1_ctx = builder.build();
         let drivers = b_conf.drivers_ref();
         Self::load_driver(drivers);
         let entry: String = b_conf.entry_ref().into();
         let version = b_conf.version();
-        ctx.set_blockless_config(Some(b_conf));
+        preview1_ctx.set_blockless_config(Some(b_conf));
+        let mut ctx = BlocklessContext::default();
+        ctx.preview1_ctx = Some(preview1_ctx);
         let mut store = Store::new(&engine, ctx);
+        
         let (module, entry) = Self::module_linker(version, entry, &mut store, &mut linker).await;
 
         let inst = linker.instantiate_async(&mut store, &module).await.unwrap();
@@ -160,22 +174,22 @@ impl BlocklessRunner {
         }
     }
 
-    fn add_to_linker(linker: &mut Linker<WasiCtx>) {
-        blockless_env::add_drivers_to_linker(linker);
-        blockless_env::add_http_to_linker(linker);
-        blockless_env::add_ipfs_to_linker(linker);
-        blockless_env::add_s3_to_linker(linker);
-        blockless_env::add_memory_to_linker(linker);
-        blockless_env::add_cgi_to_linker(linker);
-        blockless_env::add_socket_to_linker(linker);
-        wasmtime_wasi::add_to_linker(linker, |s| s).unwrap();
+    fn preview1_linker(linker: &mut Linker<BlocklessContext>) {
+        blockless_env::add_drivers_to_linker(linker, |s|  s.preview1_ctx.as_mut().unwrap());
+        blockless_env::add_http_to_linker(linker, |s|  s.preview1_ctx.as_mut().unwrap());
+        blockless_env::add_ipfs_to_linker(linker, |s|  s.preview1_ctx.as_mut().unwrap());
+        blockless_env::add_s3_to_linker(linker, |s|  s.preview1_ctx.as_mut().unwrap());
+        blockless_env::add_memory_to_linker(linker, |s|  s.preview1_ctx.as_mut().unwrap());
+        blockless_env::add_cgi_to_linker(linker, |s|  s.preview1_ctx.as_mut().unwrap());
+        blockless_env::add_socket_to_linker(linker, |s|  s.preview1_ctx.as_mut().unwrap());
+        wasmtime_wasi::add_to_linker(linker, |s|  s.preview1_ctx.as_mut().unwrap()).unwrap();
     }
 
-    async fn module_linker<'a>(
+    async fn module_linker<'a, >(
         version: BlocklessConfigVersion,
         mut entry: String,
-        store: &'a mut Store<WasiCtx>,
-        linker: &'a mut Linker<WasiCtx>
+        store: &'a mut Store<BlocklessContext>,
+        linker: &'a mut Linker<BlocklessContext>
     ) -> (Module, String) {
         match version {
             BlocklessConfigVersion::Version0 => {
