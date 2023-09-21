@@ -31,12 +31,13 @@ pub fn linker_integration(args: TokenStream) -> proc_macro::TokenStream {
         pub fn #method_name<T, U>(
             linker: &mut Linker<T>, 
             get_ctx: impl Fn(&mut T) -> &mut U + Send + Copy + Sync + 'static 
-        )
+        ) -> wiggle::anyhow::Result<()>
         where
             T: Send,
             U: Send #(#ctx)*
         {
             #(#funcs)*
+            Ok(())
         }
        
     );
@@ -93,7 +94,7 @@ fn generate_func(
                     Ok(<#ret_ty>::from(#abi_func(ctx, &mem #(, #arg_names)*).await ?))
                 })
             },
-        ).unwrap();
+        )?;
     );
     linker.into()
 }
