@@ -128,12 +128,13 @@ impl From<usize> for BlocklessConfigVersion {
 }
 
 pub struct BlocklessConfig {
+    entry: String,
     stdin: String,
     stdout: Stdout,
     stderr: Stderr,
     debug_info: bool,
     is_carfile: bool,
-    entry: String,
+    support_thread: bool,
     run_time: Option<u64>,
     stdin_args: Vec<String>,
     limited_fuel: Option<u64>,
@@ -156,6 +157,7 @@ pub struct BlocklessConfig {
 impl BlocklessConfig {
     pub fn new(entry: &str) -> BlocklessConfig {
         Self {
+            support_thread: false,
             run_time: None,
             envs: Vec::new(),
             debug_info: false,
@@ -186,6 +188,17 @@ impl BlocklessConfig {
     #[inline(always)]
     pub fn version(&self) -> BlocklessConfigVersion {
         self.version
+    }
+
+
+    #[inline(always)]
+    pub fn support_thread(&self) -> bool {
+        self.support_thread
+    }
+
+    #[inline(always)]
+    pub fn set_support_thread(&mut self, t: bool) {
+        self.support_thread = t;
     }
 
     #[inline(always)]

@@ -12,7 +12,8 @@ use cap_std::ambient_authority;
 pub use error::*;
 use log::{debug, error};
 use modules::ModuleLinker;
-use std::{env, path::Path};
+use wasmtime_wasi_threads::WasiThreadsCtx;
+use std::{env, path::Path, sync::Arc};
 pub use wasi_common::*;
 use wasmtime::{
     Config, 
@@ -108,6 +109,7 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
 
     fn preview1_engine_config(&self) -> Config {
         let mut conf = Config::new();
+
         conf.debug_info(self.get_debug_info());
 
         if let Some(_) = self.get_limited_fuel() {
@@ -120,7 +122,12 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
             allocation_config.instance_memory_pages(m);
             conf.allocation_strategy(InstanceAllocationStrategy::Pooling(allocation_config));
         }
-        conf.async_support(true);
+        
+        if self.support_thread() {
+            conf.wasm_threads(true);
+        } else {
+            conf.async_support(true);
+        }
         conf
     }
 }
@@ -145,7 +152,7 @@ impl BlocklessRunner {
         let conf = b_conf.preview1_engine_config();
         let engine = Engine::new(&conf).unwrap();
         let mut linker = Linker::new(&engine);
-        Self::preview1_linker(&mut linker);
+        let support_thread = b_conf.support_thread();
         let builder = b_conf.preview1_builder();
         let mut preview1_ctx = builder.build();
         let drivers = b_conf.drivers_ref();
@@ -156,12 +163,22 @@ impl BlocklessRunner {
         let mut ctx = BlocklessContext::default();
         ctx.preview1_ctx = Some(preview1_ctx);
         let mut store = Store::new(&engine, ctx);
-        
         let (module, entry) = Self::module_linker(version, entry, &mut store, &mut linker).await;
 
-        let inst = linker.instantiate_async(&mut store, &module).await.unwrap();
+        Self::preview1_setup(&mut linker, &mut store, support_thread, &module);
+
+        let inst = if support_thread {
+            linker.instantiate(&mut store, &module).unwrap()
+        } else {
+            linker.instantiate_async(&mut store, &module).await.unwrap()
+        };
         let func = inst.get_typed_func::<(), ()>(&mut store, &entry).unwrap();
-        let exit_code = match func.call_async(&mut store, ()).await {
+        let result = if support_thread {
+            func.call(&mut store, ())
+        } else {
+            func.call_async(&mut store, ()).await
+        };
+        let exit_code = match result {
             Err(ref t) => Self::error_process(t, || store.fuel_consumed().unwrap(), max_fuel),
             Ok(_) => {
                 debug!("program exit normal.");
@@ -174,23 +191,40 @@ impl BlocklessRunner {
         }
     }
 
-    fn preview1_linker(linker: &mut Linker<BlocklessContext>) {
+    fn preview1_setup(
+        linker: &mut Linker<BlocklessContext>, 
+        store: &mut Store<BlocklessContext>,
+        support_thread: bool,
+        module: &Module,
+    ) {
         macro_rules! add_to_linker {
             ($method:expr) => {
                 $method(linker, |s|  s.preview1_ctx.as_mut().unwrap()).unwrap()
             };
         }
-        add_to_linker!(blockless_env::add_drivers_to_linker);
-        add_to_linker!(blockless_env::add_http_to_linker);
-        add_to_linker!(blockless_env::add_ipfs_to_linker);
-        add_to_linker!(blockless_env::add_s3_to_linker);
-        add_to_linker!(blockless_env::add_memory_to_linker);
-        add_to_linker!(blockless_env::add_cgi_to_linker);
-        add_to_linker!(blockless_env::add_socket_to_linker);
         add_to_linker!(wasmtime_wasi::add_to_linker);
+        if support_thread {
+            wasmtime_wasi_threads::add_to_linker(linker, store, module, |ctx| {
+                ctx.wasi_threads.as_ref().unwrap()
+            }).unwrap();
+            store.data_mut().wasi_threads = Some(Arc::new(
+                WasiThreadsCtx::new(
+                    module.clone(), 
+                    Arc::new(linker.clone())
+                ).unwrap()
+            ));
+        } else {
+            add_to_linker!(blockless_env::add_drivers_to_linker);
+            add_to_linker!(blockless_env::add_http_to_linker);
+            add_to_linker!(blockless_env::add_ipfs_to_linker);
+            add_to_linker!(blockless_env::add_s3_to_linker);
+            add_to_linker!(blockless_env::add_memory_to_linker);
+            add_to_linker!(blockless_env::add_cgi_to_linker);
+            add_to_linker!(blockless_env::add_socket_to_linker);
+        }
     }
 
-    async fn module_linker<'a, >(
+    async fn module_linker<'a>(
         version: BlocklessConfigVersion,
         mut entry: String,
         store: &'a mut Store<BlocklessContext>,

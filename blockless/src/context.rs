@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use wasmtime_wasi::preview2;
+use wasmtime_wasi_threads::WasiThreadsCtx;
 
 #[derive(Clone)]
 pub(crate) struct BlocklessContext {
@@ -11,6 +12,8 @@ pub(crate) struct BlocklessContext {
     pub(crate) preview2_table: Arc<preview2::Table>,
     
     pub(crate) preview2_adapter: Arc<preview2::preview1::WasiPreview1Adapter>,
+    
+    pub(crate) wasi_threads: Option<Arc<WasiThreadsCtx<BlocklessContext>>>,
 }
 
 impl Default for BlocklessContext {
@@ -18,6 +21,7 @@ impl Default for BlocklessContext {
         Self {
             preview1_ctx: None, 
             preview2_ctx: None, 
+            wasi_threads: None,
             preview2_adapter: Default::default(),
             preview2_table: Arc::new(preview2::Table::new())
         }
