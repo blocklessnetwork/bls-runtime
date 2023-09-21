@@ -175,14 +175,19 @@ impl BlocklessRunner {
     }
 
     fn preview1_linker(linker: &mut Linker<BlocklessContext>) {
-        blockless_env::add_drivers_to_linker(linker, |s|  s.preview1_ctx.as_mut().unwrap());
-        blockless_env::add_http_to_linker(linker, |s|  s.preview1_ctx.as_mut().unwrap());
-        blockless_env::add_ipfs_to_linker(linker, |s|  s.preview1_ctx.as_mut().unwrap());
-        blockless_env::add_s3_to_linker(linker, |s|  s.preview1_ctx.as_mut().unwrap());
-        blockless_env::add_memory_to_linker(linker, |s|  s.preview1_ctx.as_mut().unwrap());
-        blockless_env::add_cgi_to_linker(linker, |s|  s.preview1_ctx.as_mut().unwrap());
-        blockless_env::add_socket_to_linker(linker, |s|  s.preview1_ctx.as_mut().unwrap());
-        wasmtime_wasi::add_to_linker(linker, |s|  s.preview1_ctx.as_mut().unwrap()).unwrap();
+        macro_rules! add_to_linker {
+            ($method:expr) => {
+                $method(linker, |s|  s.preview1_ctx.as_mut().unwrap()).unwrap()
+            };
+        }
+        add_to_linker!(blockless_env::add_drivers_to_linker);
+        add_to_linker!(blockless_env::add_http_to_linker);
+        add_to_linker!(blockless_env::add_ipfs_to_linker);
+        add_to_linker!(blockless_env::add_s3_to_linker);
+        add_to_linker!(blockless_env::add_memory_to_linker);
+        add_to_linker!(blockless_env::add_cgi_to_linker);
+        add_to_linker!(blockless_env::add_socket_to_linker);
+        add_to_linker!(wasmtime_wasi::add_to_linker);
     }
 
     async fn module_linker<'a, >(
