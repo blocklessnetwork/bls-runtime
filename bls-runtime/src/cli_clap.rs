@@ -110,8 +110,8 @@ pub(crate) struct CliCommandOpts {
     #[clap(long = "debug-info", value_name = "DEBUG-INFO", help = DEBUG_INFO_HELP)]
     debug_info: bool,
 
-    #[clap(long = "support-thread", value_name = "SUPPORT-THREAD", help = THREAD_SUPPORT_HELP)]
-    support_thread: bool,
+    #[clap(long = "feature-thread", value_name = "SUPPORT-THREAD", help = THREAD_SUPPORT_HELP)]
+    feature_thread: bool,
 
     #[clap(long = "fs-root-path", value_name = "FS-ROOT-PATH", help = FS_ROOT_PATH_HELP)]
     fs_root_path: Option<String>,
@@ -177,7 +177,7 @@ impl CliCommandOpts {
         conf.0.limited_fuel(self.limited_fuel);
         conf.0.set_run_time(self.run_time);
         conf.0.set_stdin_args(self.args);
-        conf.0.set_support_thread(self.support_thread);
+        conf.0.set_support_thread(self.feature_thread);
         if self.permissions.len() > 0 {
             conf.0.set_permisions(self.permissions);
         }

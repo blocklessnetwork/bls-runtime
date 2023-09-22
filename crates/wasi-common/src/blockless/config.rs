@@ -192,13 +192,13 @@ impl BlocklessConfig {
 
 
     #[inline(always)]
-    pub fn support_thread(&self) -> bool {
-        self.support_thread
+    pub fn feature_thread(&self) -> bool {
+        self.feature_thread
     }
 
     #[inline(always)]
-    pub fn set_support_thread(&mut self, t: bool) {
-        self.support_thread = t;
+    pub fn set_feature_thread(&mut self, t: bool) {
+        self.feature_thread = t;
     }
 
     #[inline(always)]
