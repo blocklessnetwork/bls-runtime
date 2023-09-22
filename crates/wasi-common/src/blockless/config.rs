@@ -134,7 +134,7 @@ pub struct BlocklessConfig {
     stderr: Stderr,
     debug_info: bool,
     is_carfile: bool,
-    support_thread: bool,
+    feature_thread: bool,
     run_time: Option<u64>,
     stdin_args: Vec<String>,
     limited_fuel: Option<u64>,
@@ -157,7 +157,6 @@ pub struct BlocklessConfig {
 impl BlocklessConfig {
     pub fn new(entry: &str) -> BlocklessConfig {
         Self {
-            support_thread: false,
             run_time: None,
             envs: Vec::new(),
             debug_info: false,
@@ -167,6 +166,7 @@ impl BlocklessConfig {
             modules: Vec::new(),
             stdin: String::new(),
             runtime_logger: None,
+            feature_thread: false,
             //vm instruction limit.
             limited_fuel: None,
             limited_time: None,
