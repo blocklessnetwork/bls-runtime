@@ -177,7 +177,7 @@ impl CliCommandOpts {
         conf.0.limited_fuel(self.limited_fuel);
         conf.0.set_run_time(self.run_time);
         conf.0.set_stdin_args(self.args);
-        conf.0.set_support_thread(self.feature_thread);
+        conf.0.set_feature_thread(self.feature_thread);
         if self.permissions.len() > 0 {
             conf.0.set_permisions(self.permissions);
         }

@@ -123,7 +123,7 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
             conf.allocation_strategy(InstanceAllocationStrategy::Pooling(allocation_config));
         }
         
-        if self.support_thread() {
+        if self.feature_thread() {
             conf.wasm_threads(true);
         } else {
             conf.async_support(true);
@@ -152,7 +152,7 @@ impl BlocklessRunner {
         let conf = b_conf.preview1_engine_config();
         let engine = Engine::new(&conf).unwrap();
         let mut linker = Linker::new(&engine);
-        let support_thread = b_conf.support_thread();
+        let support_thread = b_conf.feature_thread();
         let builder = b_conf.preview1_builder();
         let mut preview1_ctx = builder.build();
         let drivers = b_conf.drivers_ref();
