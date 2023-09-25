@@ -23,6 +23,7 @@ wasi-cap-std-sync = {path = "crates/wasi-common/cap-std-sync"}
 wasmtime = "12.0.1"
 wasmtime-wasi = "12.0.1"
 wiggle-generate = "12.0.1"
+wasmtime-wasi-threads = "12.0.1" 
 anyhow = "1.0.22"
 wiggle = "12.0.1"
 cap-std = "2.0.0"
@@ -30,6 +31,7 @@ cap-fs-ext = "2.0.0"
 cap-time-ext = "2.0.0"
 cap-tempfile = "2.0.0"
 cap-rand = { version = "2.0.0", features = ["small_rng"] }
+
 bitflags = "2.0"
 async-trait = "0.1.71"
 tracing = "0.1.26"
@@ -39,6 +41,7 @@ thiserror = "1.0.43"
 wasi-common = {path = "crates/wasi-common"}
 wasi-cap-std-sync = {path = "crates/wasi-common/cap-std-sync"}
 blockless-drivers = {path = "crates/blockless-drivers"}
+
 windows-sys = "0.48.0"
 once_cell = "1.12.0"
 md5 = "0.7.0"

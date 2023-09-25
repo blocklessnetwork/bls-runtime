@@ -60,6 +60,9 @@ const MODULES_HELP: &str =
 const V86_HELP: &str = 
     "the v86 model flag when the v86 flag the car file must be v86 configure and image.";
 
+const THREAD_SUPPORT_HELP: &str = 
+    "the thread support flag when the flag setting the runtime will support multi-threads.";
+
 fn parse_envs(envs: &str) -> Result<(String, String)> {
     let parts: Vec<_> = envs.splitn(2, "=").collect();
     if parts.len() != 2 {
@@ -106,6 +109,9 @@ pub(crate) struct CliCommandOpts {
 
     #[clap(long = "debug-info", value_name = "DEBUG-INFO", help = DEBUG_INFO_HELP)]
     debug_info: bool,
+
+    #[clap(long = "feature-thread", value_name = "SUPPORT-THREAD", help = THREAD_SUPPORT_HELP)]
+    feature_thread: bool,
 
     #[clap(long = "fs-root-path", value_name = "FS-ROOT-PATH", help = FS_ROOT_PATH_HELP)]
     fs_root_path: Option<String>,
@@ -171,6 +177,7 @@ impl CliCommandOpts {
         conf.0.limited_fuel(self.limited_fuel);
         conf.0.set_run_time(self.run_time);
         conf.0.set_stdin_args(self.args);
+        conf.0.set_feature_thread(self.feature_thread);
         if self.permissions.len() > 0 {
             conf.0.set_permisions(self.permissions);
         }

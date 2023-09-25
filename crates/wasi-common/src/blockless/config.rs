@@ -128,12 +128,13 @@ impl From<usize> for BlocklessConfigVersion {
 }
 
 pub struct BlocklessConfig {
+    entry: String,
     stdin: String,
     stdout: Stdout,
     stderr: Stderr,
     debug_info: bool,
     is_carfile: bool,
-    entry: String,
+    feature_thread: bool,
     run_time: Option<u64>,
     stdin_args: Vec<String>,
     limited_fuel: Option<u64>,
@@ -165,6 +166,7 @@ impl BlocklessConfig {
             modules: Vec::new(),
             stdin: String::new(),
             runtime_logger: None,
+            feature_thread: false,
             //vm instruction limit.
             limited_fuel: None,
             limited_time: None,
@@ -186,6 +188,17 @@ impl BlocklessConfig {
     #[inline(always)]
     pub fn version(&self) -> BlocklessConfigVersion {
         self.version
+    }
+
+
+    #[inline(always)]
+    pub fn feature_thread(&self) -> bool {
+        self.feature_thread
+    }
+
+    #[inline(always)]
+    pub fn set_feature_thread(&mut self, t: bool) {
+        self.feature_thread = t;
     }
 
     #[inline(always)]
