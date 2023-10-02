@@ -189,7 +189,7 @@ async fn non_blocking_read<R: Read + Send + 'static>(mut reader: R) -> Option<St
     });
 
     // wait for either a message from the thread or timeout
-    rx.recv_timeout(std::time::Duration::from_millis(10)).ok()
+    rx.recv_timeout(std::time::Duration::from_millis(1000)).ok()
 }
 
 #[tokio::main]
