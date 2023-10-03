@@ -202,6 +202,13 @@ impl BlocklessRunner {
                 $method(linker, |s|  s.preview1_ctx.as_mut().unwrap()).unwrap()
             };
         }
+        add_to_linker!(blockless_env::add_drivers_to_linker);
+        add_to_linker!(blockless_env::add_http_to_linker);
+        add_to_linker!(blockless_env::add_ipfs_to_linker);
+        add_to_linker!(blockless_env::add_s3_to_linker);
+        add_to_linker!(blockless_env::add_memory_to_linker);
+        add_to_linker!(blockless_env::add_cgi_to_linker);
+        add_to_linker!(blockless_env::add_socket_to_linker);
         add_to_linker!(wasmtime_wasi::add_to_linker);
         if support_thread {
             wasmtime_wasi_threads::add_to_linker(linker, store, module, |ctx| {
@@ -213,14 +220,6 @@ impl BlocklessRunner {
                     Arc::new(linker.clone())
                 ).unwrap()
             ));
-        } else {
-            add_to_linker!(blockless_env::add_drivers_to_linker);
-            add_to_linker!(blockless_env::add_http_to_linker);
-            add_to_linker!(blockless_env::add_ipfs_to_linker);
-            add_to_linker!(blockless_env::add_s3_to_linker);
-            add_to_linker!(blockless_env::add_memory_to_linker);
-            add_to_linker!(blockless_env::add_cgi_to_linker);
-            add_to_linker!(blockless_env::add_socket_to_linker);
         }
     }
 
