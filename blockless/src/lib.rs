@@ -191,12 +191,14 @@ impl BlocklessRunner {
         }
     }
 
+    /// setup functions the preview1 for linker
     fn preview1_setup(
         linker: &mut Linker<BlocklessContext>, 
         store: &mut Store<BlocklessContext>,
         support_thread: bool,
         module: &Module,
     ) {
+        // define the macro of extends.
         macro_rules! add_to_linker {
             ($method:expr) => {
                 $method(linker, |s|  s.preview1_ctx.as_mut().unwrap()).unwrap()
@@ -210,6 +212,7 @@ impl BlocklessRunner {
         add_to_linker!(blockless_env::add_cgi_to_linker);
         add_to_linker!(blockless_env::add_socket_to_linker);
         add_to_linker!(wasmtime_wasi::add_to_linker);
+        // support thread.
         if support_thread {
             wasmtime_wasi_threads::add_to_linker(linker, store, module, |ctx| {
                 ctx.wasi_threads.as_ref().unwrap()
@@ -230,6 +233,7 @@ impl BlocklessRunner {
         linker: &'a mut Linker<BlocklessContext>
     ) -> (Module, String) {
         match version {
+            // this is older configure for bls-runtime, this only run single wasm.
             BlocklessConfigVersion::Version0 => {
                 let module = Module::from_file(store.engine(), &entry).unwrap();
                 (module, ENTRY.to_string())
