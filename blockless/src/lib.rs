@@ -60,26 +60,26 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
                         Box::new(f)
                     }) {
                         is_set_fileout = true;
-                        builder = if is_err {
-                            builder.stdout(f)
+                        if is_err {
+                            builder.stdout(f);
                         } else {
-                            builder.stderr(f)
+                            builder.stderr(f);
                         }
                     }
                 }
                 if !is_set_fileout {
-                    builder = if is_err {
-                        builder.inherit_stdout()
+                    if is_err {
+                        builder.inherit_stdout();
                     } else {
-                        builder.inherit_stderr()
+                        builder.inherit_stderr();
                     }
                 }
             }
             &Stdout::Inherit => {
-                builder = if is_err {
-                    builder.inherit_stdout()
+                if is_err {
+                    builder.inherit_stdout();
                 } else {
-                    builder.inherit_stderr()
+                    builder.inherit_stderr();
                 }
             }
             &Stdout::Null => {}
@@ -99,10 +99,10 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
         let entry_module = b_conf.entry_module().unwrap();
         let mut args = vec![entry_module];
         args.extend_from_slice(&b_conf.stdin_args_ref()[..]);
-        builder = builder.args(&args[..]).unwrap();
-        builder = builder.envs(&b_conf.envs_ref()[..]).unwrap();
+        builder.args(&args[..]).unwrap();
+        builder.envs(&b_conf.envs_ref()[..]).unwrap();
         if let Some(d) = root_dir {
-            builder = builder.preopened_dir(d, "/").unwrap();
+            builder.preopened_dir(d, "/").unwrap();
         }
         builder
     }
@@ -119,7 +119,7 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
 
         if let Some(m) = self.get_limited_memory() {
             let mut allocation_config = PoolingAllocationConfig::default();
-            allocation_config.instance_memory_pages(m);
+            allocation_config.memory_pages(m);
             conf.allocation_strategy(InstanceAllocationStrategy::Pooling(allocation_config));
         }
         
@@ -153,7 +153,7 @@ impl BlocklessRunner {
         let engine = Engine::new(&conf).unwrap();
         let mut linker = Linker::new(&engine);
         let support_thread = b_conf.feature_thread();
-        let builder = b_conf.preview1_builder();
+        let mut builder = b_conf.preview1_builder();
         let mut preview1_ctx = builder.build();
         let drivers = b_conf.drivers_ref();
         Self::load_driver(drivers);

@@ -1,6 +1,6 @@
 [package]
 name = "wasi-common"
-version = "12.0.1"
+version.workspace = true
 description = "WASI implementation in Rust"
 keywords = ["webassembly", "wasm"]
 readme = "README.md"
