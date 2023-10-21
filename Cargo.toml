@@ -10,7 +10,7 @@ members = [
 ]
 
 [workspace.package]
-version = "13.0.0"
+version = "14.0.0"
 authors = ["The Blockless Project Developers"]
 edition = "2021"
 
@@ -20,15 +20,15 @@ wasi-common = {path = "crates/wasi-common"}
 wasi-cap-std-sync = {path = "crates/wasi-common/cap-std-sync"}
 
 [workspace.dependencies]
-wasmtime = "13.0.0"
-wasmtime-wasi = "13.0.0"
-wiggle-generate = "13.0.0"
-wasmtime-wasi-threads = "13.0.0" 
-wasi-common = {path = "crates/wasi-common", version="13.0.0"}
-wasi-cap-std-sync = {path = "crates/wasi-common/cap-std-sync", version="13.0.0"}
+wasmtime = "14.0.0"
+wasmtime-wasi = "14.0.0"
+wiggle-generate = "14.0.0"
+wasmtime-wasi-threads = "14.0.0" 
+wasi-common = {path = "crates/wasi-common", version="14.0.0"}
+wasi-cap-std-sync = {path = "crates/wasi-common/cap-std-sync", version="14.0.0"}
 anyhow = "1.0.22"
 cap-std = "2.0.0"
-wiggle = "13.0.0"
+wiggle = "14.0.0"
 cap-fs-ext = "2.0.0"
 cap-time-ext = "2.0.0"
 cap-tempfile = "2.0.0"
