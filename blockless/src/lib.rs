@@ -163,10 +163,12 @@ impl BlocklessRunner {
         let mut ctx = BlocklessContext::default();
         ctx.preview1_ctx = Some(preview1_ctx);
         let mut store = Store::new(&engine, ctx);
+        Self::preview1_setup_linker(&mut linker);
         let (module, entry) = Self::module_linker(version, entry, &mut store, &mut linker).await;
-
-        Self::preview1_setup(&mut linker, &mut store, support_thread, &module);
-
+        // support thread.
+        if support_thread {
+            Self::preview1_setup_thread_support(&mut linker, &mut store, &module);
+        }
         let inst = if support_thread {
             linker.instantiate(&mut store, &module).unwrap()
         } else {
@@ -192,11 +194,8 @@ impl BlocklessRunner {
     }
 
     /// setup functions the preview1 for linker
-    fn preview1_setup(
+    fn preview1_setup_linker(
         linker: &mut Linker<BlocklessContext>, 
-        store: &mut Store<BlocklessContext>,
-        support_thread: bool,
-        module: &Module,
     ) {
         // define the macro of extends.
         macro_rules! add_to_linker {
@@ -212,19 +211,25 @@ impl BlocklessRunner {
         add_to_linker!(blockless_env::add_cgi_to_linker);
         add_to_linker!(blockless_env::add_socket_to_linker);
         add_to_linker!(wasmtime_wasi::add_to_linker);
-        // support thread.
-        if support_thread {
-            wasmtime_wasi_threads::add_to_linker(linker, store, module, |ctx| {
-                ctx.wasi_threads.as_ref().unwrap()
-            }).unwrap();
-            store.data_mut().wasi_threads = Some(Arc::new(
-                WasiThreadsCtx::new(
-                    module.clone(), 
-                    Arc::new(linker.clone())
-                ).unwrap()
-            ));
-        }
     }
+
+    fn preview1_setup_thread_support(
+        linker: &mut Linker<BlocklessContext>,
+        store: &mut Store<BlocklessContext>,
+        module: &Module,
+    ) {
+        wasmtime_wasi_threads::add_to_linker(linker, store, &module, |ctx| {
+            ctx.wasi_threads.as_ref().unwrap()
+        }).unwrap();
+        store.data_mut().wasi_threads = Some(Arc::new(
+            WasiThreadsCtx::new(
+                module.clone(), 
+                Arc::new(linker.clone())
+            ).unwrap()
+        ));
+    }
+
+
 
     async fn module_linker<'a>(
         version: BlocklessConfigVersion,
@@ -733,7 +738,64 @@ mod test {
         "#;
 
         let temp_dir = TempDir::new("blockless_run").unwrap();
-        let guest_path = temp_dir.path().join("run.wasm");
+        let guest_path = temp_dir.path().join("test_blockless_extension_http_req.wasm");
+
+        fs::write(&guest_path, guest_wasm).unwrap();
+
+        let modules = vec![BlocklessModule {
+            module_type: ModuleType::Entry,
+            name: "".to_string(),
+            file: guest_path.to_str().unwrap().to_string(),
+            md5: format!("{:x}", md5::compute(guest_wasm)),
+        }];
+        let mut config = BlocklessConfig::new("_start");
+        config.set_version(BlocklessConfigVersion::Version1);
+        config.set_modules(modules);
+        let code = run_blockless(config);
+        assert_eq!(code.code, 0);
+    }
+
+    #[test]
+    fn test_linker_module() {
+        let guest_wasm = r#"
+        (module
+            (type $fd_write_ty (func (param i32 i32 i32 i32) (result i32)))
+            (import "wasi_snapshot_preview1" "fd_write" (func $fd_write (type $fd_write_ty)))
+          
+            (func $log (export "log") (param i32 i32)
+              ;; store the pointer in the first iovec field
+              i32.const 4
+              local.get 0
+              i32.store
+          
+              ;; store the length in the first iovec field
+              i32.const 4
+              local.get 1
+              i32.store offset=4
+          
+              ;; call the `fd_write` import
+              i32.const 1     ;; stdout fd
+              i32.const 4     ;; iovs start
+              i32.const 1     ;; number of iovs
+              i32.const 0     ;; where to write nwritten bytes
+              call $fd_write
+              drop
+            )
+            (func $initialize (export "_start")
+              i32.const 1024  ;; pass offset 0 to log
+              i32.const 15  ;; pass length 2 to log
+              call $log
+            )
+          
+            (memory (export "memory") 2)
+            (global (export "memory_offset") i32 (i32.const 65536))
+          
+            (data (i32.const 1024) "Hello, world2!\n")
+        )
+        "#;
+
+        let temp_dir = TempDir::new("blockless_run").unwrap();
+        let guest_path = temp_dir.path().join("test_linker_module.wasm");
 
         fs::write(&guest_path, guest_wasm).unwrap();
 
