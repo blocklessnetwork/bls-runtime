@@ -13,12 +13,19 @@
   )
 )
 
-(typename $ip-address-family
+(typename $address-family
   (enum (@witx tag u8)
-    ;;; Success
-    $ipv4
-    ;;; Invalid handle
-    $ipv6
+    $unspec
+    $inet4
+    $inet6
+  )
+)
+
+(typename $socket-type
+  (enum (@witx tag u8)
+    $any
+    $datagram
+    $stream
   )
 )
 
@@ -35,6 +42,13 @@
         (param $target string)
         (result $error (expected $socket_handle (error $socket_error)))
     )
+
+    (@interface func (export "socket_create")
+        (param $family $address-family)
+        (param $stream $socket-type)
+        (result $error (expected $socket_handle (error $socket_error)))
+    )
+
 
 )
 

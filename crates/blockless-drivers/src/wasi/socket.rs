@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use socket2::Domain;
 use wasi_cap_std_sync::net::Socket;
 use wasi_common::{
     WasiCtx, 
@@ -74,6 +75,26 @@ async fn tcp_bind(addr: &str) -> Result<Box<dyn WasiFile>, BlocklessSocketErrorK
     Ok(wasi_file)
 }
 
+impl From<types::AddressFamily> for socket2::Domain {
+    fn from(value: types::AddressFamily) -> Self {
+        use types::AddressFamily;
+        match value {
+            AddressFamily::Inet4 | AddressFamily::Unspec => Domain::IPV4,
+            AddressFamily::Inet6 => Domain::IPV6,
+        }
+    }
+}
+
+impl From<types::SocketType> for socket2::Type {
+    fn from(value: types::SocketType) -> Self {
+        use types::SocketType;
+        match value {
+            SocketType::Datagram | SocketType::Any => socket2::Type::DGRAM,
+            SocketType::Stream  => socket2::Type::STREAM,
+        }
+    }
+}
+
 #[wiggle::async_trait]
 impl blockless_socket::BlocklessSocket for WasiCtx {
     async fn create_tcp_bind_socket<'a>(
@@ -116,6 +137,15 @@ impl blockless_socket::BlocklessSocket for WasiCtx {
             }
             Err(e) => Err(e),
         }
+    }
+
+    async fn socket_create (
+        &mut self,
+        family: types::AddressFamily,
+        socket_type: types::SocketType,
+    ) -> Result<types::SocketHandle, BlocklessSocketErrorKind> {
+        let sock = socket2::Socket::new(family.into(), socket_type.into(), None);
+        todo!()
     }
 
 }

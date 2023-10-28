@@ -33,7 +33,8 @@ cap-fs-ext = "2.0.0"
 cap-time-ext = "2.0.0"
 cap-tempfile = "2.0.0"
 cap-rand = { version = "2.0.0", features = ["small_rng"] }
-
+bytes = "1"
+socket2 = "0.5.5"
 is-terminal = "0.4.0"
 bitflags = "2.0"
 async-trait = "0.1.71"
@@ -56,5 +57,5 @@ tokio = { version = "1.26.0" }
 system-interface = { version = "0.26.0", features = ["cap_std_impls"] }
 fs-set-times = "0.20.0"
 io-extras = "0.18.0"
-rustix = "0.38.8"
+rustix = "0.38.20"
 
