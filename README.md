@@ -76,7 +76,7 @@ Blockless supports a variety of programming languages including:
 - `permissions`: a list of resources that the app is allowed to access. If the app tries to access a resource that is not in this list, it will receive a "Permission Deny" error. If the app panics, the log will show the following message:
 
 - `modules`: is the app wasm files. the wasm files have 2 types defined by `type` node, `module` and `entry`. `module` is lib in the app, `entry` is the entry wasm, normally the entry wasm contain the entry function.
-    - `type`: he wasm files have 2 types defined by `type` node.
+    - `type`: the wasm files have 2 types defined by `type` node.
     - `file`: the wasm file.
     - `name`: name is used for define the linker name, the app can be use the name for the caller.
     - `md5`: the checksum of the file.
@@ -90,7 +90,7 @@ panic: Permission deny
 
 - `drivers_root_path`: Specifies the root path for the drivers used by the runtime environment. In the example above, the drivers will be stored in the directory /path/to/drivers.
 
-for the file permission the url is start with "file://", if you use "file:///", should not work.
+for the file permissions the url is start with "file://", if you use "file:///", should not work.
 
 ## Using the runtime from the command line
 
