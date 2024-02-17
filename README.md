@@ -105,7 +105,7 @@ $ "echo "FOO" | env THIS_IS_MY_VAR=FOO BLS_LIST_VARS=THIS_IS_MY_VAR ~/.bls/runti
 |code|description|
 |----|-------------------|
 |Exit Code 0|Success|
-|Exit Code 1|The flue used out|
+|Exit Code 1|The fuel used out|
 |Exit Code 2|call stack exhausted|
 |Exit Code 3|out of bounds memory access|
 |Exit Code 4|misaligned memory access|
