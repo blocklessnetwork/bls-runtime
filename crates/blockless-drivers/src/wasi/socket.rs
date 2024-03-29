@@ -1,10 +1,13 @@
 use std::sync::Arc;
 
-use wasi_cap_std_sync::net::Socket;
 use wasi_common::{
+    file::{
+        FileAccessMode, 
+        FileEntry
+    }, 
+    sync::net::Socket, 
     WasiCtx, 
-    WasiFile, 
-    file::{FileAccessMode, FileEntry}
+    WasiFile
 };
 
 use crate::BlocklessSocketErrorKind;
