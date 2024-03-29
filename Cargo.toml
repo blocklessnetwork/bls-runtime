@@ -17,7 +17,7 @@ edition = "2021"
 
 [patch.crates-io]
 wasi-common = {path = "crates/wasi-common"}
-wasi-cap-std-sync = {path = "crates/wasi-common/cap-std-sync"}
+wasi-cap-std-sync = { path = "crates/wasi-common/cap-std-sync" }
 
 [workspace.dependencies]
 tempfile = "3.1.0"
@@ -26,8 +26,8 @@ wasmtime = "19.0.0"
 wasmtime-wasi = "19.0.0"
 wiggle-generate = "19.0.0"
 wasmtime-wasi-threads = "19.0.0" 
-wasi-common = {path = "crates/wasi-common", version="19.0.0"}
-wasi-cap-std-sync = {path = "crates/wasi-common/cap-std-sync", version="19.0.0"}
+wasi-common = { path = "crates/wasi-common", version="19.0.0" }
+wasi-cap-std-sync = { path = "crates/wasi-common/cap-std-sync", version="19.0.0" }
 wiggle = "19.0.0"
 anyhow = "1.0.22"
 cap-std = "3.0.0"
@@ -37,25 +37,32 @@ cap-tempfile = "3.0.0"
 cap-rand = { version = "3.0.0", features = ["small_rng"] }
 test-log = { version = "0.2", default-features = false, features = ["trace"] }
 tracing-subscriber = { version = "0.3.1", default-features = false, features = ['fmt', 'env-filter', 'ansi', 'tracing-log'] }
+clap = "4.3.12"
 
 is-terminal = "0.4.0"
 bitflags = "2.0"
 async-trait = "0.1.71"
 tracing = "0.1.26"
+url = "2.2"
 io-lifetimes = { version = "2.0.3", default-features = false }
 log = { version = "0.4.8", default-features = false }
 thiserror = "1.0.43"
-blockless-drivers = {path = "crates/blockless-drivers"}
-blockless-multiaddr = {path = "crates/blockless-multiaddr"}
+blockless-drivers = { path = "crates/blockless-drivers" }
+blockless-multiaddr = { path = "crates/blockless-multiaddr" }
+env_logger = "0.10"
 
 windows-sys = "0.52.0"
 once_cell = "1.12.0"
 md5 = "0.7.0"
 rust-car = "0.1.4"
 tempdir = "0.3.7"
+bytes = "1.4"
+futures-core = { version = "0.3.27", default-features = false }
+futures-util = { version = "0.3.27", default-features = false }
 dlopen = "0.1"
 lazy_static = "1.4.0"
 syn = "2.0.25"
+json = {version = "0.12.4"}
 
 tokio = { version = "1.26.0", features = [ "rt", "time" ] }
 system-interface = { version = "0.27.1", features = ["cap_std_impls"] }
