@@ -1,3 +1,4 @@
+use std::sync::Arc;
 use std::{collections::HashMap, cmp::min};
 use tokio::sync::Mutex;
 use json::JsonValue;
@@ -54,8 +55,8 @@ type CallerTypedFunc = TypedFunc<(i32, u32, i32, u32), u32>;
 
 struct InstanceInfo {
     mem: Option<Memory>,
-    alloc: Option<AllocTypedFunc>,
-    dealloc: Option<DeallocTypedFunc>,
+    alloc: Option<Arc<AllocTypedFunc>>,
+    dealloc: Option<Arc<DeallocTypedFunc>>,
     export_funcs: HashMap<String, Func>,
 }
 
@@ -65,9 +66,13 @@ impl InstanceInfo {
             .ok_or(anyhow::anyhow!(format!("method: {method} not found")))?;
             
         let mem = self.mem.ok_or(anyhow::anyhow!("memory is not exported in module."))?.clone();
-        let alloc = self.alloc.ok_or(anyhow::anyhow!("alloc is not exported in module."))?.clone();
-        let dealloc = self.dealloc.ok_or(anyhow::anyhow!("dealloc is not exported in module."))?.clone();
-        let func: CallerTypedFunc = export_func.typed(store)?;
+        let alloc = self.alloc.as_ref()
+            .ok_or(anyhow::anyhow!("alloc is not exported in module."))?
+            .clone();
+        let dealloc = self.dealloc.as_ref()
+            .ok_or(anyhow::anyhow!("dealloc is not exported in module."))?
+            .clone();
+        let func: Arc<CallerTypedFunc> = Arc::new(export_func.typed(store)?);
         Ok(InstanceCaller {
             mem,
             func,
@@ -79,9 +84,9 @@ impl InstanceInfo {
 
 struct InstanceCaller {
     mem: Memory,
-    alloc: AllocTypedFunc,
-    dealloc: DeallocTypedFunc,
-    func: CallerTypedFunc
+    alloc: Arc<AllocTypedFunc>,
+    dealloc: Arc<DeallocTypedFunc>,
+    func: Arc<CallerTypedFunc>
 }
 
 struct MemBuf<'a> {
@@ -449,18 +454,18 @@ impl<'a>  ModuleLinker<'a>  {
             INS_CTX.lock().await.modules.insert(mem_ptr, m_name.to_string());
         }
 
-        let alloc: Option<AllocTypedFunc> = match alloc.map(|alloc| alloc
+        let alloc: Option<Arc<AllocTypedFunc>> = match alloc.map(|alloc| alloc
             .typed(self.store.as_context_mut())
             .context("loading the alloc function")) {
-            Some(Ok(r)) => Some(r),
+            Some(Ok(r)) => Some(Arc::new(r)),
             Some(Err(e)) => return Err(e),
             None => None,
         };
     
-        let dealloc: Option<DeallocTypedFunc> = match dealloc.map(|dealloc| dealloc
+        let dealloc: Option<Arc<DeallocTypedFunc>> = match dealloc.map(|dealloc| dealloc
             .typed(self.store.as_context_mut())
             .context("loading the dealloc function")) {
-            Some(Ok(r)) => Some(r),
+            Some(Ok(r)) => Some(Arc::new(r)),
             Some(Err(e)) => return Err(e),
             None => None,
         };

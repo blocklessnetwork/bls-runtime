@@ -15,6 +15,7 @@ use modules::ModuleLinker;
 use wasmtime_wasi_threads::WasiThreadsCtx;
 use std::{env, path::Path, sync::Arc};
 pub use wasi_common::*;
+pub use blockless_multiaddr::MultiAddr;
 use wasmtime::{
     Config, 
     Engine,
@@ -25,7 +26,7 @@ use wasmtime::{
     Store,
     Trap,
 };
-use wasmtime_wasi::sync::WasiCtxBuilder;
+use wasi_common::sync::WasiCtxBuilder;
 
 const ENTRY: &str = "_start";
 
@@ -56,7 +57,7 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
 
                     if let Some(f) = file_opts.open(file_name).ok().map(|file| {
                         let file = cap_std::fs::File::from_std(file);
-                        let f = wasmtime_wasi::file::File::from_cap_std(file);
+                        let f = wasi_common::sync::file::File::from_cap_std(file);
                         Box::new(f)
                     }) {
                         is_set_fileout = true;
@@ -91,7 +92,7 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
         let b_conf = self;
         let root_dir = b_conf
             .fs_root_path_ref()
-            .and_then(|path| wasmtime_wasi::Dir::open_ambient_dir(path, ambient_authority()).ok());
+            .and_then(|path| wasi_common::sync::Dir::open_ambient_dir(path, ambient_authority()).ok());
         let mut builder = WasiCtxBuilder::new();
         //stdout file process for setting.
         builder = b_conf.preview1_set_stdouterr(builder, false);
@@ -181,14 +182,14 @@ impl BlocklessRunner {
             func.call_async(&mut store, ()).await
         };
         let exit_code = match result {
-            Err(ref t) => Self::error_process(t, || store.fuel_consumed().unwrap(), max_fuel),
+            Err(ref t) => Self::error_process(t, || store.get_fuel().unwrap(), max_fuel),
             Ok(_) => {
                 debug!("program exit normal.");
                 0
             }
         };
         ExitStatus {
-            fuel: store.fuel_consumed(),
+            fuel: store.get_fuel().ok(),
             code: exit_code,
         }
     }
@@ -210,7 +211,9 @@ impl BlocklessRunner {
         add_to_linker!(blockless_env::add_memory_to_linker);
         add_to_linker!(blockless_env::add_cgi_to_linker);
         add_to_linker!(blockless_env::add_socket_to_linker);
-        add_to_linker!(wasmtime_wasi::add_to_linker);
+        wasi_common::sync::add_to_linker(linker, |host| {
+            host.preview1_ctx.as_mut().unwrap()
+        }).unwrap();
     }
 
     fn preview1_setup_thread_support(
