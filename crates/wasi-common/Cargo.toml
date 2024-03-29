@@ -22,7 +22,7 @@ log = { workspace = true }
 rustix = {workspace = true}
 
 [target.'cfg(windows)'.dependencies]
-io-extras = "0.17.0"
+io-extras = { workspace = true }
 
 [target.'cfg(windows)'.dependencies.windows-sys]
 workspace = true
