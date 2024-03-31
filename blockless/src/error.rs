@@ -26,7 +26,7 @@ impl From<McallError> for u32 {
     }
 }
 
-impl std::error::Error for McallError{}
+impl std::error::Error for McallError {}
 
 impl Display for McallError {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
