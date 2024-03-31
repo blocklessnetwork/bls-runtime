@@ -71,12 +71,12 @@ fn file_md5(f: impl AsRef<Path>) -> Result<String, CLIExitCode> {
     let mut file = fs::OpenOptions::new()
         .read(true)
         .open(f)
-        .map_err(|_e| CLIExitCode::UnknownError("the module file does not exist or is unreadable.".into()))?;
+        .map_err(|_e| CLIExitCode::UnknownError("the module file either does not exist or is inaccessible.".into()))?;
     let mut buf = vec![0u8; 2048];
     let mut md5_ctx = md5::Context::new();
     loop {
         let n = file.read(&mut buf)
-            .map_err(|_e| CLIExitCode::UnknownError("the module file does not exist or is unreadable.".into()))?;
+            .map_err(|_e| CLIExitCode::UnknownError("the module file either does not exist or is inaccessible.".into()))?;
         if n == 0 {
             break;
         }
@@ -217,6 +217,7 @@ async fn main() -> CLIExitCode {
                 }
             };
             if let Err(code) = check_module_sum(&cfg) {
+                eprintln!("{code}");
                 return code;
             }
             return wasm_runtime(cfg, cli_command_opts).await;

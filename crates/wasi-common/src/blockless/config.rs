@@ -29,6 +29,7 @@ impl From<&str> for LoggerLevel {
     }
 }
 
+#[derive(Debug)]
 pub enum Stdout {
     //no stdout.
     Null,
