@@ -1,20 +1,27 @@
 {
-    "fs_root_path": "/Users/join/Downloads", 
-    "drivers_root_path": "/Users/join/Downloads", 
+    "version": 1,
+    "fs_root_path": ".", 
+    "drivers_root_path": ".", 
     "runtime_logger": "runtime.log", 
     "limited_memory": 30,
-    "debug_info": false,
-    "entry": "_start",
+    "debug_info": true,
+    "entry": "run",
     "modules": [
         {
-            "file": "/Users/join/Downloads/sdk-rust/target/wasm32-wasi/release/exam1.wasm",
-            "name": "",
+            "file": "examples/wat/linking1.wat",
+            "name": "linking1",
             "type": "entry",
-            "md5": "d5cfa0fc2c4ae995160c68c496dc26b0"
+            "md5": "2d1c1bcfcae62e3842bd4a657549df9f"
+        },
+		{
+            "file": "examples/wat/linking2.wat",
+            "name": "linking2",
+            "type": "module",
+            "md5": "0047cd71fa55c7842f343c8705920916"
         }
     ],
     "permissions": [
         "http://httpbin.org/anything",
-        "file://a.go"
+        "file://README.md"
     ]
 }
