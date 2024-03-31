@@ -259,27 +259,6 @@ impl BlocklessRunner {
     }
 
     /// the error code process.
-    /// ```
-    /// |code|description|
-    /// |----|-------------------|
-    /// |Exit Code 0|Success|
-    /// |Exit Code 1|The flue used out|
-    /// |Exit Code 2|call stack exhausted|
-    /// |Exit Code 3|out of bounds memory access|
-    /// |Exit Code 4|misaligned memory access|
-    /// |Exit Code 5|undefined element: out of bounds table access|
-    /// |Exit Code 6|uninitialized element|
-    /// |Exit Code 7|indirect call type mismatch|
-    /// |Exit Code 8|integer overflow|
-    /// |Exit Code 9|integer divide by zero|
-    /// |Exit Code 10|invalid conversion to integer|
-    /// |Exit Code 11|wasm `unreachable` instruction executed|
-    /// |Exit Code 12|interrupt|
-    /// |Exit Code 13|degenerate component adapter called|
-    /// |Exit Code 15|the app timeout|
-    /// |Exit Code 128|The configure error|
-    /// |Exit Code 255|Unknown error|
-    /// ``` 
     fn error_process<F>(t: &anyhow::Error, used_fuel: F, max_fuel: Option<u64>) -> i32
     where
         F: FnOnce() -> u64,
