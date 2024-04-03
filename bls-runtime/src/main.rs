@@ -1,33 +1,24 @@
-mod v86;
-mod error;
 mod cli_clap;
 mod config;
+mod error;
+mod v86;
+mod macros;
+mod plog;
 mod v86config;
-use blockless::{
-    blockless_run, 
-    LoggerLevel
-};
-use error::CLIExitCode;
+use blockless::{blockless_run, LoggerLevel};
 use clap::Parser;
 use cli_clap::{CliCommandOpts, RuntimeType};
+use config::load_cli_config_extract_from_car;
 #[allow(unused_imports)]
 use config::CliConfig;
-use config::load_cli_config_extract_from_car;
-use v86::V86Lib;
-use v86config::load_v86conf_extract_from_car;
-use std::{
-    io::Read, 
-    path::PathBuf, 
-    time::Duration, 
-};
 use env_logger::Target;
-use log::{
-    error, 
-    info, 
-    LevelFilter,
-};
+use error::CLIExitCode;
+use log::{error, info, LevelFilter};
 use std::fs;
 use std::path::Path;
+use std::{io::Read, path::PathBuf, time::Duration};
+use v86::V86Lib;
+use v86config::load_v86conf_extract_from_car;
 
 const ENV_ROOT_PATH_NAME: &str = "ENV_ROOT_PATH";
 
@@ -38,7 +29,10 @@ fn logger_init_with_config(cfg: &CliConfig) -> Result<(), CLIExitCode> {
     Ok(())
 }
 
-fn logger_init(rt_logger: Option<PathBuf>, rt_logger_level: LoggerLevel) -> Result<(), CLIExitCode> {
+fn logger_init(
+    rt_logger: Option<PathBuf>,
+    rt_logger_level: LoggerLevel,
+) -> Result<(), CLIExitCode> {
     let mut builder = env_logger::Builder::from_default_env();
     let filter_level = match rt_logger_level {
         LoggerLevel::INFO => LevelFilter::Info,
@@ -57,9 +51,13 @@ fn logger_init(rt_logger: Option<PathBuf>, rt_logger_level: LoggerLevel) -> Resu
                 .create(true)
                 .write(true)
                 .open(f)
-                .map_err(|_e| CLIExitCode::UnknownError("the runtime logger file does not exist or is unreadable.".into()))?;
+                .map_err(|_e| {
+                    CLIExitCode::UnknownError(
+                        "the runtime logger file does not exist or is unreadable.".into(),
+                    )
+                })?;
             Target::Pipe(Box::new(file))
-        },
+        }
     };
 
     builder.target(target);
@@ -68,15 +66,19 @@ fn logger_init(rt_logger: Option<PathBuf>, rt_logger_level: LoggerLevel) -> Resu
 }
 
 fn file_md5(f: impl AsRef<Path>) -> Result<String, CLIExitCode> {
-    let mut file = fs::OpenOptions::new()
-        .read(true)
-        .open(f)
-        .map_err(|_e| CLIExitCode::UnknownError("the module file either does not exist or is inaccessible.".into()))?;
+    let mut file = fs::OpenOptions::new().read(true).open(f).map_err(|_e| {
+        CLIExitCode::UnknownError(
+            "the module file either does not exist or is inaccessible.".into(),
+        )
+    })?;
     let mut buf = vec![0u8; 2048];
     let mut md5_ctx = md5::Context::new();
     loop {
-        let n = file.read(&mut buf)
-            .map_err(|_e| CLIExitCode::UnknownError("the module file either does not exist or is inaccessible.".into()))?;
+        let n = file.read(&mut buf).map_err(|_e| {
+            CLIExitCode::UnknownError(
+                "the module file either does not exist or is inaccessible.".into(),
+            )
+        })?;
         if n == 0 {
             break;
         }
@@ -91,14 +93,14 @@ fn check_module_sum(cfg: &CliConfig) -> Result<(), CLIExitCode> {
         let m_file = &module.file;
         let md5sum = file_md5(m_file)?;
         if md5sum != module.md5 {
-            eprintln!("the module {m_file} file md5 checksum is not correctly.");
+            perror!("the module {m_file} file md5 checksum is not correctly.");
             return Err(CLIExitCode::ConfigureError);
         }
     }
     Ok(())
 }
 
-/// the cli support 3 type file, 
+/// the cli support 3 type file,
 /// 1. the car file format, all files archive into the car file.
 /// 2. the wasm or wasi file format, will run wasm directly.
 /// 3. the the config file, format, all files is define in the config file.
@@ -110,12 +112,16 @@ fn load_cli_config(file_path: &str) -> Result<CliConfig, CLIExitCode> {
             let file = fs::OpenOptions::new()
                 .read(true)
                 .open(file_path)
-                .map_err(|_e| CLIExitCode::UnknownError("the car file does not exist or is unreadable.".into()))?;
+                .map_err(|_e| {
+                    CLIExitCode::UnknownError(
+                        "the car file does not exist or is unreadable.".into(),
+                    )
+                })?;
             Some(load_cli_config_extract_from_car(file))
-        },
+        }
         Some(ext) if ext == "wasm" || ext == "wasi" || ext == "wat" => {
             Some(Ok(CliConfig::new_with_wasm(file_path)))
-        },
+        }
         _ => None,
     };
     cli_config
@@ -124,22 +130,27 @@ fn load_cli_config(file_path: &str) -> Result<CliConfig, CLIExitCode> {
 }
 
 fn v86_runtime(path: &str) -> Result<i32, CLIExitCode> {
-    let file = fs::OpenOptions::new()
-        .read(true)
-        .open(path)
-        .map_err(|e| CLIExitCode::UnknownError(format!("the v86 car file does not exist or is unreadable: {}", e)))?;
+    let file = fs::OpenOptions::new().read(true).open(path).map_err(|e| {
+        CLIExitCode::UnknownError(format!(
+            "the v86 car file does not exist or is unreadable: {}",
+            e
+        ))
+    })?;
 
     let cfg = load_v86conf_extract_from_car(file)?;
     let v86 = V86Lib::load(&cfg.dynamic_lib_path)?;
 
-    let raw_config_json = &cfg.raw_config
-        .ok_or_else(|| CLIExitCode::UnknownError("the v86 config file does not exist or is unreadable.".to_string()))?;
+    let raw_config_json = &cfg.raw_config.ok_or_else(|| {
+        CLIExitCode::UnknownError(
+            "the v86 config file does not exist or is unreadable.".to_string(),
+        )
+    })?;
     Ok(v86.v86_wasi_run(raw_config_json))
 }
 
 async fn wasm_runtime(mut cfg: CliConfig, cli_command_opts: CliCommandOpts) -> CLIExitCode {
     if let Err(err) = logger_init_with_config(&cfg) {
-        eprintln!("failed to init logger: {}", err);
+        perror!("failed to init logger: {}", err);
         return err;
     }
 
@@ -156,20 +167,23 @@ async fn wasm_runtime(mut cfg: CliConfig, cli_command_opts: CliCommandOpts) -> C
             tokio::time::sleep(Duration::from_millis(time)).await;
             info!("The wasm execute finish, the exit code: 15");
             std::process::exit(CLIExitCode::AppTimeout.into());
-        }).await;
+        })
+        .await;
     }
 
     info!("The wasm app started.");
     std::panic::set_hook(Box::new(|panic_info| {
         error!("{}", panic_info);
-        eprintln!("WASM app crashed, please check the runtime.log file");
+        perror!("WASM app crashed, please check the runtime.log file");
     }));
 
     let exit_status = blockless_run(cfg.0).await;
-    info!("The wasm execute finish, the exit code: {}", exit_status.code);
+    info!(
+        "The wasm execute finish, the exit code: {}",
+        exit_status.code
+    );
     exit_status.code.into()
 }
-
 
 fn set_root_path_env_var(cli_command_opts: &CliCommandOpts) {
     cli_command_opts
@@ -183,11 +197,12 @@ async fn non_blocking_read<R: Read + Send + 'static>(mut reader: R) -> Option<St
     // spawn thread to read from the reader asynchronously
     std::thread::spawn(move || {
         let mut buffer = String::new();
-        if reader.read_to_string(&mut buffer).is_ok() && !buffer.is_empty() { // blocks
+        if reader.read_to_string(&mut buffer).is_ok() && !buffer.is_empty() {
+            // blocks
             let _ = tx.send(buffer);
         }
     });
-
+    
     // wait for either a message from the thread or timeout
     rx.recv_timeout(std::time::Duration::from_millis(1000)).ok()
 }
@@ -199,25 +214,23 @@ async fn main() -> CLIExitCode {
     let path = cli_command_opts.input_ref();
 
     match cli_command_opts.runtime_type() {
-        RuntimeType::V86 => {
-            match v86_runtime(&path) {
-                Ok(exit_code_err) => return exit_code_err.into(),
-                Err(e) => {
-                    eprintln!("{}", e);
-                    return e
-                }
+        RuntimeType::V86 => match v86_runtime(&path) {
+            Ok(exit_code_err) => return exit_code_err.into(),
+            Err(e) => {
+                perror!("{}", e);
+                return e;
             }
         },
         RuntimeType::Wasm => {
             let cfg = match load_cli_config(&path) {
                 Ok(cfg) => cfg,
                 Err(e) => {
-                    eprintln!("failed to load CLI config: {}", e);
+                    perror!("failed to load CLI config: {}", e);
                     return e;
                 }
             };
             if let Err(code) = check_module_sum(&cfg) {
-                eprintln!("{code}");
+                perror!("{}", code);
                 return code;
             }
             return wasm_runtime(cfg, cli_command_opts).await;
@@ -228,23 +241,28 @@ async fn main() -> CLIExitCode {
 #[cfg(test)]
 mod test {
     #![allow(unused)]
+    use crate::config::load_cli_config_from_car;
     use blockless::ModuleType;
     use rust_car::{
-        Ipld,
+        codec::Encoder,
         header::CarHeader,
-        writer::{self as  car_writer, CarWriter}, 
-        unixfs::{UnixFs, Link}, 
-        codec::Encoder, reader::{self, CarReader}
+        reader::{self, CarReader},
+        unixfs::{Link, UnixFs},
+        writer::{self as car_writer, CarWriter},
+        Ipld,
     };
-    use crate::config::load_cli_config_from_car;
 
     use super::*;
 
     #[test]
     fn test_set_root_path_env_var() {
-        let cli_opts = CliCommandOpts::try_parse_from(["cli", "test", "--fs-root-path=./test"]).unwrap();;
+        let cli_opts =
+            CliCommandOpts::try_parse_from(["cli", "test", "--fs-root-path=./test"]).unwrap();
         set_root_path_env_var(&cli_opts);
-        assert_eq!(std::env::var(ENV_ROOT_PATH_NAME).unwrap(), *cli_opts.fs_root_path().unwrap());
+        assert_eq!(
+            std::env::var(ENV_ROOT_PATH_NAME).unwrap(),
+            *cli_opts.fs_root_path().unwrap()
+        );
     }
 
     #[test]
@@ -289,13 +307,16 @@ mod test {
                     "http://httpbin.org/anything",
                     "file://a.go"
                 ]
-            }"#.to_vec();
+            }"#
+            .to_vec();
             let d_len = data.len();
             let f_cid = writer.write_ipld(Ipld::Bytes(data)).unwrap();
             let mut unixfs = UnixFs::new_directory();
             unixfs.add_link(Link::new(f_cid, "config.json".to_string(), d_len as _));
             let root_cid = writer.write_ipld(unixfs.encode().unwrap());
-            writer.rewrite_header(CarHeader::new_v1(vec![root_cid.unwrap()])).unwrap();
+            writer
+                .rewrite_header(CarHeader::new_v1(vec![root_cid.unwrap()]))
+                .unwrap();
             writer.flush().unwrap();
         };
         write_car();

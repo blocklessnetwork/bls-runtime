@@ -1,6 +1,9 @@
 use std::fs::File;
 
-use crate::{config::{replace_vars, load_extract_from_car, Config}, error::CLIExitCode};
+use crate::{
+    config::{load_extract_from_car, replace_vars, Config},
+    error::CLIExitCode,
+};
 use anyhow::Result;
 
 pub(crate) struct V86config {
@@ -11,16 +14,16 @@ pub(crate) struct V86config {
 
 #[allow(dead_code)]
 impl V86config {
-
     fn from_json_string(json_string: String) -> Result<Self> {
         let json_obj = json::parse(&json_string)?;
         let fs_root_path: Option<String> = json_obj["fs_root_path"].as_str().map(String::from);
         let fs_root_path = fs_root_path.unwrap();
 
-        let dynamic_lib_path: Option<String> = json_obj["dynamic_lib_path"].as_str().map(String::from);
+        let dynamic_lib_path: Option<String> =
+            json_obj["dynamic_lib_path"].as_str().map(String::from);
         let dynamic_lib_path = dynamic_lib_path.unwrap();
-        Ok(V86config{ 
-            fs_root_path, 
+        Ok(V86config {
+            fs_root_path,
             dynamic_lib_path,
             raw_config: None,
         })
@@ -30,7 +33,7 @@ impl V86config {
         let data = replace_vars(data, root_suffix)?;
         Self::from_json_string(data)
     }
-    
+
     pub fn from_file(data: String, root_suffix: Option<String>) -> Result<Self> {
         let data = replace_vars(data, root_suffix)?;
         Self::from_json_string(data)
@@ -47,16 +50,17 @@ pub(crate) fn load_v86conf_extract_from_car(f: File) -> Result<V86config, CLIExi
 
     match config {
         Config::V86config(cfg) => Ok(cfg),
-        _ => Err(CLIExitCode::UnknownError("the v86 car file does not exist or is unreadable.".to_string())),
+        _ => Err(CLIExitCode::UnknownError(
+            "the v86 car file does not exist or is unreadable.".to_string(),
+        )),
     }
 }
-
 
 #[cfg(test)]
 mod test {
     use super::V86config;
 
-    #[test]   
+    #[test]
     fn test_v86_config() {
         let data = r#"{
             "fs_root_path": "$ENV_ROOT_PATH", 
@@ -69,7 +73,7 @@ mod test {
         assert_eq!(&cfg.dynamic_lib_path, "/temp/v86/1/test.so");
     }
 
-    #[test]   
+    #[test]
     fn test_v86_config2() {
         let data = r#"{
             "fs_root_path": "$ENV_ROOT_PATH", 
