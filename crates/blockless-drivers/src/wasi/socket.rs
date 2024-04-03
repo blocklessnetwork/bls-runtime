@@ -1,16 +1,15 @@
 use std::sync::Arc;
 
-use wasi_cap_std_sync::net::Socket;
 use wasi_common::{
-    WasiCtx, 
-    WasiFile, 
-    file::{FileAccessMode, FileEntry}
+    file::{FileAccessMode, FileEntry},
+    sync::net::Socket,
+    WasiCtx, WasiFile,
 };
 
 use crate::BlocklessSocketErrorKind;
-use wiggle::GuestPtr;
-use std::net::{TcpStream, TcpListener};
 use log::error;
+use std::net::{TcpListener, TcpStream};
+use wiggle::GuestPtr;
 
 wiggle::from_witx!({
     witx: ["$BLOCKLESS_DRIVERS_ROOT/witx/blockless_socket.witx"],
@@ -20,12 +19,13 @@ wiggle::from_witx!({
 });
 
 impl types::UserErrorConversion for WasiCtx {
-
-    fn socket_error_from_blockless_socket_error_kind(&mut self,e:self::BlocklessSocketErrorKind) -> wiggle::anyhow::Result<types::SocketError>  {
+    fn socket_error_from_blockless_socket_error_kind(
+        &mut self,
+        e: self::BlocklessSocketErrorKind,
+    ) -> wiggle::anyhow::Result<types::SocketError> {
         e.try_into()
             .map_err(|e| wiggle::anyhow::anyhow!(format!("{:?}", e)))
     }
-    
 }
 
 impl wiggle::GuestErrorType for types::SocketError {
@@ -80,10 +80,11 @@ impl blockless_socket::BlocklessSocket for WasiCtx {
         &mut self,
         bind: &GuestPtr<'a, str>,
     ) -> Result<types::SocketHandle, BlocklessSocketErrorKind> {
-        let addr = bind.as_str()
+        let addr = bind
+            .as_str()
             .map_err(|_| BlocklessSocketErrorKind::ParameterError)?
             .unwrap();
-        let mode = FileAccessMode::READ|FileAccessMode::WRITE;
+        let mode = FileAccessMode::READ | FileAccessMode::WRITE;
         match tcp_bind(&addr)
             .await
             .map(|f| Arc::new(FileEntry::new(f, mode)))
@@ -101,10 +102,11 @@ impl blockless_socket::BlocklessSocket for WasiCtx {
         &mut self,
         target: &GuestPtr<'a, str>,
     ) -> Result<types::SocketHandle, BlocklessSocketErrorKind> {
-        let addr = target.as_str()
+        let addr = target
+            .as_str()
             .map_err(|_| BlocklessSocketErrorKind::ParameterError)?
             .unwrap();
-        let mode = FileAccessMode::READ|FileAccessMode::WRITE;
+        let mode = FileAccessMode::READ | FileAccessMode::WRITE;
         match tcp_connect(&addr)
             .await
             .map(|f| Arc::new(FileEntry::new(f, mode)))
@@ -117,5 +119,4 @@ impl blockless_socket::BlocklessSocket for WasiCtx {
             Err(e) => Err(e),
         }
     }
-
 }

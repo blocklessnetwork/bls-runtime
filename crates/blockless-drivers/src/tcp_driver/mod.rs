@@ -1,10 +1,10 @@
 use crate::{Driver, ErrorKind};
 use blockless_multiaddr as multiaddr;
 use log::error;
+use wasi_common::sync::net::Socket;
 use std::future::Future;
 use std::pin::Pin;
 use tokio::net::TcpStream;
-use wasi_cap_std_sync::net::Socket;
 use wasi_common::WasiFile;
 
 pub struct TcpDriver {}

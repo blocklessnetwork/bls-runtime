@@ -16,22 +16,21 @@ wiggle_metadata = ["wiggle/wiggle_metadata"]
 blockless-drivers-macro = {path = "macro"}
 wasmtime-wasi = {workspace = true}
 wiggle = {workspace = true}
-wasi-cap-std-sync = {workspace = true}
 wasi-common = {workspace = true}
 anyhow = {workspace = true}
 cap-std = {workspace = true}
-log = "0.4"
-async-trait = "0.1"
+log = {workspace = true}
+async-trait = {workspace = true}
 dlopen = {workspace = true}
+json = {workspace = true}
 reqwest = {version = "0.11", features = ["stream"]}
 serde_urlencoded = "0.7"
-bytes = "1"
+bytes = { workspace = true }
 httparse = "1"
-json = {version = "0.12.4"}
-url = "2.2"
+url = { workspace = true }
 rust-s3 = "0.32.0"
-futures-core = "0.3.25"
-futures-util = "0.3.25"
+futures-core = {workspace = true}
+futures-util = {workspace = true}
 md5 = "0.7.0"
 
 [dependencies.rusqlite]
@@ -40,7 +39,7 @@ features = ["bundled"]
 
 
 [dev-dependencies]
-tempdir = "0.3.7"
+tempdir = {workspace = true}
 tokio-test = "0.4.2"
 
 
@@ -48,7 +47,7 @@ tokio-test = "0.4.2"
 workspace = true
 
 [dependencies.tokio]
-version = "1"
+workspace = true
 features = ["net", "process", "fs"]
 
 

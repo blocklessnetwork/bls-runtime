@@ -1,32 +1,25 @@
-mod modules;
 mod context;
 pub mod error;
+mod modules;
 
-use context::BlocklessContext;
-use blockless_drivers::{
-    CdylibDriver, 
-    DriverConetxt
-};
+use blockless_drivers::{CdylibDriver, DriverConetxt};
 use blockless_env;
+pub use blockless_multiaddr::MultiAddr;
 use cap_std::ambient_authority;
+use context::BlocklessContext;
 pub use error::*;
 use log::{debug, error};
 use modules::ModuleLinker;
-use wasmtime_wasi_threads::WasiThreadsCtx;
 use std::{env, path::Path, sync::Arc};
+use wasi_common::sync::WasiCtxBuilder;
 pub use wasi_common::*;
 use wasmtime::{
-    Config, 
-    Engine,
-    PoolingAllocationConfig, 
-    InstanceAllocationStrategy, 
-    Linker, 
-    Module,
-    Store,
+    Config, Engine, InstanceAllocationStrategy, Linker, Module, PoolingAllocationConfig, Store,
     Trap,
 };
-use wasmtime_wasi::sync::WasiCtxBuilder;
+use wasmtime_wasi_threads::WasiThreadsCtx;
 
+// the default wasm entry name.
 const ENTRY: &str = "_start";
 
 pub struct ExitStatus {
@@ -41,6 +34,8 @@ trait BlocklessConfig2Preview1WasiBuilder {
 }
 
 impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
+    /// set the stdout and stderr for the wasm.
+    /// the stdout adn stderr can be setting to file or inherit the stdout and stderr.
     fn preview1_set_stdouterr(&self, mut builder: WasiCtxBuilder, is_err: bool) -> WasiCtxBuilder {
         let b_conf = self;
         match b_conf.stdout_ref() {
@@ -56,7 +51,7 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
 
                     if let Some(f) = file_opts.open(file_name).ok().map(|file| {
                         let file = cap_std::fs::File::from_std(file);
-                        let f = wasmtime_wasi::file::File::from_cap_std(file);
+                        let f = wasi_common::sync::file::File::from_cap_std(file);
                         Box::new(f)
                     }) {
                         is_set_fileout = true;
@@ -87,14 +82,14 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
         builder
     }
 
+    /// create the preview1_builder by the configure.
     fn preview1_builder(&self) -> WasiCtxBuilder {
         let b_conf = self;
-        let root_dir = b_conf
-            .fs_root_path_ref()
-            .and_then(|path| wasmtime_wasi::Dir::open_ambient_dir(path, ambient_authority()).ok());
+        let root_dir = b_conf.fs_root_path_ref().and_then(|path| {
+            wasi_common::sync::Dir::open_ambient_dir(path, ambient_authority()).ok()
+        });
         let mut builder = WasiCtxBuilder::new();
         //stdout file process for setting.
-        builder = b_conf.preview1_set_stdouterr(builder, false);
         builder = b_conf.preview1_set_stdouterr(builder, true);
         let entry_module = b_conf.entry_module().unwrap();
         let mut args = vec![entry_module];
@@ -107,6 +102,7 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
         builder
     }
 
+    /// convert the blockless configure  to wasmtime configure.
     fn preview1_engine_config(&self) -> Config {
         let mut conf = Config::new();
 
@@ -122,7 +118,7 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
             allocation_config.memory_pages(m);
             conf.allocation_strategy(InstanceAllocationStrategy::Pooling(allocation_config));
         }
-        
+
         if self.feature_thread() {
             conf.wasm_threads(true);
         } else {
@@ -135,10 +131,12 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
 struct BlocklessRunner(BlocklessConfig);
 
 impl BlocklessRunner {
+    
+    /// blockless run method, it execute the wasm program with configure file.
     async fn run(self) -> ExitStatus {
         let b_conf = self.0;
         let max_fuel = b_conf.get_limited_fuel();
-        //set the drivers root path, if not setting use exe file path.
+        // set the drivers root path, if not setting use exe file path.
         let drivers_root_path = b_conf
             .drivers_root_path_ref()
             .map(|p| p.into())
@@ -175,32 +173,32 @@ impl BlocklessRunner {
             linker.instantiate_async(&mut store, &module).await.unwrap()
         };
         let func = inst.get_typed_func::<(), ()>(&mut store, &entry).unwrap();
+        // if thread multi thread use sync model. 
+        // The multi-thread model is used for the cpu intensive program.
         let result = if support_thread {
             func.call(&mut store, ())
         } else {
             func.call_async(&mut store, ()).await
         };
         let exit_code = match result {
-            Err(ref t) => Self::error_process(t, || store.fuel_consumed().unwrap(), max_fuel),
+            Err(ref t) => Self::error_process(t, || store.get_fuel().unwrap(), max_fuel),
             Ok(_) => {
                 debug!("program exit normal.");
                 0
             }
         };
         ExitStatus {
-            fuel: store.fuel_consumed(),
+            fuel: store.get_fuel().ok(),
             code: exit_code,
         }
     }
 
     /// setup functions the preview1 for linker
-    fn preview1_setup_linker(
-        linker: &mut Linker<BlocklessContext>, 
-    ) {
+    fn preview1_setup_linker(linker: &mut Linker<BlocklessContext>) {
         // define the macro of extends.
         macro_rules! add_to_linker {
             ($method:expr) => {
-                $method(linker, |s|  s.preview1_ctx.as_mut().unwrap()).unwrap()
+                $method(linker, |s| s.preview1_ctx.as_mut().unwrap()).unwrap()
             };
         }
         add_to_linker!(blockless_env::add_drivers_to_linker);
@@ -210,7 +208,10 @@ impl BlocklessRunner {
         add_to_linker!(blockless_env::add_memory_to_linker);
         add_to_linker!(blockless_env::add_cgi_to_linker);
         add_to_linker!(blockless_env::add_socket_to_linker);
-        add_to_linker!(wasmtime_wasi::add_to_linker);
+        wasi_common::sync::add_to_linker(
+            linker, 
+            |host| host.preview1_ctx.as_mut().unwrap()
+        ).unwrap();
     }
 
     fn preview1_setup_thread_support(
@@ -220,22 +221,18 @@ impl BlocklessRunner {
     ) {
         wasmtime_wasi_threads::add_to_linker(linker, store, &module, |ctx| {
             ctx.wasi_threads.as_ref().unwrap()
-        }).unwrap();
+        })
+        .unwrap();
         store.data_mut().wasi_threads = Some(Arc::new(
-            WasiThreadsCtx::new(
-                module.clone(), 
-                Arc::new(linker.clone())
-            ).unwrap()
+            WasiThreadsCtx::new(module.clone(), Arc::new(linker.clone())).unwrap(),
         ));
     }
-
-
 
     async fn module_linker<'a>(
         version: BlocklessConfigVersion,
         mut entry: String,
         store: &'a mut Store<BlocklessContext>,
-        linker: &'a mut Linker<BlocklessContext>
+        linker: &'a mut Linker<BlocklessContext>,
     ) -> (Module, String) {
         match version {
             // this is older configure for bls-runtime, this only run single wasm.
@@ -261,6 +258,7 @@ impl BlocklessRunner {
         });
     }
 
+    /// the error code process.
     fn error_process<F>(t: &anyhow::Error, used_fuel: F, max_fuel: Option<u64>) -> i32
     where
         F: FnOnce() -> u64,
@@ -307,12 +305,11 @@ pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
     BlocklessRunner(b_conf).run().await
 }
 
-
 #[cfg(test)]
 mod test {
     #[allow(unused_imports)]
     use super::*;
-    
+
     //inner test
     #[test]
     fn test_exit_code() {
@@ -320,5 +317,4 @@ mod test {
         let rs = BlocklessRunner::error_process(&err, || 20u64, Some(30));
         assert_eq!(rs, 1);
     }
-
 }
