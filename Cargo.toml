@@ -26,7 +26,10 @@ wasmtime-wasi = "19.0.0"
 wiggle-generate = "19.0.0"
 wasmtime-wasi-threads = "19.0.0" 
 wasi-common = { path = "crates/wasi-common", version="19.0.0" }
+# witx dependency by wiggle
 wiggle = "19.0.0"
+witx = "0.9.1"
+
 anyhow = "1.0.22"
 cap-std = "3.0.0"
 cap-fs-ext = "3.0.0"
