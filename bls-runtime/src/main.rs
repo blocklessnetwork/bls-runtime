@@ -22,6 +22,7 @@ use v86config::load_v86conf_extract_from_car;
 
 const ENV_ROOT_PATH_NAME: &str = "ENV_ROOT_PATH";
 
+/// set the logger output and filter level.
 fn logger_init_with_config(cfg: &CliConfig) -> Result<(), CLIExitCode> {
     let rt_logger = cfg.0.runtime_logger_path();
     let rt_logger_level = cfg.0.get_runtime_logger_level();
@@ -29,6 +30,9 @@ fn logger_init_with_config(cfg: &CliConfig) -> Result<(), CLIExitCode> {
     Ok(())
 }
 
+/// init the logger with the configure file.
+/// the default output is the console.
+/// you can set the output as file in the configure.
 fn logger_init(
     rt_logger: Option<PathBuf>,
     rt_logger_level: LoggerLevel,
