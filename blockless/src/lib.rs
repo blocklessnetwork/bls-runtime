@@ -161,7 +161,7 @@ impl BlocklessRunner {
         let mut ctx = BlocklessContext::default();
         ctx.preview1_ctx = Some(preview1_ctx);
         let mut store = Store::new(&engine, ctx);
-        Self::preview1_setup_linker(&mut linker);
+        Self::preview1_setup_linker(&mut linker, support_thread);
         let (module, entry) = Self::module_linker(version, entry, &mut store, &mut linker).await;
         // support thread.
         if support_thread {
@@ -194,20 +194,22 @@ impl BlocklessRunner {
     }
 
     /// setup functions the preview1 for linker
-    fn preview1_setup_linker(linker: &mut Linker<BlocklessContext>) {
-        // define the macro of extends.
-        macro_rules! add_to_linker {
-            ($method:expr) => {
-                $method(linker, |s| s.preview1_ctx.as_mut().unwrap()).unwrap()
-            };
+    fn preview1_setup_linker(linker: &mut Linker<BlocklessContext>, support_thread: bool) {
+        if !support_thread {
+            // define the macro of extends.
+            macro_rules! add_to_linker {
+                ($method:expr) => {
+                    $method(linker, |s| s.preview1_ctx.as_mut().unwrap()).unwrap()
+                };
+            }
+            add_to_linker!(blockless_env::add_drivers_to_linker);
+            add_to_linker!(blockless_env::add_http_to_linker);
+            add_to_linker!(blockless_env::add_ipfs_to_linker);
+            add_to_linker!(blockless_env::add_s3_to_linker);
+            add_to_linker!(blockless_env::add_memory_to_linker);
+            add_to_linker!(blockless_env::add_cgi_to_linker);
+            add_to_linker!(blockless_env::add_socket_to_linker);
         }
-        add_to_linker!(blockless_env::add_drivers_to_linker);
-        add_to_linker!(blockless_env::add_http_to_linker);
-        add_to_linker!(blockless_env::add_ipfs_to_linker);
-        add_to_linker!(blockless_env::add_s3_to_linker);
-        add_to_linker!(blockless_env::add_memory_to_linker);
-        add_to_linker!(blockless_env::add_cgi_to_linker);
-        add_to_linker!(blockless_env::add_socket_to_linker);
         wasi_common::sync::add_to_linker(
             linker, 
             |host| host.preview1_ctx.as_mut().unwrap()
