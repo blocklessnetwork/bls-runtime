@@ -223,9 +223,10 @@ impl BlocklessRunner {
             ctx.wasi_threads.as_ref().unwrap()
         })
         .unwrap();
-        store.data_mut().wasi_threads = Some(Arc::new(
-            WasiThreadsCtx::new(module.clone(), Arc::new(linker.clone())).unwrap(),
-        ));
+        store.data_mut().wasi_threads = Some(Arc::new(WasiThreadsCtx::new(
+            module.clone(), 
+            Arc::new(linker.clone()),
+        ).expect("wasi thread ctx new fail.")));
     }
 
     async fn module_linker<'a>(
@@ -241,7 +242,7 @@ impl BlocklessRunner {
                 (module, ENTRY.to_string())
             }
             BlocklessConfigVersion::Version1 => {
-                if entry == "" {
+                if entry.is_empty() {
                     entry = ENTRY.to_string();
                 }
                 let mut module_linker = ModuleLinker::new(linker, store);
