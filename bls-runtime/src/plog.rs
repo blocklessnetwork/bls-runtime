@@ -20,7 +20,6 @@ static ENV_LOGGER: Lazy<Mutex<Logger>> = Lazy::new(|| {
 
 /// log info by level
 pub fn plog(level: Level, args: Arguments<'_>) {
-    let logger = ENV_LOGGER.lock().unwrap();
     let record = Record::builder().args(args).level(level).build();
-    logger.log(&record);
+    ENV_LOGGER.lock().unwrap().log(&record);
 }
