@@ -67,22 +67,25 @@ impl DB {
             select id, alias, md5, filename, description, status
             from extension_meta where status = 0 and alias=?1;
         "#;
-        Ok(self.connect.query_row(query_sql, &[alias], |row| {
-            let id = row.get(0)?;
-            let alias = row.get(1)?;
-            let md5 = row.get(2)?;
-            let file_name = row.get(3)?;
-            let description = row.get(4)?;
-            let status = row.get::<usize, i32>(5)?.into();
-            Ok(ExtensionMeta {
-                id,
-                md5,
-                alias,
-                status,
-                file_name,
-                description,
+        Ok(self
+            .connect
+            .query_row(query_sql, &[alias], |row| {
+                let id = row.get(0)?;
+                let alias = row.get(1)?;
+                let md5 = row.get(2)?;
+                let file_name = row.get(3)?;
+                let description = row.get(4)?;
+                let status = row.get::<usize, i32>(5)?.into();
+                Ok(ExtensionMeta {
+                    id,
+                    md5,
+                    alias,
+                    status,
+                    file_name,
+                    description,
+                })
             })
-        }).optional()?)
+            .optional()?)
     }
 
     pub(crate) fn list_extensions(&self) -> Result<Vec<ExtensionMeta>> {
@@ -127,13 +130,8 @@ impl DB {
             delete from extension_meta
             where id = ?1 and filename=?2
         "#;
-        self.connect.execute(
-            update_sql,
-            (
-                &meta.id,
-                &meta.file_name,
-            )
-        )?;
+        self.connect
+            .execute(update_sql, (&meta.id, &meta.file_name))?;
         Ok(())
     }
 
@@ -145,12 +143,7 @@ impl DB {
         "#;
         self.connect.execute(
             update_sql,
-            (
-                &meta.alias,
-                &meta.md5,
-                &meta.description,
-                &meta.file_name,
-            )
+            (&meta.alias, &meta.md5, &meta.description, &meta.file_name),
         )?;
         Ok(())
     }

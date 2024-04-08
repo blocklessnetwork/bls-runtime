@@ -1,8 +1,8 @@
 use std::ffi::OsStr;
 
+use crate::HttpErrorKind;
 use dlopen::raw::Library;
 use log::error;
-use crate::HttpErrorKind;
 
 type ReqFuncType = unsafe extern "C" fn(
     url: *const u8,

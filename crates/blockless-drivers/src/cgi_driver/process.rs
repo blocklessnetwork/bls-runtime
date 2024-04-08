@@ -2,34 +2,36 @@ use std::{
     collections::HashMap,
     path::{Path, PathBuf},
     process::Stdio,
-    sync::{ Mutex, MutexGuard},
+    sync::{Mutex, MutexGuard},
 };
 
 use crate::CgiErrorKind;
 use json::object::Object as JsonObject;
 use json::JsonValue;
 use log::{debug, error};
+#[cfg(target_family = "unix")]
+use std::os::unix::prelude::MetadataExt;
 use tokio::{
     fs::File,
     io::{AsyncReadExt, AsyncWriteExt},
     process::{Child, Command},
 };
-#[cfg(target_family="unix")]
-use std::os::unix::prelude::MetadataExt;
 
 const DB_NAME: &str = ".extsdb";
 
 use super::db::{ExtensionMeta, ExtensionMetaStatus, DB};
-
 
 fn get_db(path: impl AsRef<Path>) -> MutexGuard<'static, Option<DB>> {
     static mut DB: Mutex<Option<DB>> = Mutex::new(None);
     unsafe {
         let mut db = DB.lock().unwrap();
         if db.is_none() {
-            db.replace( DB::new(path)
-            .map_err(|e| error!("error open db {}", e))
-            .ok().unwrap());
+            db.replace(
+                DB::new(path)
+                    .map_err(|e| error!("error open db {}", e))
+                    .ok()
+                    .unwrap(),
+            );
             db.as_mut().and_then(|db| {
                 if db.create_schema().is_ok() {
                     Some(db)
@@ -64,7 +66,7 @@ impl CgiProcess {
 
         let command = match get_command_with_alias(&root_path, &command) {
             Some(c) => c.file_name,
-            None => return Err(CgiErrorKind::InvalidExtension)
+            None => return Err(CgiErrorKind::InvalidExtension),
         };
 
         let args = match obj["args"] {
@@ -197,19 +199,20 @@ fn list_extensions_from_db(path: &str) -> HashMap<String, ExtensionMeta> {
     let mut db = get_db(db_file_name);
     //load the metas from db
     //the ids in db will use for delete the invalid extension.
-    db.as_mut().map(|db| {
-        let exts = db
-            .list_extensions()
-            .map_err(|e| error!("error list extensions: {}", e))
-            .unwrap_or_default();
-        let mut exts_metas = HashMap::new();
-        for mut ext in exts.into_iter() {
-            ext.status = ExtensionMetaStatus::Invalid;
-            exts_metas.insert(ext.file_name.clone(), ext);
-        }
-        exts_metas
-    })
-    .unwrap_or_default()
+    db.as_mut()
+        .map(|db| {
+            let exts = db
+                .list_extensions()
+                .map_err(|e| error!("error list extensions: {}", e))
+                .unwrap_or_default();
+            let mut exts_metas = HashMap::new();
+            for mut ext in exts.into_iter() {
+                ext.status = ExtensionMetaStatus::Invalid;
+                exts_metas.insert(ext.file_name.clone(), ext);
+            }
+            exts_metas
+        })
+        .unwrap_or_default()
 }
 
 /// get the file md5 summary
@@ -273,7 +276,7 @@ async fn list_cgi_directory(
 ) -> anyhow::Result<Vec<ExtensionMeta>> {
     let mut read_dir = tokio::fs::read_dir(path).await?;
     let mut rs = Vec::new();
-    while let Some(entry) =  read_dir.next_entry().await? {
+    while let Some(entry) = read_dir.next_entry().await? {
         let file_name = entry.file_name();
         if file_name == DB_NAME {
             continue;
@@ -282,8 +285,8 @@ async fn list_cgi_directory(
         if !meta_data.is_file() {
             continue;
         }
-        #[cfg(target_family="unix")]
-        if meta_data.mode()&0o111 == 0  {
+        #[cfg(target_family = "unix")]
+        if meta_data.mode() & 0o111 == 0 {
             continue;
         }
         let full_path = entry.path();
@@ -333,12 +336,11 @@ async fn cgi_directory_list_extensions(path: &str) -> Result<Vec<ExtensionMeta>,
         Some(Err(e)) => return Err(e),
         None => return Err(CgiErrorKind::RuntimeError),
     };
-    let metas = metas.into_iter()
-        .filter(|meta| {
-            match meta.status {
-                ExtensionMetaStatus::Invalid => false,
-                _ => true,
-            }
+    let metas = metas
+        .into_iter()
+        .filter(|meta| match meta.status {
+            ExtensionMetaStatus::Invalid => false,
+            _ => true,
         })
         .collect::<Vec<_>>();
     Ok(metas)
@@ -347,44 +349,43 @@ async fn cgi_directory_list_extensions(path: &str) -> Result<Vec<ExtensionMeta>,
 /// The CGI must support "--ext_verify" paramter, the runtime will be call with the parameter.
 pub async fn cgi_directory_list_exec(path: &str) -> Result<String, CgiErrorKind> {
     let exts = cgi_directory_list_extensions(path).await?;
-    let exts: Vec<JsonValue> = exts.into_iter().map(|ext| {
-        let mut json_obj = JsonObject::new();
-        json_obj.insert("fileName", JsonValue::String(ext.file_name));
-        json_obj.insert("alias", JsonValue::String(ext.alias));
-        json_obj.insert("md5", JsonValue::String(ext.md5));
-        json_obj.insert("description", JsonValue::String(ext.description));
-        JsonValue::Object(json_obj)
-    }).collect();
+    let exts: Vec<JsonValue> = exts
+        .into_iter()
+        .map(|ext| {
+            let mut json_obj = JsonObject::new();
+            json_obj.insert("fileName", JsonValue::String(ext.file_name));
+            json_obj.insert("alias", JsonValue::String(ext.alias));
+            json_obj.insert("md5", JsonValue::String(ext.md5));
+            json_obj.insert("description", JsonValue::String(ext.description));
+            JsonValue::Object(json_obj)
+        })
+        .collect();
     let vals = JsonValue::Array(exts);
     Ok(json::stringify(vals))
 }
 
-
-fn get_command_with_alias(
-    path: &str, 
-    alias: &str,
-) -> Option<ExtensionMeta> {
-    match get_db(path).as_mut().map(|db| {
-        db.get_extension_by_alias(alias)
-    }) {
+fn get_command_with_alias(path: &str, alias: &str) -> Option<ExtensionMeta> {
+    match get_db(path)
+        .as_mut()
+        .map(|db| db.get_extension_by_alias(alias))
+    {
         Some(Ok(s)) => s,
         Some(Err(e)) => {
             error!("error get_extension_by_alias: {}", e);
             None
-        },
+        }
         None => None,
     }
 }
 
-
 #[cfg(test)]
 mod test {
     use super::*;
+    use std::{fs, io::Write, os::unix::prelude::OpenOptionsExt};
     use tempdir::{self, TempDir};
     use tokio_test;
-    use std::{fs, io::Write, os::unix::prelude::OpenOptionsExt};
     struct DropDir {
-        path: PathBuf
+        path: PathBuf,
     }
 
     impl Drop for DropDir {
@@ -393,7 +394,10 @@ mod test {
         }
     }
 
-    async fn _test_extensions_file(temp_dir: &TempDir,filename: &str) -> anyhow::Result<Vec<ExtensionMeta>> {
+    async fn _test_extensions_file(
+        temp_dir: &TempDir,
+        filename: &str,
+    ) -> anyhow::Result<Vec<ExtensionMeta>> {
         let test_extension = temp_dir.path().join(filename);
         {
             let mut file = fs::OpenOptions::new()
@@ -403,30 +407,32 @@ mod test {
                 .open(test_extension)
                 .unwrap();
             //The CGI must support "--ext_verify" paramter
-            let script = format!(r#"#!/usr/bin/env sh 
-            echo '{{"alias":"{}", "description":"eeeeee", "is_cgi":true}}'"#, 
-            filename);
+            let script = format!(
+                r#"#!/usr/bin/env sh 
+            echo '{{"alias":"{}", "description":"eeeeee", "is_cgi":true}}'"#,
+                filename
+            );
             file.write_all(script.as_bytes())?;
         }
         let path = temp_dir.path().to_str().unwrap();
         let exts = cgi_directory_list_extensions(path).await?;
         Ok(exts)
     }
-    
+
     #[test]
-    fn test_extensions_file()  {
-        #[cfg(target_family="unix")]
+    fn test_extensions_file() {
+        #[cfg(target_family = "unix")]
         tokio_test::block_on(async {
             let temp_dir = tempdir::TempDir::new("drivers-test").unwrap();
-            let drop_dir = DropDir{
-                path: temp_dir.path().to_path_buf()
+            let drop_dir = DropDir {
+                path: temp_dir.path().to_path_buf(),
             };
-            let exts = _test_extensions_file(&temp_dir, "f1").await.unwrap(); 
+            let exts = _test_extensions_file(&temp_dir, "f1").await.unwrap();
             assert_eq!(exts.len(), 1);
             assert!(exts[0].alias == "f1");
             assert!(exts[0].description == "eeeeee");
             assert!(exts[0].file_name == "f1");
-            let exts = _test_extensions_file(&temp_dir, "f2").await.unwrap(); 
+            let exts = _test_extensions_file(&temp_dir, "f2").await.unwrap();
             assert!(exts.len() == 2);
             assert!(exts[0].alias == "f1" || exts[0].alias == "f2");
             assert!(exts[0].description == "eeeeee");

@@ -191,7 +191,6 @@ impl BlocklessConfig {
         self.version
     }
 
-
     #[inline(always)]
     pub fn feature_thread(&self) -> bool {
         self.feature_thread
@@ -233,9 +232,7 @@ impl BlocklessConfig {
             BlocklessConfigVersion::Version1 => self
                 .modules
                 .iter()
-                .find(|m| {
-                    matches!(m.module_type, ModuleType::Entry)
-                })
+                .find(|m| matches!(m.module_type, ModuleType::Entry))
                 .map(|s| s.file.as_str()),
         };
         entry_module.and_then(|s| {
@@ -450,9 +447,7 @@ impl BlocklessConfig {
     }
 
     pub fn resource_permission(&self, url: &str) -> bool {
-        self.permisions
-            .iter()
-            .any(|p| p.is_permision(url))
+        self.permisions.iter().any(|p| p.is_permision(url))
     }
 }
 

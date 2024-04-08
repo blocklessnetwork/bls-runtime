@@ -23,14 +23,16 @@ pub fn linker_integration(args: TokenStream) -> proc_macro::TokenStream {
     }
     let method_name = format_ident!("{}", config.link_method.value());
     let target_path = &config.target;
-    let mut ctx = bounds.iter().zip(module_ident.iter()).map(|(m, b)| {
-        quote!(+#target_path::#b::#m)
-    }).collect::<Vec<_>>();
+    let mut ctx = bounds
+        .iter()
+        .zip(module_ident.iter())
+        .map(|(m, b)| quote!(+#target_path::#b::#m))
+        .collect::<Vec<_>>();
     ctx.push(quote!(+#target_path::types::UserErrorConversion));
     let s = quote!(
         pub fn #method_name<T, U>(
-            linker: &mut Linker<T>, 
-            get_ctx: impl Fn(&mut T) -> &mut U + Send + Copy + Sync + 'static 
+            linker: &mut Linker<T>,
+            get_ctx: impl Fn(&mut T) -> &mut U + Send + Copy + Sync + 'static
         ) -> wiggle::anyhow::Result<()>
         where
             T: Send,
@@ -39,7 +41,7 @@ pub fn linker_integration(args: TokenStream) -> proc_macro::TokenStream {
             #(#funcs)*
             Ok(())
         }
-       
+
     );
     s.into()
 }

@@ -1,7 +1,7 @@
-use std::{fmt::Arguments, sync::Mutex};
-use once_cell::sync::Lazy;
 use env_logger::{Builder, Logger};
 use log::{Level, Log, MetadataBuilder, Record};
+use once_cell::sync::Lazy;
+use std::{fmt::Arguments, sync::Mutex};
 
 /// The logger should only be set once in log crate by set_logger,
 /// if set the console as output, can't be set the file as output.

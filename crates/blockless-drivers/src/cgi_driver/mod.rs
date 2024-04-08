@@ -1,5 +1,5 @@
-mod process;
 mod db;
+mod process;
 
 use std::{collections::HashMap, sync::Once};
 
@@ -54,9 +54,9 @@ pub async fn cgi_directory_list_read(handle: u32, buf: &mut [u8]) -> Result<u32,
         ctx.insert(handle, CGICtx::DirectoryList((vals, pos)));
         return Ok(0);
     }
-    
-    buf[0..copyn].copy_from_slice(&rs[pos..(pos+copyn)]);
-    ctx.insert(handle, CGICtx::DirectoryList((vals, pos+copyn)));
+
+    buf[0..copyn].copy_from_slice(&rs[pos..(pos + copyn)]);
+    ctx.insert(handle, CGICtx::DirectoryList((vals, pos + copyn)));
     Ok(copyn as u32)
 }
 
