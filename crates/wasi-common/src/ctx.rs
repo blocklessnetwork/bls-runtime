@@ -4,12 +4,12 @@ use crate::file::{FileAccessMode, FileEntry, WasiFile};
 use crate::sched::WasiSched;
 use crate::string_array::StringArray;
 use crate::table::Table;
+use crate::BlocklessConfig;
 use crate::{Error, StringArrayError};
 use cap_rand::RngCore;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
-use crate::BlocklessConfig;
 
 /// An `Arc`-wrapper around the wasi-common context to allow mutable access to
 /// the file descriptor table. This wrapper is only necessary due to the
@@ -61,19 +61,19 @@ impl WasiCtx {
 
     pub fn config_drivers_root_path_ref(&mut self) -> Option<String> {
         let lock = self.0.blockless_config.lock().unwrap();
-        lock.as_ref().and_then(|l| l.drivers_root_path_ref().map(String::from))
+        lock.as_ref()
+            .and_then(|l| l.drivers_root_path_ref().map(String::from))
     }
 
     pub fn config_stdin_ref(&mut self) -> Option<String> {
         let lock = self.0.blockless_config.lock().unwrap();
-        lock.as_ref().and_then(|l| Some(String::from(l.stdin_ref().as_str())))
+        lock.as_ref()
+            .and_then(|l| Some(String::from(l.stdin_ref().as_str())))
     }
 
     pub fn resource_permission(&self, resource: &str) -> bool {
         match self.blockless_config.lock().unwrap().deref() {
-            Some(ref c) => {
-                c.resource_permission(resource)
-            },
+            Some(ref c) => c.resource_permission(resource),
             None => false,
         }
     }

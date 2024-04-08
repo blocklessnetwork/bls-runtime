@@ -3,7 +3,7 @@ use std::fs;
 
 use common::run_blockless;
 use tempdir::TempDir;
-use wasi_common::{BlocklessModule, ModuleType, BlocklessConfig, BlocklessConfigVersion};
+use wasi_common::{BlocklessConfig, BlocklessConfigVersion, BlocklessModule, ModuleType};
 
 #[test]
 fn test_linker_module() {
@@ -95,7 +95,9 @@ fn test_blockless_extension_http_req() {
     "#;
 
     let temp_dir = TempDir::new("blockless_run").unwrap();
-    let guest_path = temp_dir.path().join("test_blockless_extension_http_req.wasm");
+    let guest_path = temp_dir
+        .path()
+        .join("test_blockless_extension_http_req.wasm");
 
     fs::write(&guest_path, guest_wasm).unwrap();
 
@@ -111,7 +113,6 @@ fn test_blockless_extension_http_req() {
     let code = run_blockless(config);
     assert_eq!(code.code, 0);
 }
-
 
 #[test]
 fn test_blockless_run_primary_module_can_call_reactor_module() {

@@ -12,12 +12,13 @@ wiggle::from_witx!({
 });
 
 impl types::UserErrorConversion for WasiCtx {
-
-    fn blockless_memory_error_from_blockless_memory_error_kind(&mut self,e:self::BlocklessMemoryErrorKind) -> wiggle::anyhow::Result<types::BlocklessMemoryError>  {
+    fn blockless_memory_error_from_blockless_memory_error_kind(
+        &mut self,
+        e: self::BlocklessMemoryErrorKind,
+    ) -> wiggle::anyhow::Result<types::BlocklessMemoryError> {
         e.try_into()
             .map_err(|e| wiggle::anyhow::anyhow!(format!("{:?}", e)))
     }
-    
 }
 
 impl From<BlocklessMemoryErrorKind> for types::BlocklessMemoryError {

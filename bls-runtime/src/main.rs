@@ -1,9 +1,9 @@
 mod cli_clap;
 mod config;
 mod error;
-mod v86;
 mod macros;
 mod plog;
+mod v86;
 mod v86config;
 use blockless::{blockless_run, LoggerLevel};
 use clap::Parser;
@@ -206,7 +206,7 @@ async fn non_blocking_read<R: Read + Send + 'static>(mut reader: R) -> Option<St
             let _ = tx.send(buffer);
         }
     });
-    
+
     // wait for either a message from the thread or timeout
     rx.recv_timeout(std::time::Duration::from_millis(1000)).ok()
 }
