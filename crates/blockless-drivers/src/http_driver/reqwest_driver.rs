@@ -1,21 +1,20 @@
-use std::{collections::HashMap, sync::Once, time::Duration, pin::Pin};
+use std::{collections::HashMap, pin::Pin, sync::Once, time::Duration};
 
-use bytes::{Bytes, Buf};
+use bytes::{Buf, Bytes};
 use futures_util::StreamExt;
-use log::{error, debug};
+use log::{debug, error};
 use reqwest::Response;
 
 use crate::HttpErrorKind;
 use futures_core;
 use futures_core::Stream;
 
-type StreamInBox = Pin<Box<dyn Stream<Item = reqwest::Result<Bytes>> + Send >>;
+type StreamInBox = Pin<Box<dyn Stream<Item = reqwest::Result<Bytes>> + Send>>;
 
 struct StreamState {
     stream: StreamInBox,
     buffer: Option<Bytes>,
 }
-
 
 enum HttpCtx {
     Response(Response),
@@ -26,14 +25,10 @@ enum HttpCtx {
 fn get_ctx() -> Option<&'static mut HashMap<u32, HttpCtx>> {
     static mut CTX: Option<HashMap<u32, HttpCtx>> = None;
     static CTX_ONCE: Once = Once::new();
-    CTX_ONCE.call_once(||{
-        unsafe {
-            CTX = Some(HashMap::new());
-        }
+    CTX_ONCE.call_once(|| unsafe {
+        CTX = Some(HashMap::new());
     });
-    unsafe {
-        CTX.as_mut()
-    }
+    unsafe { CTX.as_mut() }
 }
 
 fn increase_fd() -> Option<u32> {
@@ -45,10 +40,7 @@ fn increase_fd() -> Option<u32> {
 }
 
 /// request the url and the return the fd handle.
-pub(crate) async fn http_req(
-    url: &str, 
-    opts: &str,
-) -> Result<(u32, i32), HttpErrorKind> {
+pub(crate) async fn http_req(url: &str, opts: &str) -> Result<(u32, i32), HttpErrorKind> {
     let json = match json::parse(opts) {
         Ok(o) => o,
         Err(_) => return Err(HttpErrorKind::RequestError),
@@ -66,11 +58,9 @@ pub(crate) async fn http_req(
     let connect_timeout = json["connectTimeout"]
         .as_u64()
         .map(|s| Duration::from_secs(s));
-    let read_timeout = json["readTimeout"]
-        .as_u64()
-        .map(|s| Duration::from_secs(s));
+    let read_timeout = json["readTimeout"].as_u64().map(|s| Duration::from_secs(s));
 
-    // build the headers from the options json  
+    // build the headers from the options json
     let mut headers = reqwest::header::HeaderMap::new();
     let header_value = &json["headers"];
     let header_obj = match json::parse(header_value.as_str().unwrap()) {
@@ -82,7 +72,7 @@ pub(crate) async fn http_req(
         for (key, value) in header_obj.entries() {
             headers.insert(
                 reqwest::header::HeaderName::from_bytes(key.as_bytes()).unwrap(),
-                reqwest::header::HeaderValue::from_str(value.as_str().unwrap()).unwrap()
+                reqwest::header::HeaderValue::from_str(value.as_str().unwrap()).unwrap(),
             );
         }
     }
@@ -118,10 +108,7 @@ pub(crate) async fn http_req(
 }
 
 /// read from handle
-pub(crate) fn http_read_head(
-    fd: u32,
-    head: &str,
-) -> Result<String, HttpErrorKind> {
+pub(crate) fn http_read_head(fd: u32, head: &str) -> Result<String, HttpErrorKind> {
     let ctx = get_ctx().unwrap();
     let respone = match ctx.get_mut(&fd) {
         Some(HttpCtx::Response(ref h)) => h,
@@ -130,13 +117,11 @@ pub(crate) fn http_read_head(
     };
     let headers = respone.headers();
     match headers.get(head) {
-        Some(h) => {
-            match h.to_str() {
-                Ok(s) => Ok(s.into()),
-                Err(_) => Err(HttpErrorKind::InvalidEncoding),
-            }
-        }
-        None => Err(HttpErrorKind::HeaderNotFound)
+        Some(h) => match h.to_str() {
+            Ok(s) => Ok(s.into()),
+            Err(_) => Err(HttpErrorKind::InvalidEncoding),
+        },
+        None => Err(HttpErrorKind::HeaderNotFound),
     }
 }
 
@@ -158,7 +143,7 @@ async fn stream_read(state: &mut StreamState, dest: &mut [u8]) -> usize {
     loop {
         match state.buffer {
             Some(ref mut buffer) => {
-                let n = read_call(buffer, &mut dest[readn..]);    
+                let n = read_call(buffer, &mut dest[readn..]);
                 if n + readn <= dest.len() {
                     readn += n;
                 }
@@ -184,7 +169,7 @@ async fn stream_read(state: &mut StreamState, dest: &mut [u8]) -> usize {
                 }
                 if readn + n < dest.len() {
                     readn += n;
-                } else if  n + readn == dest.len() {
+                } else if n + readn == dest.len() {
                     return readn + n;
                 } else {
                     unreachable!("can't be happend!");
@@ -194,10 +179,7 @@ async fn stream_read(state: &mut StreamState, dest: &mut [u8]) -> usize {
     }
 }
 
-pub async fn http_read_body(
-    fd: u32, 
-    buf: &mut [u8],
-) -> Result<u32, HttpErrorKind> {
+pub async fn http_read_body(fd: u32, buf: &mut [u8]) -> Result<u32, HttpErrorKind> {
     let ctx = get_ctx().unwrap();
     match ctx.remove(&fd) {
         Some(HttpCtx::Response(resp)) => {
@@ -232,26 +214,25 @@ pub(crate) fn http_close(fd: u32) -> Result<(), HttpErrorKind> {
 mod test {
     use super::*;
     use bytes::BytesMut;
-    use tokio::runtime::{Builder, Runtime};
     use std::task::Poll;
+    use tokio::runtime::{Builder, Runtime};
 
     struct TestStream(Vec<Bytes>);
-    
+
     impl Stream for TestStream {
         type Item = reqwest::Result<Bytes>;
 
-        fn poll_next(self: Pin<&mut Self>, _cx: &mut std::task::Context<'_>) -> Poll<Option<Self::Item>> {
+        fn poll_next(
+            self: Pin<&mut Self>,
+            _cx: &mut std::task::Context<'_>,
+        ) -> Poll<Option<Self::Item>> {
             let s = self.get_mut().0.pop().map(|s| Ok(s));
             Poll::Ready(s)
         }
-        
     }
 
     fn get_runtime() -> Runtime {
-        let rt = Builder::new_current_thread()
-            .enable_all()
-            .build()
-            .unwrap();
+        let rt = Builder::new_current_thread().enable_all().build().unwrap();
         return rt;
     }
 
@@ -276,7 +257,7 @@ mod test {
     fn test_stream_read_2step() {
         let rt = get_runtime();
         rt.block_on(async move {
-            let data: &[u8] = &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,12];
+            let data: &[u8] = &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
             let bytes = BytesMut::from(data);
             let mut state = StreamState {
                 stream: Box::pin(TestStream(vec![bytes.freeze()])),
@@ -298,8 +279,8 @@ mod test {
     fn test_stream_read_3step() {
         let rt = get_runtime();
         rt.block_on(async move {
-            let data: &[u8] = &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11,12];
-            let data2: &[u8] = &[13, 14,15,16];
+            let data: &[u8] = &[1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12];
+            let data2: &[u8] = &[13, 14, 15, 16];
             let mut state = StreamState {
                 stream: Box::pin(TestStream(vec![Bytes::from(data2), Bytes::from(data)])),
                 buffer: None,

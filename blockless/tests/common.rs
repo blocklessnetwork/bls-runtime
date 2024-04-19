@@ -1,4 +1,4 @@
-use blockless::{ExitStatus, blockless_run};
+use blockless::{blockless_run, ExitStatus};
 use tokio::runtime::Builder;
 use wasi_common::BlocklessConfig;
 

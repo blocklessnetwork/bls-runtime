@@ -182,7 +182,6 @@ impl std::fmt::Display for CgiErrorKind {
     }
 }
 
-
 #[derive(Debug)]
 pub enum BlocklessSocketErrorKind {
     ConnectRefused,

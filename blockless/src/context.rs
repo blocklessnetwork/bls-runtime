@@ -40,4 +40,3 @@ impl wasmtime_wasi::WasiView for BlocklessContext {
         self.preview2_ctx().ctx()
     }
 }
-

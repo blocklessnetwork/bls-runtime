@@ -131,7 +131,6 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
 struct BlocklessRunner(BlocklessConfig);
 
 impl BlocklessRunner {
-    
     /// blockless run method, it execute the wasm program with configure file.
     async fn run(self) -> ExitStatus {
         let b_conf = self.0;
@@ -173,7 +172,7 @@ impl BlocklessRunner {
             linker.instantiate_async(&mut store, &module).await.unwrap()
         };
         let func = inst.get_typed_func::<(), ()>(&mut store, &entry).unwrap();
-        // if thread multi thread use sync model. 
+        // if thread multi thread use sync model.
         // The multi-thread model is used for the cpu intensive program.
         let result = if support_thread {
             func.call(&mut store, ())
@@ -210,10 +209,8 @@ impl BlocklessRunner {
             add_to_linker!(blockless_env::add_cgi_to_linker);
             add_to_linker!(blockless_env::add_socket_to_linker);
         }
-        wasi_common::sync::add_to_linker(
-            linker, 
-            |host| host.preview1_ctx.as_mut().unwrap()
-        ).unwrap();
+        wasi_common::sync::add_to_linker(linker, |host| host.preview1_ctx.as_mut().unwrap())
+            .unwrap();
     }
 
     fn preview1_setup_thread_support(
@@ -225,10 +222,10 @@ impl BlocklessRunner {
             ctx.wasi_threads.as_ref().unwrap()
         })
         .unwrap();
-        store.data_mut().wasi_threads = Some(Arc::new(WasiThreadsCtx::new(
-            module.clone(), 
-            Arc::new(linker.clone()),
-        ).expect("wasi thread ctx new fail.")));
+        store.data_mut().wasi_threads = Some(Arc::new(
+            WasiThreadsCtx::new(module.clone(), Arc::new(linker.clone()))
+                .expect("wasi thread ctx new fail."),
+        ));
     }
 
     async fn module_linker<'a>(

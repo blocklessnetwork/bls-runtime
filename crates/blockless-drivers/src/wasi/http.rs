@@ -1,5 +1,5 @@
 #![allow(non_upper_case_globals)]
-use crate::{HttpErrorKind, http_driver};
+use crate::{http_driver, HttpErrorKind};
 use log::error;
 use wasi_common::WasiCtx;
 use wiggle::GuestPtr;
@@ -12,12 +12,14 @@ wiggle::from_witx!({
 });
 
 impl types::UserErrorConversion for WasiCtx {
-    fn http_error_from_http_error_kind(&mut self,e : self::HttpErrorKind) -> wiggle::anyhow::Result<types::HttpError>  {
+    fn http_error_from_http_error_kind(
+        &mut self,
+        e: self::HttpErrorKind,
+    ) -> wiggle::anyhow::Result<types::HttpError> {
         e.try_into()
             .map_err(|e| wiggle::anyhow::anyhow!(format!("{:?}", e)))
     }
 }
-
 
 impl From<HttpErrorKind> for types::HttpError {
     fn from(e: HttpErrorKind) -> types::HttpError {
@@ -98,18 +100,24 @@ impl blockless_http::BlocklessHttp for WasiCtx {
         url: &GuestPtr<'a, str>,
         opts: &GuestPtr<'a, str>,
     ) -> Result<(types::HttpHandle, types::CodeType), HttpErrorKind> {
-        let url: &str = &url.as_str().map_err(|e| {
-            error!("guest url error: {}", e);
-            HttpErrorKind::Utf8Error
-        })?.unwrap();
+        let url: &str = &url
+            .as_str()
+            .map_err(|e| {
+                error!("guest url error: {}", e);
+                HttpErrorKind::Utf8Error
+            })?
+            .unwrap();
         if !self.resource_permission(url) {
             error!("Permission Deny");
             return Err(HttpErrorKind::PermissionDeny);
         }
-        let opts: &str = &opts.as_str().map_err(|e| {
-            error!("guest options error: {}", e);
-            HttpErrorKind::Utf8Error
-        })?.unwrap();
+        let opts: &str = &opts
+            .as_str()
+            .map_err(|e| {
+                error!("guest options error: {}", e);
+                HttpErrorKind::Utf8Error
+            })?
+            .unwrap();
         let (fd, code) = http_driver::http_req(url, opts).await?;
         Ok((types::HttpHandle::from(fd), types::CodeType::from(code)))
     }
@@ -125,10 +133,13 @@ impl blockless_http::BlocklessHttp for WasiCtx {
         buf: &GuestPtr<'a, u8>,
         buf_len: u32,
     ) -> Result<u32, HttpErrorKind> {
-        let head: &str = &head.as_str().map_err(|e| {
-            error!("guest head error: {}", e);
-            HttpErrorKind::Utf8Error
-        })?.unwrap();
+        let head: &str = &head
+            .as_str()
+            .map_err(|e| {
+                error!("guest head error: {}", e);
+                HttpErrorKind::Utf8Error
+            })?
+            .unwrap();
         let mut dest_buf = vec![0; buf_len as _];
         let buf = buf.clone();
         let rs = http_driver::http_read_head(handle.into(), head, &mut dest_buf[..]).await?;

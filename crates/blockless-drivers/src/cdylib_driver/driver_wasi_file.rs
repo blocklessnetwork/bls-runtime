@@ -1,8 +1,8 @@
 use crate::error::*;
 
 use super::driver_api::DriverApi;
-use wasi_common::Error;
 use std::any::Any;
+use wasi_common::Error;
 use wasi_common::{file::FileType, WasiFile};
 
 pub(crate) struct DriverWasiFile {
@@ -61,7 +61,7 @@ impl WasiFile for DriverWasiFile {
         if rs != 0 {
             return Err(std::io::Error::from_raw_os_error(rs as _).into());
         }
-        match  n.try_into() {
+        match n.try_into() {
             Ok(o) => Ok(o),
             Err(_) => Err(std::io::Error::from_raw_os_error(rs as _).into()),
         }

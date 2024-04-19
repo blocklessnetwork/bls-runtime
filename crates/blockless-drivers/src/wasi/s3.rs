@@ -12,12 +12,13 @@ wiggle::from_witx!({
 });
 
 impl types::UserErrorConversion for WasiCtx {
-
-    fn s3_error_from_s3_error_kind(&mut self,e:self::S3ErrorKind) -> wiggle::anyhow::Result<types::S3Error>  {
+    fn s3_error_from_s3_error_kind(
+        &mut self,
+        e: self::S3ErrorKind,
+    ) -> wiggle::anyhow::Result<types::S3Error> {
         e.try_into()
             .map_err(|e| wiggle::anyhow::anyhow!(format!("{:?}", e)))
     }
-    
 }
 
 impl From<S3ErrorKind> for types::S3Error {
@@ -52,10 +53,13 @@ impl blockless_s3::BlocklessS3 for WasiCtx {
         cmd: u16,
         param: &GuestPtr<'a, str>,
     ) -> Result<types::S3Handle, S3ErrorKind> {
-        let params: &str = &param.as_str().map_err(|e| {
-            error!("guest url error: {}", e);
-            S3ErrorKind::Utf8Error
-        })?.unwrap();
+        let params: &str = &param
+            .as_str()
+            .map_err(|e| {
+                error!("guest url error: {}", e);
+                S3ErrorKind::Utf8Error
+            })?
+            .unwrap();
         let rs = s3_driver::bucket_command(cmd, params).await?;
         Ok(rs.into())
     }
@@ -66,14 +70,21 @@ impl blockless_s3::BlocklessS3 for WasiCtx {
         buf: &GuestPtr<'a, u8>,
         buf_len: u32,
     ) -> Result<(), S3ErrorKind> {
-        let cfg: &str = &cfg.as_str().map_err(|e| {
-            error!("guest url error: {}", e);
-            S3ErrorKind::Utf8Error
-        })?.unwrap();
-        let params = buf.as_array(buf_len).as_slice().map_err(|e| {
-            error!("guest url error: {}", e);
-            S3ErrorKind::InvalidParameter
-        })?.unwrap();
+        let cfg: &str = &cfg
+            .as_str()
+            .map_err(|e| {
+                error!("guest url error: {}", e);
+                S3ErrorKind::Utf8Error
+            })?
+            .unwrap();
+        let params = buf
+            .as_array(buf_len)
+            .as_slice()
+            .map_err(|e| {
+                error!("guest url error: {}", e);
+                S3ErrorKind::InvalidParameter
+            })?
+            .unwrap();
         s3_driver::bucket_put_object(cfg, &params).await
     }
 
