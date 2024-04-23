@@ -87,6 +87,10 @@ jobs:
         uses: JesseTG/rm@v1.0.3
         with:
           path: target/${{ matrix.target }}/release/deps
+      - name: Remove Files
+        run: |
+          rm -rf target/${{ matrix.target }}/release/*.d
+          rm  -rf target/${{ matrix.target }}/release/*.rlib
       - name: Archive Release
         uses: thedoctor0/zip-release@main
         with:
