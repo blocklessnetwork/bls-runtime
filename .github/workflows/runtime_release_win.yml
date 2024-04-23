@@ -51,7 +51,7 @@ jobs:
       - name: Remove File
         uses: JesseTG/rm@v1.0.3
         with:
-          path: ttarget/${{ matrix.target }}/release/build
+          path: target/${{ matrix.target }}/release/build
       - name: Remove File
         uses: JesseTG/rm@v1.0.3
         with:
@@ -64,6 +64,11 @@ jobs:
         uses: JesseTG/rm@v1.0.3
         with:
           path: target/${{ matrix.target }}/release/deps
+      - name: Remove Files
+        run: |
+          rm target/${{ matrix.target }}/release/*.d
+          rm target/${{ matrix.target }}/release/*.rlib
+          rm target/${{ matrix.target }}/release/*.pdb
       - name: Archive Release
         uses: thedoctor0/zip-release@main
         with:
