@@ -131,7 +131,6 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
 struct BlocklessRunner(BlocklessConfig);
 
 impl BlocklessRunner {
-    
     /// blockless run method, it execute the wasm program with configure file.
     async fn run(self) -> ExitStatus {
         let b_conf = self.0;
@@ -161,7 +160,7 @@ impl BlocklessRunner {
         let mut ctx = BlocklessContext::default();
         ctx.preview1_ctx = Some(preview1_ctx);
         let mut store = Store::new(&engine, ctx);
-        Self::preview1_setup_linker(&mut linker);
+        Self::preview1_setup_linker(&mut linker, support_thread);
         let (module, entry) = Self::module_linker(version, entry, &mut store, &mut linker).await;
         // support thread.
         if support_thread {
@@ -173,7 +172,7 @@ impl BlocklessRunner {
             linker.instantiate_async(&mut store, &module).await.unwrap()
         };
         let func = inst.get_typed_func::<(), ()>(&mut store, &entry).unwrap();
-        // if thread multi thread use sync model. 
+        // if thread multi thread use sync model.
         // The multi-thread model is used for the cpu intensive program.
         let result = if support_thread {
             func.call(&mut store, ())
@@ -194,24 +193,24 @@ impl BlocklessRunner {
     }
 
     /// setup functions the preview1 for linker
-    fn preview1_setup_linker(linker: &mut Linker<BlocklessContext>) {
-        // define the macro of extends.
-        macro_rules! add_to_linker {
-            ($method:expr) => {
-                $method(linker, |s| s.preview1_ctx.as_mut().unwrap()).unwrap()
-            };
+    fn preview1_setup_linker(linker: &mut Linker<BlocklessContext>, support_thread: bool) {
+        if !support_thread {
+            // define the macro of extends.
+            macro_rules! add_to_linker {
+                ($method:expr) => {
+                    $method(linker, |s| s.preview1_ctx.as_mut().unwrap()).unwrap()
+                };
+            }
+            add_to_linker!(blockless_env::add_drivers_to_linker);
+            add_to_linker!(blockless_env::add_http_to_linker);
+            add_to_linker!(blockless_env::add_ipfs_to_linker);
+            add_to_linker!(blockless_env::add_s3_to_linker);
+            add_to_linker!(blockless_env::add_memory_to_linker);
+            add_to_linker!(blockless_env::add_cgi_to_linker);
+            add_to_linker!(blockless_env::add_socket_to_linker);
         }
-        add_to_linker!(blockless_env::add_drivers_to_linker);
-        add_to_linker!(blockless_env::add_http_to_linker);
-        add_to_linker!(blockless_env::add_ipfs_to_linker);
-        add_to_linker!(blockless_env::add_s3_to_linker);
-        add_to_linker!(blockless_env::add_memory_to_linker);
-        add_to_linker!(blockless_env::add_cgi_to_linker);
-        add_to_linker!(blockless_env::add_socket_to_linker);
-        wasi_common::sync::add_to_linker(
-            linker, 
-            |host| host.preview1_ctx.as_mut().unwrap()
-        ).unwrap();
+        wasi_common::sync::add_to_linker(linker, |host| host.preview1_ctx.as_mut().unwrap())
+            .unwrap();
     }
 
     fn preview1_setup_thread_support(
@@ -224,7 +223,8 @@ impl BlocklessRunner {
         })
         .unwrap();
         store.data_mut().wasi_threads = Some(Arc::new(
-            WasiThreadsCtx::new(module.clone(), Arc::new(linker.clone())).unwrap(),
+            WasiThreadsCtx::new(module.clone(), Arc::new(linker.clone()))
+                .expect("wasi thread ctx new fail."),
         ));
     }
 
@@ -241,7 +241,7 @@ impl BlocklessRunner {
                 (module, ENTRY.to_string())
             }
             BlocklessConfigVersion::Version1 => {
-                if entry == "" {
+                if entry.is_empty() {
                     entry = ENTRY.to_string();
                 }
                 let mut module_linker = ModuleLinker::new(linker, store);

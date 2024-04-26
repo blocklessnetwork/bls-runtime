@@ -11,7 +11,7 @@ pub mod wasi;
 use blockless_multiaddr as multiaddr;
 pub use cdylib_driver::CdylibDriver;
 pub use error::*;
-#[cfg(not(feature="builtin_http"))]
+#[cfg(not(feature = "builtin_http"))]
 use http_driver::init_http_driver;
 
 use lazy_static::*;
@@ -93,9 +93,9 @@ impl DriverConetxt {
 
     #[warn(unused_variables)]
     pub fn init_built_in_drivers(_path: impl AsRef<Path>) {
-        #[cfg(not(feature="builtin_http"))]
+        #[cfg(not(feature = "builtin_http"))]
         let tcp_driver_path = _path.as_ref().join("http_driver.so");
-        #[cfg(not(feature="builtin_http"))]
+        #[cfg(not(feature = "builtin_http"))]
         if tcp_driver_path.exists() {
             init_http_driver(tcp_driver_path.as_os_str()).unwrap();
         }

@@ -2,65 +2,42 @@
 use std::str::FromStr;
 
 use anyhow::{bail, Result};
-use blockless::{
-    BlocklessConfig, 
-    BlocklessModule, 
-    Permission, 
-    ModuleType
-};
-use clap::{
-    Arg, 
-    ArgMatches, 
-    Command, 
-    Parser
-};
+use blockless::{BlocklessConfig, BlocklessModule, ModuleType, Permission};
+use clap::{Arg, ArgMatches, Command, Parser};
 use url::Url;
 
 use crate::config::CliConfig;
 
-const INPUT_HELP: &str  = 
-    "the input file is wasm file, configure file, or car file";
+const INPUT_HELP: &str = "the input file is wasm file, configure file, or car file";
 
-const DEBUG_INFO_HELP: &str  = 
-    "the debug info for the runtime.";
+const DEBUG_INFO_HELP: &str = "the debug info for the runtime.";
 
-const APP_ARGS_HELP: &str = 
-    "the app args will pass into the app.";
+const APP_ARGS_HELP: &str = "the app args will pass into the app.";
 
-const FS_ROOT_PATH_HELP: &str = 
-    "the root directory for the runtime.";
+const FS_ROOT_PATH_HELP: &str = "the root directory for the runtime.";
 
-const DRIVERS_ROOT_PATH_HELP: &str = 
-    "the drivers root directory for the runtime.";
+const DRIVERS_ROOT_PATH_HELP: &str = "the drivers root directory for the runtime.";
 
-const RUNTIME_LOGGER_HELP: &str = 
-    "the logger file for the runtime.";
+const RUNTIME_LOGGER_HELP: &str = "the logger file for the runtime.";
 
-const LIMITED_MEMORY_HELP: &str = 
-    "the limited memory for the runtime, default is infine.";
+const LIMITED_MEMORY_HELP: &str = "the limited memory for the runtime, default is infine.";
 
-const RUN_TIME_HELP: &str = 
-    "the run time for the runtime, default is infine.";
+const RUN_TIME_HELP: &str = "the run time for the runtime, default is infine.";
 
-const ENTRY_HELP: &str = 
-    "the entry for wasm, default is _start";
+const ENTRY_HELP: &str = "the entry for wasm, default is _start";
 
-const LIMITED_FUEL_HELP: &str = 
-    "the limited fuel for runtime, default is infine";
+const LIMITED_FUEL_HELP: &str = "the limited fuel for runtime, default is infine";
 
-const ENVS_HELP: &str = 
-    "the app envs will pass into the app";
+const ENVS_HELP: &str = "the app envs will pass into the app";
 
-const PERMISSION_HELP: &str = 
-    "the permissions for app";
+const PERMISSION_HELP: &str = "the permissions for app";
 
-const MODULES_HELP: &str = 
-    "the modules used by app";
+const MODULES_HELP: &str = "the modules used by app";
 
-const V86_HELP: &str = 
+const V86_HELP: &str =
     "the v86 model flag when the v86 flag the car file must be v86 configure and image.";
 
-const THREAD_SUPPORT_HELP: &str = 
+const THREAD_SUPPORT_HELP: &str =
     "the thread support flag when the flag setting the runtime will support multi-threads.";
 
 fn parse_envs(envs: &str) -> Result<(String, String)> {
@@ -73,9 +50,9 @@ fn parse_envs(envs: &str) -> Result<(String, String)> {
 
 fn parse_permission(permsion: &str) -> Result<Permission> {
     let url = Url::from_str(permsion)?;
-    Ok(Permission { 
-        schema: url.scheme().into(), 
-        url: permsion.into() 
+    Ok(Permission {
+        schema: url.scheme().into(),
+        url: permsion.into(),
     })
 }
 
@@ -85,7 +62,7 @@ fn parse_module(module: &str) -> Result<BlocklessModule> {
         module_type: ModuleType::Module,
         name: mods[0].into(),
         file: mods[1].into(),
-        md5: String::new(),//didn't need check.
+        md5: String::new(), //didn't need check.
     })
 }
 
@@ -103,7 +80,7 @@ pub(crate) const SHORT_VERSION: &str = concat!("v", env!("CARGO_PKG_VERSION"));
 pub(crate) struct CliCommandOpts {
     #[clap(long = "v86", value_name = "V86", required = false, help = V86_HELP )]
     v86: bool,
-    
+
     #[clap(value_name = "INPUT", required = true, help = INPUT_HELP )]
     input: String,
 
@@ -147,14 +124,12 @@ pub(crate) struct CliCommandOpts {
     args: Vec<String>,
 }
 
-
 impl CliCommandOpts {
-
     #[inline(always)]
     pub fn fs_root_path(&self) -> Option<&String> {
         self.fs_root_path.as_ref()
     }
-    
+
     #[inline(always)]
     pub fn runtime_type(&self) -> RuntimeType {
         if self.v86 {
@@ -190,17 +165,18 @@ impl CliCommandOpts {
             conf.0.set_entry(e)
         });
         if modules.len() > 0 {
-            modules.push(BlocklessModule { 
-                module_type: ModuleType::Entry, 
-                name: String::new(), 
-                file: self.input, 
-                md5: String::new() 
+            modules.push(BlocklessModule {
+                module_type: ModuleType::Entry,
+                name: String::new(),
+                file: self.input,
+                md5: String::new(),
             });
             conf.0.set_modules(modules);
             if !has_entry {
                 conf.0.reset_modules_model_entry();
             }
-            conf.0.set_version(blockless::BlocklessConfigVersion::Version1);
+            conf.0
+                .set_version(blockless::BlocklessConfigVersion::Version1);
         }
     }
 }
@@ -229,7 +205,8 @@ mod test {
 
     #[test]
     fn test_cli_command_env() {
-        let cli = CliCommandOpts::try_parse_from(["cli", "test", "--env", "a=1", "--env", "b=2"]).unwrap();
+        let cli = CliCommandOpts::try_parse_from(["cli", "test", "--env", "a=1", "--env", "b=2"])
+            .unwrap();
         assert_eq!(cli.input.as_str(), "test");
         assert_eq!(cli.envs.len(), 2);
         assert_eq!(cli.envs[0], ("a".to_string(), "1".to_string()));
@@ -238,11 +215,17 @@ mod test {
 
     #[test]
     fn test_cli_command_permisson() {
-        let cli = CliCommandOpts::try_parse_from(["cli", "test", "--permission", "http://www.google.com"]).unwrap();
+        let cli = CliCommandOpts::try_parse_from([
+            "cli",
+            "test",
+            "--permission",
+            "http://www.google.com",
+        ])
+        .unwrap();
         assert_eq!(cli.input.as_str(), "test");
         assert_eq!(cli.permissions.len(), 1);
         let perm = Permission {
-            schema: "http".to_string(), 
+            schema: "http".to_string(),
             url: "http://www.google.com".to_string(),
         };
         assert_eq!(cli.permissions[0], perm);
@@ -295,7 +278,10 @@ mod test {
         let mut cli_conf = CliConfig(BlocklessConfig::new("/a.wasm"));
         cli_opts.into_config(&mut cli_conf);
         assert_eq!(cli_conf.0.entry_ref(), "/a.wasm");
-        assert!(matches!(cli_conf.0.version(), BlocklessConfigVersion::Version0));
+        assert!(matches!(
+            cli_conf.0.version(),
+            BlocklessConfigVersion::Version0
+        ));
     }
 
     #[test]
@@ -309,12 +295,16 @@ mod test {
         let mut cli_conf = CliConfig(BlocklessConfig::new("/a.wasm"));
         cli_opts.into_config(&mut cli_conf);
         assert_eq!(cli_conf.0.entry_ref(), "_start");
-        assert!(matches!(cli_conf.0.version(), BlocklessConfigVersion::Version1));
+        assert!(matches!(
+            cli_conf.0.version(),
+            BlocklessConfigVersion::Version1
+        ));
     }
 
     #[test]
     fn test_cli_command_modules_wasm_with_entry() {
-        let command_line = r#"blockless_cli test.wasm --fs-root-path / --module=test=/module.wasm --entry=run"#;
+        let command_line =
+            r#"blockless_cli test.wasm --fs-root-path / --module=test=/module.wasm --entry=run"#;
         let command_line = command_line
             .split(" ")
             .map(str::to_string)
@@ -323,7 +313,9 @@ mod test {
         let mut cli_conf = CliConfig(BlocklessConfig::new("/a.wasm"));
         cli_opts.into_config(&mut cli_conf);
         assert_eq!(cli_conf.0.entry_ref(), "run");
-        assert!(matches!(cli_conf.0.version(), BlocklessConfigVersion::Version1));
+        assert!(matches!(
+            cli_conf.0.version(),
+            BlocklessConfigVersion::Version1
+        ));
     }
-    
 }

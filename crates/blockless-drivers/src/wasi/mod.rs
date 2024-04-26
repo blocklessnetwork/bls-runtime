@@ -22,12 +22,13 @@ wiggle::from_witx!({
 });
 
 impl types::UserErrorConversion for WasiCtx {
-
-    fn errno_from_error_kind(&mut self,e:self::ErrorKind) -> wiggle::anyhow::Result<types::Errno>  {
+    fn errno_from_error_kind(
+        &mut self,
+        e: self::ErrorKind,
+    ) -> wiggle::anyhow::Result<types::Errno> {
         e.try_into()
             .map_err(|e| wiggle::anyhow::anyhow!(format!("{:?}", e)))
     }
-    
 }
 
 impl From<ErrorKind> for types::Errno {
@@ -102,7 +103,7 @@ impl blockless_drivers::BlocklessDrivers for WasiCtx {
             Some(d) => d,
             None => return Err(ErrorKind::DriverNotFound),
         };
-        let mode = FileAccessMode::READ|FileAccessMode::WRITE;
+        let mode = FileAccessMode::READ | FileAccessMode::WRITE;
         match drv
             .open(path, opts)
             .await

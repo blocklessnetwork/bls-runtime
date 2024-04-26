@@ -19,5 +19,5 @@ proc-macro2 = "1.0"
 quote = "1.0"
 
 [dependencies.witx]
-version = "0.9.1"
+workspace = true
 
