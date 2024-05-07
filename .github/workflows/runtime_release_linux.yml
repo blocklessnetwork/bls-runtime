@@ -57,6 +57,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
+          target: ${{ matrix.target }}
       - name: Build runtime
         uses: actions-rs/cargo@v1
         with:
