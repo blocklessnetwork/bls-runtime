@@ -36,7 +36,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
-      - run: rustup target add aarch64-apple-darwin
+          target: ${{ matrix.target }}
       - name: Build runtime
         uses: actions-rs/cargo@v1
         with:
