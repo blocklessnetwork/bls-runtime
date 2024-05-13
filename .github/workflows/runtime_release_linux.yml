@@ -23,13 +23,13 @@ jobs:
             target: x86_64-unknown-linux-gnu
             arch: x86_64
             cross: false
-          # - build: linux_arm64
-          #   os: linux-latest
-          #   runson: macos-14
-          #   rust: stable
-          #   target: aarch64-unknown-linux-gnu
-          #   arch: aarch64
-          #   cross: true
+          - build: linux_arm64
+            os: linux-latest
+            runson: ubuntu-latest
+            rust: stable
+            target: aarch64-unknown-linux-gnu
+            arch: aarch64
+            cross: true
     runs-on: ${{ matrix.runson }}
     steps:
       - uses: actions/checkout@v2
