@@ -46,7 +46,7 @@ jobs:
           value: "${{ steps.get_release.outputs.tag_name }}"
       - name: install libssl-dev
         run: |
-          sudo apt install libssl-dev
+          sudo apt install libssl-dev pkg-config
       # - name: create Cross.toml
       #   run: |
       #     echo [target.aarch64-unknown-linux-gnu] > Cross.toml
