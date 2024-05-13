@@ -25,7 +25,7 @@ jobs:
             cross: false
           - build: linux_arm64
             os: linux-latest
-            runson: self-hosted
+            runson: macos-14
             rust: stable
             target: aarch64-unknown-linux-gnu
             arch: aarch64
