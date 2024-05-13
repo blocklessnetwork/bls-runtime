@@ -44,16 +44,19 @@ jobs:
           file: "bls-runtime/Cargo.toml"
           key: "version"
           value: "${{ steps.get_release.outputs.tag_name }}"
-      - name: create Cross.toml
+      - name: install libssl-dev
         run: |
-          echo [target.aarch64-unknown-linux-gnu] > Cross.toml
-          echo "dockerfile = \"./Dockerfile\"" >> Cross.toml
-      - name: create Dockerfile
-        run: |
-          echo "FROM arm64v8/rust" > Dockerfile
-          echo "RUN dpkg --add-architecture arm64 && \\" >> Dockerfile
-          echo "apt-get update && \\" >> Dockerfile
-          echo "apt-get install --assume-yes build-essential" >> Dockerfile
+          sudo apt install libssl-dev
+      # - name: create Cross.toml
+      #   run: |
+      #     echo [target.aarch64-unknown-linux-gnu] > Cross.toml
+      #     echo "dockerfile = \"./Dockerfile\"" >> Cross.toml
+      # - name: create Dockerfile
+      #   run: |
+      #     echo "FROM arm64v8/rust" > Dockerfile
+      #     echo "RUN dpkg --add-architecture arm64 && \\" >> Dockerfile
+      #     echo "apt-get update && \\" >> Dockerfile
+      #     echo "apt-get install --assume-yes build-essential" >> Dockerfile
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
