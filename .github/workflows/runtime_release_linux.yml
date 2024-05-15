@@ -74,16 +74,6 @@ jobs:
           make -j$(($(nproc)+1))
           sudo make install
         if: startsWith(matrix.arch, 'aarch64')
-      # - name: create Cross.toml
-      #   run: |
-      #     echo [target.aarch64-unknown-linux-gnu] > Cross.toml
-      #     echo "dockerfile = \"./Dockerfile\"" >> Cross.toml
-      # - name: create Dockerfile
-      #   run: |
-      #     echo "FROM arm64v8/rust" > Dockerfile
-      #     echo "RUN dpkg --add-architecture arm64 && \\" >> Dockerfile
-      #     echo "apt-get update && \\" >> Dockerfile
-      #     echo "apt-get install --assume-yes build-essential" >> Dockerfile
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -92,6 +82,8 @@ jobs:
         uses: actions-rs/cargo@v1
         env:
           RUSTFLAGS: "-C link-arg=-L/usr/local/zlib/lib"
+          LD_LIBRARY_PATH: "$LD_LIBRARY_PATH:/usr/local/zlib/lib"
+          DYLD_LIBRARY_PATH: "$DYLD_LIBRARY_PATH:/usr/local/zlib/lib"
           AARCH64_UNKNOWN_LINUX_GNU_OPENSSL_INCLUDE_DIR: /usr/local/ssl/include
           AARCH64_UNKNOWN_LINUX_GNU_OPENSSL_LIB_DIR: /usr/local/ssl/lib
         with:
