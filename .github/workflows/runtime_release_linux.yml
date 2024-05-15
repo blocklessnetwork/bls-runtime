@@ -60,7 +60,7 @@ jobs:
           CHOST=arm CC=/usr/bin/aarch64-linux-gnu-gcc \
           AR=/usr/bin/aarch64-linux-gnu-ar \
           RANLIB=/usr/bin/aarch64-linux-gnu-ranlib \
-          ./configure --prefix=/opt/local/zlib
+          ./configure --prefix=/usr/local/zlib
           make -j$(nproc) 
           sudo make install
           cd ..
