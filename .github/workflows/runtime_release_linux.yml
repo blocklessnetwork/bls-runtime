@@ -50,7 +50,6 @@ jobs:
           AARCH64_UNKNOWN_LINUX_GNU_OPENSSL_DIR: /usr/local/ssl
         run: |
           echo `pwd`
-          sudo dpkg --add-architecture arm64
           sudo apt install gcc-aarch64-linux-gnu
           sudo apt-get install build-essential gcc make perl dkms
           wget https://phoenixnap.dl.sourceforge.net/project/libpng/zlib/1.2.11/zlib-1.2.11.tar.gz\?viasf\=1 -O zlib-1.2.11.tar.gz
@@ -61,16 +60,16 @@ jobs:
           CHOST=arm CC=/usr/bin/aarch64-linux-gnu-gcc \
           AR=/usr/bin/aarch64-linux-gnu-ar \
           RANLIB=/usr/bin/aarch64-linux-gnu-ranlib \
-          ./configure --prefix=$(pwd)/build
+          ./configure --prefix=/usr/local/zlib
           make -j$(nproc) && make install
           cd ..
-          ZLIBPATH=`pwd`/zlib-1.2.11/build
+          ZLIBPATH=/usr/local/zlib/
           wget https://www.openssl.org/source/openssl-1.1.1.tar.gz
           tar -xvzf openssl-1.1.1.tar.gz
           cd openssl-1.1.1/
           ./Configure linux-aarch64 \
           --cross-compile-prefix=/usr/bin/aarch64-linux-gnu- --prefix=/usr/local/ssl --with-zlib-lib=${ZLIBPATH}/lib \
-          --with-zlib-include=${ZLIBPATH}/include --openssldir=/usr/local/ssl static zlib 
+          --with-zlib-include=${ZLIBPATH}/include --openssldir=/usr/local/ssl shared zlib 
           make -j$(($(nproc)+1))
           sudo make install
         if: startsWith(matrix.arch, 'aarch64')
@@ -85,13 +84,13 @@ jobs:
       #     echo "apt-get update && \\" >> Dockerfile
       #     echo "apt-get install --assume-yes build-essential" >> Dockerfile
       - uses: actions-rs/toolchain@v1
-        
         with:
           toolchain: stable
           target: ${{ matrix.target }}
       - name: Build runtime
         uses: actions-rs/cargo@v1
         env:
+          RUSTFLAGS: "-C link-arg=-L/usr/local/zlib/lib"
           AARCH64_UNKNOWN_LINUX_GNU_OPENSSL_INCLUDE_DIR: /usr/local/ssl/include
           AARCH64_UNKNOWN_LINUX_GNU_OPENSSL_LIB_DIR: /usr/local/ssl/lib
         with:
