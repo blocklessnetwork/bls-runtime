@@ -49,6 +49,7 @@ jobs:
           OPENSSL_DIR: /usr/local/ssl
           AARCH64_UNKNOWN_LINUX_GNU_OPENSSL_DIR: /usr/local/ssl
         run: |
+          echo "11111$OPENSSL_DIR"
           echo $OPENSSL_DIR
           echo $AARCH64_UNKNOWN_LINUX_GNU_OPENSSL_DIR
           sudo dpkg --add-architecture arm64
