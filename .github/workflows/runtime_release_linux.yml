@@ -45,7 +45,12 @@ jobs:
           key: "version"
           value: "${{ steps.get_release.outputs.tag_name }}"
       - name: install libssl-dev
+        env:
+          OPENSSL_DIR: /usr/local/ssl
+          AARCH64_UNKNOWN_LINUX_GNU_OPENSSL_DIR: /usr/local/ssl
         run: |
+          echo $OPENSSL_DIR
+          echo $AARCH64_UNKNOWN_LINUX_GNU_OPENSSL_DIR
           sudo dpkg --add-architecture arm64
           sudo apt install gcc-aarch64-linux-gnu
           sudo apt-get install build-essential gcc make perl dkms
