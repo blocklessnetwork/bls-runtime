@@ -49,9 +49,6 @@ jobs:
           OPENSSL_DIR: /usr/local/ssl
           AARCH64_UNKNOWN_LINUX_GNU_OPENSSL_DIR: /usr/local/ssl
         run: |
-          echo "11111$OPENSSL_DIR"
-          echo $OPENSSL_DIR
-          echo $AARCH64_UNKNOWN_LINUX_GNU_OPENSSL_DIR
           sudo dpkg --add-architecture arm64
           sudo apt install gcc-aarch64-linux-gnu
           sudo apt-get install build-essential gcc make perl dkms
@@ -90,8 +87,8 @@ jobs:
       #     echo "apt-get install --assume-yes build-essential" >> Dockerfile
       - uses: actions-rs/toolchain@v1
         env:
-          OPENSSL_DIR: /usr/local/ssl
-          AARCH64_UNKNOWN_LINUX_GNU_OPENSSL_DIR: /usr/local/ssl
+          AARCH64_UNKNOWN_LINUX_GNU_OPENSSL_INCLUDE_DIR: /usr/local/ssl/include
+          AARCH64_UNKNOWN_LINUX_GNU_OPENSSL_LIB_DIR: /usr/local/ssl/lib
         with:
           toolchain: stable
           target: ${{ matrix.target }}
