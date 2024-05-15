@@ -70,6 +70,7 @@ jobs:
           --with-zlib-include=${ZLIBPATH}/include --openssldir=/usr/local/ssl shared zlib 
           make -j$(($(nproc)+1))
           sudo make install
+          find /usr/local/ssl
         if: startsWith(matrix.arch, 'aarch64')
       # - name: create Cross.toml
       #   run: |
