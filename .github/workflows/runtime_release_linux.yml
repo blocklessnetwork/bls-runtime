@@ -82,6 +82,8 @@ jobs:
       #     echo "apt-get update && \\" >> Dockerfile
       #     echo "apt-get install --assume-yes build-essential" >> Dockerfile
       - uses: actions-rs/toolchain@v1
+        env:
+          OPENSSL_DIR: /usr/local/ssl
         with:
           toolchain: stable
           target: ${{ matrix.target }}
