@@ -60,8 +60,9 @@ jobs:
           CHOST=arm CC=/usr/bin/aarch64-linux-gnu-gcc \
           AR=/usr/bin/aarch64-linux-gnu-ar \
           RANLIB=/usr/bin/aarch64-linux-gnu-ranlib \
-          ./configure --prefix=/usr/local/zlib
-          make -j$(nproc) && make install
+          ./configure --prefix=/opt/local/zlib
+          make -j$(nproc) 
+          sudo make install
           cd ..
           ZLIBPATH=/usr/local/zlib/
           wget https://www.openssl.org/source/openssl-1.1.1.tar.gz
