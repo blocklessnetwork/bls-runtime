@@ -85,6 +85,7 @@ jobs:
       - uses: actions-rs/toolchain@v1
         env:
           OPENSSL_DIR: /usr/local/ssl
+          AARCH64_UNKNOWN_LINUX_GNU_OPENSSL_DIR: /usr/local/ssl
         with:
           toolchain: stable
           target: ${{ matrix.target }}
