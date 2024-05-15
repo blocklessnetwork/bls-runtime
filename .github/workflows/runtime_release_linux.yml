@@ -73,7 +73,6 @@ jobs:
           --with-zlib-include=${ZLIBPATH}/include --openssldir=/usr/local/ssl shared zlib 
           make -j$(($(nproc)+1))
           sudo make install
-          find /usr/local/ssl
         if: startsWith(matrix.arch, 'aarch64')
       # - name: create Cross.toml
       #   run: |
@@ -86,14 +85,15 @@ jobs:
       #     echo "apt-get update && \\" >> Dockerfile
       #     echo "apt-get install --assume-yes build-essential" >> Dockerfile
       - uses: actions-rs/toolchain@v1
-        env:
-          AARCH64_UNKNOWN_LINUX_GNU_OPENSSL_INCLUDE_DIR: /usr/local/ssl/include
-          AARCH64_UNKNOWN_LINUX_GNU_OPENSSL_LIB_DIR: /usr/local/ssl/lib
+        
         with:
           toolchain: stable
           target: ${{ matrix.target }}
       - name: Build runtime
         uses: actions-rs/cargo@v1
+        env:
+          AARCH64_UNKNOWN_LINUX_GNU_OPENSSL_INCLUDE_DIR: /usr/local/ssl/include
+          AARCH64_UNKNOWN_LINUX_GNU_OPENSSL_LIB_DIR: /usr/local/ssl/lib
         with:
           use-cross: ${{ matrix.cross }}
           command: build
