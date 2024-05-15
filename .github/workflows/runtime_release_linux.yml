@@ -46,7 +46,31 @@ jobs:
           value: "${{ steps.get_release.outputs.tag_name }}"
       - name: install libssl-dev
         run: |
-          sudo apt install libssl-dev pkg-config
+          sudo dpkg --add-architecture arm64
+          sudo apt install gcc-aarch64-linux-gnu
+          sudo apt-get install build-essential gcc make perl dkms
+          wget https://phoenixnap.dl.sourceforge.net/project/libpng/zlib/1.2.11/zlib-1.2.11.tar.gz\?viasf\=1 -O zlib-1.2.11.tar.gz
+          tar xf zlib-1.2.11.tar.gz && rm zlib-1.2.11.tar.gz
+          cd zlib-1.2.11
+          sed   '394,400d' configure > _configure && mv _configure configure && chmod +x configure
+          mkdir build
+          CHOST=arm CC=/usr/bin/aarch64-linux-gnu-gcc \
+          AR=/usr/bin/aarch64-linux-gnu-ar \
+          RANLIB=/usr/bin/aarch64-linux-gnu-ranlib \
+          ./configure --prefix=$(pwd)/build
+          make -j$(nproc) && make install
+          cd ..
+          ZLIBPATH=`pwd`/zlib-1.2.11/build
+          find zlib-1.2.11/.
+          wget https://www.openssl.org/source/openssl-1.1.1.tar.gz
+          tar -xvzf openssl-1.1.1.tar.gz
+          cd openssl-1.1.1/
+          ./Configure linux-aarch64 \
+          --cross-compile-prefix=/usr/bin/aarch64-linux-gnu- --prefix=/usr/local/ssl --with-zlib-lib=${ZLIBPATH}/lib \
+          --with-zlib-include=${ZLIBPATH}/include --openssldir=/usr/local/ssl shared zlib 
+          make -j$(($(nproc)+1))
+          sudo make install
+        if: startsWith(matrix.arch, 'aarch64')
       # - name: create Cross.toml
       #   run: |
       #     echo [target.aarch64-unknown-linux-gnu] > Cross.toml
