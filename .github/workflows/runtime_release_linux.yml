@@ -49,6 +49,7 @@ jobs:
           OPENSSL_DIR: /usr/local/ssl
           AARCH64_UNKNOWN_LINUX_GNU_OPENSSL_DIR: /usr/local/ssl
         run: |
+          echo `pwd`
           sudo dpkg --add-architecture arm64
           sudo apt install gcc-aarch64-linux-gnu
           sudo apt-get install build-essential gcc make perl dkms
@@ -64,7 +65,6 @@ jobs:
           make -j$(nproc) && make install
           cd ..
           ZLIBPATH=`pwd`/zlib-1.2.11/build
-          find zlib-1.2.11/.
           wget https://www.openssl.org/source/openssl-1.1.1.tar.gz
           tar -xvzf openssl-1.1.1.tar.gz
           cd openssl-1.1.1/
