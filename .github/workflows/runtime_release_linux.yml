@@ -45,24 +45,47 @@ jobs:
           key: "version"
           value: "${{ steps.get_release.outputs.tag_name }}"
       - name: install libssl-dev
+        env:
+          OPENSSL_DIR: /usr/local/ssl
+          AARCH64_UNKNOWN_LINUX_GNU_OPENSSL_DIR: /usr/local/ssl
         run: |
-          sudo apt install libssl-dev pkg-config
-      # - name: create Cross.toml
-      #   run: |
-      #     echo [target.aarch64-unknown-linux-gnu] > Cross.toml
-      #     echo "dockerfile = \"./Dockerfile\"" >> Cross.toml
-      # - name: create Dockerfile
-      #   run: |
-      #     echo "FROM arm64v8/rust" > Dockerfile
-      #     echo "RUN dpkg --add-architecture arm64 && \\" >> Dockerfile
-      #     echo "apt-get update && \\" >> Dockerfile
-      #     echo "apt-get install --assume-yes build-essential" >> Dockerfile
+          echo `pwd`
+          sudo apt install gcc-aarch64-linux-gnu
+          sudo apt-get install build-essential gcc make perl dkms
+          wget https://phoenixnap.dl.sourceforge.net/project/libpng/zlib/1.2.11/zlib-1.2.11.tar.gz\?viasf\=1 -O zlib-1.2.11.tar.gz
+          tar xf zlib-1.2.11.tar.gz && rm zlib-1.2.11.tar.gz
+          cd zlib-1.2.11
+          sed   '394,400d' configure > _configure && mv _configure configure && chmod +x configure
+          mkdir build
+          CHOST=arm CC=/usr/bin/aarch64-linux-gnu-gcc \
+          AR=/usr/bin/aarch64-linux-gnu-ar \
+          RANLIB=/usr/bin/aarch64-linux-gnu-ranlib \
+          ./configure --prefix=/usr/local/
+          make -j$(nproc) 
+          sudo make install
+          cd ..
+          ZLIBPATH=/usr/local/
+          wget https://www.openssl.org/source/openssl-1.1.1.tar.gz
+          tar -xvzf openssl-1.1.1.tar.gz
+          cd openssl-1.1.1/
+          ./Configure linux-aarch64 \
+          --cross-compile-prefix=/usr/bin/aarch64-linux-gnu- --prefix=/usr/local --with-zlib-lib=${ZLIBPATH}/lib \
+          --with-zlib-include=${ZLIBPATH}/include --openssldir=/usr/local shared zlib 
+          make -j$(($(nproc)+1))
+          sudo make install
+        if: startsWith(matrix.arch, 'aarch64')
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
           target: ${{ matrix.target }}
       - name: Build runtime
         uses: actions-rs/cargo@v1
+        env:
+          RUSTFLAGS: "-C link-arg=-L/usr/local/lib"
+          LD_LIBRARY_PATH: "$LD_LIBRARY_PATH:/usr/local/lib"
+          DYLD_LIBRARY_PATH: "$DYLD_LIBRARY_PATH:/usr/local/lib"
+          AARCH64_UNKNOWN_LINUX_GNU_OPENSSL_INCLUDE_DIR: /usr/local/include
+          AARCH64_UNKNOWN_LINUX_GNU_OPENSSL_LIB_DIR: /usr/local/lib
         with:
           use-cross: ${{ matrix.cross }}
           command: build
