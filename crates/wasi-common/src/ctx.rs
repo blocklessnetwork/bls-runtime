@@ -4,18 +4,18 @@ use crate::file::{FileAccessMode, FileEntry, WasiFile};
 use crate::sched::WasiSched;
 use crate::string_array::StringArray;
 use crate::table::Table;
-use crate::BlocklessConfig;
 use crate::{Error, StringArrayError};
 use cap_rand::RngCore;
 use std::ops::Deref;
 use std::path::{Path, PathBuf};
 use std::sync::{Arc, Mutex};
+use crate::BlocklessConfig;
 
 /// An `Arc`-wrapper around the wasi-common context to allow mutable access to
 /// the file descriptor table. This wrapper is only necessary due to the
 /// signature of `fd_fdstat_set_flags`; if that changes, there are a variety of
 /// improvements that can be made (TODO:
-/// https://github.com/bytecodealliance/wasmtime/issues/5643).
+/// <https://github.com/bytecodealliance/wasmtime/issues/5643)>.
 #[derive(Clone)]
 pub struct WasiCtx(Arc<WasiCtxInner>);
 
