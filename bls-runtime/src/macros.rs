@@ -1,4 +1,3 @@
-#[macro_export]
 macro_rules! plog {
     ($level: expr, $($args:tt)+) => {{
         crate::plog::plog($level, std::format_args!($($args)+))
@@ -6,10 +5,9 @@ macro_rules! plog {
 }
 
 /// export the perror macro for log the error
-#[macro_export]
 macro_rules! perror {
     ($($args:tt)+) => {{
-        crate::plog!(log::Level::Error, $($args)+)
+        plog!(log::Level::Error, $($args)+)
     }};
 
     () => {{
@@ -19,7 +17,6 @@ macro_rules! perror {
 }
 
 /// export the pinfo macro for log the info
-#[macro_export]
 macro_rules! pinfo {
     ($($args:tt)+) => {{
         crate::plog!(log::Level::Info, $($args)+)

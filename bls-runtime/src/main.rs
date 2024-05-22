@@ -1,6 +1,7 @@
 mod cli_clap;
 mod config;
 mod error;
+#[macro_use]
 mod macros;
 mod plog;
 mod v86;
