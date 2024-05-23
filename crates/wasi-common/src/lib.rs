@@ -98,7 +98,7 @@ pub use sched::{Poll, WasiSched};
 pub use string_array::{StringArray, StringArrayError};
 pub use table::Table;
 
-pub mod blockless;
+mod blockless;
 pub use blockless::*;
 
 // The only difference between these definitions for sync vs async is whether

@@ -17,6 +17,7 @@ macro_rules! perror {
 }
 
 /// export the pinfo macro for log the info
+#[allow(unused_macros)]
 macro_rules! pinfo {
     ($($args:tt)+) => {{
         crate::plog!(log::Level::Info, $($args)+)
