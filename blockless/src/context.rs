@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 
-use wasmtime_wasi_threads::WasiThreadsCtx;
 use wasmtime_wasi::preview1::WasiP1Ctx;
+use wasmtime_wasi_threads::WasiThreadsCtx;
 
 #[derive(Clone)]
 pub(crate) struct BlocklessContext {

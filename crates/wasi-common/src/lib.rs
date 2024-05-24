@@ -194,4 +194,3 @@ pub fn maybe_exit_on_error(e: anyhow::Error) -> anyhow::Error {
 
     e
 }
-
