@@ -100,8 +100,8 @@ pub use table::Table;
 
 mod blockless;
 pub use blockless::{
-    BlocklessConfig, BlocklessModule, LoggerLevel, BlocklessConfigVersion,
-    DriverConfig, ModuleType, Permission, Stderr, Stdout
+    BlocklessConfig, BlocklessConfigVersion, BlocklessModule, DriverConfig, LoggerLevel,
+    ModuleType, Permission, Stderr, Stdout,
 };
 
 // The only difference between these definitions for sync vs async is whether
