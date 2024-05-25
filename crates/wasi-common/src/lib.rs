@@ -99,7 +99,10 @@ pub use string_array::{StringArray, StringArrayError};
 pub use table::Table;
 
 mod blockless;
-pub use blockless::*;
+pub use blockless::{
+    BlocklessConfig, BlocklessModule, LoggerLevel, BlocklessConfigVersion,
+    DriverConfig, ModuleType, Permission, Stderr, Stdout
+};
 
 // The only difference between these definitions for sync vs async is whether
 // the wasmtime::Funcs generated are async (& therefore need an async Store and an executor to run)
