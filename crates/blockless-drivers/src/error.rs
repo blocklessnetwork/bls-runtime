@@ -33,7 +33,7 @@ impl std::fmt::Display for ErrorKind {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum HttpErrorKind {
     InvalidDriver,
     InvalidHandle,
