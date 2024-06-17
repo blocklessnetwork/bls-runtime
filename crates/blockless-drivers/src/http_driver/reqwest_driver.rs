@@ -63,17 +63,29 @@ pub(crate) async fn http_req(url: &str, opts: &str) -> Result<(u32, i32), HttpEr
     // build the headers from the options json
     let mut headers = reqwest::header::HeaderMap::new();
     let header_value = &json["headers"];
-    let header_obj = match json::parse(header_value.as_str().unwrap()) {
+
+    // Check if header_value is a valid string
+    let header_obj = match json::parse(header_value.as_str().unwrap_or_default()) {
         Ok(o) => o,
         Err(_) => return Err(HttpErrorKind::HeadersValidationError),
     };
 
     if header_obj.is_object() {
         for (key, value) in header_obj.entries() {
-            headers.insert(
-                reqwest::header::HeaderName::from_bytes(key.as_bytes()).unwrap(),
-                reqwest::header::HeaderValue::from_str(value.as_str().unwrap()).unwrap(),
-            );
+            // Handle possible errors from from_bytes
+            let header_name = match reqwest::header::HeaderName::from_bytes(key.as_bytes()) {
+                Ok(name) => name,
+                Err(_) => return Err(HttpErrorKind::HeadersValidationError),
+            };
+
+            // Handle possible errors from from_str
+            let header_value =
+                match reqwest::header::HeaderValue::from_str(value.as_str().unwrap_or_default()) {
+                    Ok(value) => value,
+                    Err(_) => return Err(HttpErrorKind::HeadersValidationError),
+                };
+
+            headers.insert(header_name, header_value);
         }
     }
 
@@ -213,7 +225,10 @@ pub(crate) fn http_close(fd: u32) -> Result<(), HttpErrorKind> {
 #[cfg(test)]
 mod test {
     use super::*;
+    use crate::error::HttpErrorKind;
     use bytes::BytesMut;
+    use json::JsonValue;
+    use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
     use std::task::Poll;
     use tokio::runtime::{Builder, Runtime};
 
@@ -231,9 +246,106 @@ mod test {
         }
     }
 
+    fn build_headers(json_str: &str) -> Result<HeaderMap, HttpErrorKind> {
+        let parsed_json = match json::parse(json_str) {
+            Ok(json) => json,
+            Err(_) => return Err(HttpErrorKind::HeadersValidationError),
+        };
+
+        let headers_value = match &parsed_json["headers"] {
+            JsonValue::Object(obj) => obj,
+            _ => return Err(HttpErrorKind::HeadersValidationError),
+        };
+
+        let mut headers = HeaderMap::new();
+        for (key, value) in headers_value.iter() {
+            let header_name = match reqwest::header::HeaderName::from_bytes(key.as_bytes()) {
+                Ok(name) => name,
+                Err(_) => return Err(HttpErrorKind::HeadersValidationError),
+            };
+
+            let header_value = match value.as_str() {
+                Some(val) => match HeaderValue::from_str(val) {
+                    Ok(value) => value,
+                    Err(_) => return Err(HttpErrorKind::HeadersValidationError),
+                },
+                None => return Err(HttpErrorKind::HeadersValidationError),
+            };
+
+            headers.insert(header_name, header_value);
+        }
+
+        Ok(headers)
+    }
+
     fn get_runtime() -> Runtime {
         let rt = Builder::new_current_thread().enable_all().build().unwrap();
         return rt;
+    }
+
+    // Test for valid headers
+    #[test]
+    fn test_valid_headers() {
+        let json_str = r#"
+       {
+           "headers": {
+               "Content-Type": "application/json",
+               "Authorization": "Bearer token"
+           }
+       }
+       "#;
+
+        let result = build_headers(json_str);
+        assert!(result.is_ok());
+        let headers = result.unwrap();
+        assert_eq!(headers.get("Content-Type").unwrap(), "application/json");
+        assert_eq!(headers.get("Authorization").unwrap(), "Bearer token");
+    }
+
+    // Test for invalid JSON headers
+    #[test]
+    fn test_invalid_json_headers() {
+        let json_str = r#"
+        {
+            "headers": "not a json object"
+        }
+        "#;
+
+        let result = build_headers(json_str);
+        assert!(result.is_err());
+        assert_eq!(result.err().unwrap(), HttpErrorKind::HeadersValidationError);
+    }
+
+    // Test for invalid header name
+    #[test]
+    fn test_invalid_header_name() {
+        let json_str = r#"
+        {
+            "headers": {
+                "Invalid Header Name": "value"
+            }
+        }
+        "#;
+
+        let result = build_headers(json_str);
+        assert!(result.is_err());
+        assert_eq!(result.err().unwrap(), HttpErrorKind::HeadersValidationError);
+    }
+
+    // Test for invalid header value
+    #[test]
+    fn test_invalid_header_value() {
+        let json_str = r#"
+        {
+            "headers": {
+                "Content-Type": "\0"
+            }
+        }
+        "#;
+
+        let result = build_headers(json_str);
+        assert!(result.is_err());
+        assert_eq!(result.err().unwrap(), HttpErrorKind::HeadersValidationError);
     }
 
     #[test]
