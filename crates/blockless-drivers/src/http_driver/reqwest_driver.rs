@@ -259,7 +259,7 @@ mod test {
 
         let mut headers = HeaderMap::new();
         for (key, value) in headers_value.iter() {
-            let header_name = match HeaderName::from_bytes(key.as_bytes()) {
+            let header_name = match reqwest::header::HeaderName::from_bytes(key.as_bytes()) {
                 Ok(name) => name,
                 Err(_) => return Err(HttpErrorKind::HeadersValidationError),
             };
