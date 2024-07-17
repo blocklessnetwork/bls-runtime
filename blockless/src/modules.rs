@@ -406,7 +406,7 @@ impl<'a> ModuleLinker<'a> {
                 "blockless",
                 "mcall",
                 |caller: Caller<'_, BSContext>,
-                 (addr,addr_len, buf,buf_len,):(u32,u32,u32,u32,)| {
+                 (addr, addr_len, buf, buf_len): (u32, u32, u32, u32)| {
                     Self::mcall_fn(caller, addr, addr_len, buf, buf_len)
                 },
             )
@@ -416,7 +416,7 @@ impl<'a> ModuleLinker<'a> {
                 "blockless",
                 "register",
                 |caller: Caller<'_, BSContext>,
-                (addr,addr_len, buf,buf_len,):(u32,u32,u32,u32,)| {
+                 (addr, addr_len, buf, buf_len): (u32, u32, u32, u32)| {
                     Self::register_fn(caller, addr, addr_len, buf, buf_len)
                 },
             )

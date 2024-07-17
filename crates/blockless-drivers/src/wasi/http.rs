@@ -101,7 +101,8 @@ impl blockless_http::BlocklessHttp for WasiCtx {
         url: GuestPtr<str>,
         opts: GuestPtr<str>,
     ) -> Result<(types::HttpHandle, types::CodeType), HttpErrorKind> {
-        let url: &str = memory.as_str(url)
+        let url: &str = memory
+            .as_str(url)
             .map_err(|e| {
                 error!("guest url error: {}", e);
                 HttpErrorKind::Utf8Error
@@ -111,7 +112,8 @@ impl blockless_http::BlocklessHttp for WasiCtx {
             error!("Permission Deny");
             return Err(HttpErrorKind::PermissionDeny);
         }
-        let opts: &str = memory.as_str(opts)
+        let opts: &str = memory
+            .as_str(opts)
             .map_err(|e| {
                 error!("guest options error: {}", e);
                 HttpErrorKind::Utf8Error
@@ -122,9 +124,9 @@ impl blockless_http::BlocklessHttp for WasiCtx {
     }
 
     async fn http_close(
-        &mut self, 
+        &mut self,
         _memory: &mut GuestMemory<'_>,
-        handle: types::HttpHandle
+        handle: types::HttpHandle,
     ) -> Result<(), HttpErrorKind> {
         http_driver::http_close(handle.into()).await
     }
@@ -137,7 +139,8 @@ impl blockless_http::BlocklessHttp for WasiCtx {
         buf: GuestPtr<u8>,
         buf_len: u32,
     ) -> Result<u32, HttpErrorKind> {
-        let head: &str = memory.as_str(head)
+        let head: &str = memory
+            .as_str(head)
             .map_err(|e| {
                 error!("guest head error: {}", e);
                 HttpErrorKind::Utf8Error
@@ -146,7 +149,8 @@ impl blockless_http::BlocklessHttp for WasiCtx {
         let mut dest_buf = vec![0; buf_len as _];
         let buf = buf.clone();
         let rs = http_driver::http_read_head(handle.into(), head, &mut dest_buf[..]).await?;
-        memory.copy_from_slice(&dest_buf[0..rs as _], buf.as_array(rs))
+        memory
+            .copy_from_slice(&dest_buf[0..rs as _], buf.as_array(rs))
             .map_err(|_| HttpErrorKind::MemoryAccessError)?;
         Ok(rs)
     }
@@ -162,7 +166,8 @@ impl blockless_http::BlocklessHttp for WasiCtx {
         let buf = buf.clone();
         let rs = http_driver::http_read_body(handle.into(), &mut dest_buf[..]).await?;
         if rs > 0 {
-            memory.copy_from_slice(&dest_buf[0..rs as _], buf.as_array(rs))
+            memory
+                .copy_from_slice(&dest_buf[0..rs as _], buf.as_array(rs))
                 .map_err(|_| HttpErrorKind::MemoryAccessError)?;
         }
         Ok(rs)

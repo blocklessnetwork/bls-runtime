@@ -61,18 +61,14 @@ fn generate_func(
 
     let mut arg_name_decls = Vec::new();
     let mut arg_type_decls = Vec::new();
-    params
-        .iter()
-        .enumerate()
-        .for_each(|(i, ty)| {
-            let name = &arg_names[i];
-            let wasm = names::wasm_type(*ty);
-            
-            arg_name_decls.push(quote! { #name, });
-            arg_type_decls.push(quote! { #wasm, });
-        });
-   
-    
+    params.iter().enumerate().for_each(|(i, ty)| {
+        let name = &arg_names[i];
+        let wasm = names::wasm_type(*ty);
+
+        arg_name_decls.push(quote! { #name, });
+        arg_type_decls.push(quote! { #wasm, });
+    });
+
     let func_name = func.name.as_str();
     let func_ident = names::func(&func.name);
     let ret_ty = match results.len() {

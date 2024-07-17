@@ -51,7 +51,8 @@ impl blockless_cgi::BlocklessCgi for WasiCtx {
         memory: &mut GuestMemory<'_>,
         command_with_args: GuestPtr<str>,
     ) -> Result<types::CgiHandle, CgiErrorKind> {
-        let cmd: &str = memory.as_str(command_with_args)
+        let cmd: &str = memory
+            .as_str(command_with_args)
             .map_err(|e| {
                 error!("command error: {}", e);
                 CgiErrorKind::InvalidParameter
@@ -61,7 +62,10 @@ impl blockless_cgi::BlocklessCgi for WasiCtx {
         command_and_exec(&root_path, cmd).await.map(|r| r.into())
     }
 
-    async fn cgi_list_exec(&mut self, _memory: &mut GuestMemory<'_>) -> Result<types::CgiHandle, CgiErrorKind> {
+    async fn cgi_list_exec(
+        &mut self,
+        _memory: &mut GuestMemory<'_>,
+    ) -> Result<types::CgiHandle, CgiErrorKind> {
         let root_path = self.config_drivers_root_path_ref().unwrap();
         cgi_directory_list_exec(&root_path).await.map(|r| r.into())
     }
@@ -77,7 +81,8 @@ impl blockless_cgi::BlocklessCgi for WasiCtx {
         let buf = buf.clone();
         let rs = cgi_directory_list_read(handle.into(), &mut dest_buf[..]).await?;
         if rs > 0 {
-            memory.copy_from_slice(&dest_buf[0..rs as _], buf.as_array(rs))
+            memory
+                .copy_from_slice(&dest_buf[0..rs as _], buf.as_array(rs))
                 .map_err(|_| CgiErrorKind::RuntimeError)?;
         }
         Ok(rs)
@@ -94,7 +99,8 @@ impl blockless_cgi::BlocklessCgi for WasiCtx {
         let buf = buf.clone();
         let rs = child_stdout_read(handle.into(), &mut dest_buf[..]).await?;
         if rs > 0 {
-            memory.copy_from_slice(&dest_buf[0..rs as _], buf.as_array(rs))
+            memory
+                .copy_from_slice(&dest_buf[0..rs as _], buf.as_array(rs))
                 .map_err(|_| CgiErrorKind::RuntimeError)?;
         }
         Ok(rs)
@@ -111,7 +117,8 @@ impl blockless_cgi::BlocklessCgi for WasiCtx {
         let buf = buf.clone();
         let rs = child_stderr_read(handle.into(), &mut dest_buf[..]).await?;
         if rs > 0 {
-            memory.copy_from_slice(&dest_buf[0..rs as _], buf.as_array(rs))
+            memory
+                .copy_from_slice(&dest_buf[0..rs as _], buf.as_array(rs))
                 .map_err(|_| CgiErrorKind::RuntimeError)?;
         }
         Ok(rs)
@@ -124,7 +131,8 @@ impl blockless_cgi::BlocklessCgi for WasiCtx {
         buf: GuestPtr<u8>,
         buf_len: u32,
     ) -> Result<u32, CgiErrorKind> {
-        let buf = memory.as_slice(buf.as_array(buf_len))
+        let buf = memory
+            .as_slice(buf.as_array(buf_len))
             .map_err(|e| {
                 error!("guest stdin write buf error: {}", e);
                 CgiErrorKind::InvalidParameter
@@ -134,7 +142,11 @@ impl blockless_cgi::BlocklessCgi for WasiCtx {
         child_stdin_write(handle.into(), buf).await
     }
 
-    async fn cgi_close(&mut self, _memory: &mut GuestMemory<'_>, handle: types::CgiHandle) -> Result<(), CgiErrorKind> {
+    async fn cgi_close(
+        &mut self,
+        _memory: &mut GuestMemory<'_>,
+        handle: types::CgiHandle,
+    ) -> Result<(), CgiErrorKind> {
         cgi_driver::close(handle.into())
     }
 }

@@ -53,7 +53,8 @@ impl blockless_ipfs::BlocklessIpfs for WasiCtx {
         memory: &mut GuestMemory<'_>,
         params: GuestPtr<str>,
     ) -> Result<(types::IpfsHandle, types::StatusCode), IpfsErrorKind> {
-        let params = memory.as_str(params)
+        let params = memory
+            .as_str(params)
             .map_err(|e| {
                 error!("guest url error: {}", e);
                 IpfsErrorKind::Utf8Error
@@ -74,16 +75,17 @@ impl blockless_ipfs::BlocklessIpfs for WasiCtx {
         let buf = buf.clone();
         let rs = ipfs_driver::read_body(handle.into(), &mut dest_buf[..]).await?;
         if rs > 0 {
-            memory.copy_from_slice(&dest_buf[0..rs as _], buf.as_array(rs))
+            memory
+                .copy_from_slice(&dest_buf[0..rs as _], buf.as_array(rs))
                 .map_err(|_| IpfsErrorKind::RuntimeError)?;
         }
         Ok(rs)
     }
 
     async fn ipfs_close(
-        &mut self, 
+        &mut self,
         _memory: &mut GuestMemory<'_>,
-        handle: types::IpfsHandle
+        handle: types::IpfsHandle,
     ) -> Result<(), IpfsErrorKind> {
         ipfs_driver::close(handle.into()).await?;
         Ok(())
@@ -96,7 +98,8 @@ impl blockless_ipfs::BlocklessIpfs for WasiCtx {
         buf: GuestPtr<u8>,
         buf_len: u32,
     ) -> Result<u32, IpfsErrorKind> {
-        let buf = memory.as_slice(buf.as_array(buf_len))
+        let buf = memory
+            .as_slice(buf.as_array(buf_len))
             .map_err(|e| {
                 error!("guest url error: {}", e);
                 IpfsErrorKind::InvalidParameter

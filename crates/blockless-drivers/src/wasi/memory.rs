@@ -49,7 +49,8 @@ impl blockless_memory::BlocklessMemory for WasiCtx {
         let mut dest_buf = vec![0; buf_len as _];
         let rs = memory_driver::read(&mut dest_buf, stdin.to_string()).await?;
         if rs > 0 {
-            memory.copy_from_slice(&dest_buf[0..rs as _], buf.as_array(rs))
+            memory
+                .copy_from_slice(&dest_buf[0..rs as _], buf.as_array(rs))
                 .map_err(|_| BlocklessMemoryErrorKind::RuntimeError)?;
         }
         Ok(rs)
@@ -82,7 +83,8 @@ impl blockless_memory::BlocklessMemory for WasiCtx {
         let mut dest_buf = vec![0; buf_len as _];
         let rs = memory_driver::read(&mut dest_buf, owned_string.to_string()).await?;
         if rs > 0 {
-            memory.copy_from_slice(&dest_buf[0..rs as _], buf.as_array(rs))
+            memory
+                .copy_from_slice(&dest_buf[0..rs as _], buf.as_array(rs))
                 .map_err(|_| BlocklessMemoryErrorKind::RuntimeError)?;
         }
         Ok(rs)

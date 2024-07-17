@@ -90,7 +90,6 @@ impl wiggle::GuestErrorType for types::Errno {
     }
 }
 
-
 #[wiggle::async_trait]
 impl blockless_drivers::BlocklessDrivers for WasiCtx {
     async fn blockless_open(
@@ -99,8 +98,14 @@ impl blockless_drivers::BlocklessDrivers for WasiCtx {
         path: GuestPtr<str>,
         opts: GuestPtr<str>,
     ) -> Result<types::Fd, ErrorKind> {
-        let path = memory.as_str(path).map_err(|_| ErrorKind::DriverBadParams)?.unwrap();
-        let opts = memory.as_str(opts).map_err(|_| ErrorKind::DriverBadParams)?.unwrap();
+        let path = memory
+            .as_str(path)
+            .map_err(|_| ErrorKind::DriverBadParams)?
+            .unwrap();
+        let opts = memory
+            .as_str(opts)
+            .map_err(|_| ErrorKind::DriverBadParams)?
+            .unwrap();
         let drv: Arc<dyn Driver + Sync + Send> = match DriverConetxt::find_driver(path) {
             Some(d) => d,
             None => return Err(ErrorKind::DriverNotFound),

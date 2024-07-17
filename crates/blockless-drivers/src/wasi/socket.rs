@@ -81,7 +81,8 @@ impl blockless_socket::BlocklessSocket for WasiCtx {
         memory: &mut GuestMemory<'_>,
         bind: GuestPtr<str>,
     ) -> Result<types::SocketHandle, BlocklessSocketErrorKind> {
-        let addr = memory.as_str(bind)
+        let addr = memory
+            .as_str(bind)
             .map_err(|_| BlocklessSocketErrorKind::ParameterError)?
             .unwrap();
         let mode = FileAccessMode::READ | FileAccessMode::WRITE;
@@ -103,7 +104,8 @@ impl blockless_socket::BlocklessSocket for WasiCtx {
         memory: &mut GuestMemory<'_>,
         target: GuestPtr<str>,
     ) -> Result<types::SocketHandle, BlocklessSocketErrorKind> {
-        let addr = memory.as_str(target)
+        let addr = memory
+            .as_str(target)
             .map_err(|_| BlocklessSocketErrorKind::ParameterError)?
             .unwrap();
         let mode = FileAccessMode::READ | FileAccessMode::WRITE;

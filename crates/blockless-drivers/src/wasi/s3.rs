@@ -54,7 +54,8 @@ impl blockless_s3::BlocklessS3 for WasiCtx {
         cmd: u16,
         param: GuestPtr<str>,
     ) -> Result<types::S3Handle, S3ErrorKind> {
-        let params = memory.as_str(param)
+        let params = memory
+            .as_str(param)
             .map_err(|e| {
                 error!("guest url error: {}", e);
                 S3ErrorKind::Utf8Error
@@ -71,14 +72,16 @@ impl blockless_s3::BlocklessS3 for WasiCtx {
         buf: GuestPtr<u8>,
         buf_len: u32,
     ) -> Result<(), S3ErrorKind> {
-        let cfg = memory.as_str(cfg)
+        let cfg = memory
+            .as_str(cfg)
             .map_err(|e| {
                 error!("guest url error: {}", e);
                 S3ErrorKind::Utf8Error
             })?
             .unwrap();
-        
-        let params = memory.as_slice(buf.as_array(buf_len))
+
+        let params = memory
+            .as_slice(buf.as_array(buf_len))
             .map_err(|e| {
                 error!("guest url error: {}", e);
                 S3ErrorKind::InvalidParameter
@@ -97,16 +100,17 @@ impl blockless_s3::BlocklessS3 for WasiCtx {
         let mut dest_buf = vec![0; buf_len as _];
         let rs = s3_driver::read(handle.into(), &mut dest_buf).await?;
         if rs > 0 {
-            memory.copy_from_slice(&dest_buf[0..rs as _], buf.as_array(rs))
+            memory
+                .copy_from_slice(&dest_buf[0..rs as _], buf.as_array(rs))
                 .map_err(|_| S3ErrorKind::RuntimeError)?;
         }
         Ok(rs)
     }
 
     async fn s3_close(
-        &mut self, 
+        &mut self,
         _memory: &mut GuestMemory<'_>,
-        handle: types::S3Handle
+        handle: types::S3Handle,
     ) -> Result<(), S3ErrorKind> {
         s3_driver::close(handle.into()).await
     }
