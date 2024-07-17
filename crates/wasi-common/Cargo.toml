@@ -15,7 +15,7 @@ include = ["src/**/*", "tests/**/*", "witx", "README.md", "LICENSE", "build.rs"]
 workspace = true
 
 [dependencies]
-anyhow = { workspace = true }
+anyhow = { workspace = true, features = ['std'] }
 thiserror = { workspace = true }
 wiggle = { workspace = true }
 tracing = { workspace = true }
@@ -30,7 +30,6 @@ wasmtime = { workspace = true, optional = true, features = ['runtime'] }
 cap-fs-ext = { workspace = true, optional = true }
 cap-time-ext = { workspace = true, optional = true }
 fs-set-times = { workspace = true, optional = true }
-
 system-interface = { workspace = true, features = ["cap_std_impls"], optional = true }
 io-lifetimes = { workspace = true, optional = true }
 # Optional, enabled by tokio feature:
@@ -55,6 +54,7 @@ features = [
 ]
 
 [dev-dependencies]
+wasi-common = { path = '.', features = ['tokio'] }
 tempfile = { workspace = true }
 test-log = { workspace = true }
 tracing-subscriber = { workspace = true }
@@ -92,4 +92,7 @@ tokio = [
     "dep:tokio",
 ]
 exit = [ "wasmtime", "dep:libc" ]
+
+[package.metadata.docs.rs]
+all-features = true
 
