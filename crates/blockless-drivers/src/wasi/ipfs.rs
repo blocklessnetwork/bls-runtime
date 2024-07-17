@@ -82,7 +82,7 @@ impl blockless_ipfs::BlocklessIpfs for WasiCtx {
 
     async fn ipfs_close(
         &mut self, 
-        memory: &mut GuestMemory<'_>,
+        _memory: &mut GuestMemory<'_>,
         handle: types::IpfsHandle
     ) -> Result<(), IpfsErrorKind> {
         ipfs_driver::close(handle.into()).await?;

@@ -123,7 +123,7 @@ impl blockless_http::BlocklessHttp for WasiCtx {
 
     async fn http_close(
         &mut self, 
-        memory: &mut GuestMemory<'_>,
+        _memory: &mut GuestMemory<'_>,
         handle: types::HttpHandle
     ) -> Result<(), HttpErrorKind> {
         http_driver::http_close(handle.into()).await

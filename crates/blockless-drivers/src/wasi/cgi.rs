@@ -61,7 +61,7 @@ impl blockless_cgi::BlocklessCgi for WasiCtx {
         command_and_exec(&root_path, cmd).await.map(|r| r.into())
     }
 
-    async fn cgi_list_exec(&mut self, memory: &mut GuestMemory<'_>) -> Result<types::CgiHandle, CgiErrorKind> {
+    async fn cgi_list_exec(&mut self, _memory: &mut GuestMemory<'_>) -> Result<types::CgiHandle, CgiErrorKind> {
         let root_path = self.config_drivers_root_path_ref().unwrap();
         cgi_directory_list_exec(&root_path).await.map(|r| r.into())
     }
@@ -134,7 +134,7 @@ impl blockless_cgi::BlocklessCgi for WasiCtx {
         child_stdin_write(handle.into(), buf).await
     }
 
-    async fn cgi_close(&mut self, memory: &mut GuestMemory<'_>, handle: types::CgiHandle) -> Result<(), CgiErrorKind> {
+    async fn cgi_close(&mut self, _memory: &mut GuestMemory<'_>, handle: types::CgiHandle) -> Result<(), CgiErrorKind> {
         cgi_driver::close(handle.into())
     }
 }

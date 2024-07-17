@@ -105,7 +105,7 @@ impl blockless_s3::BlocklessS3 for WasiCtx {
 
     async fn s3_close(
         &mut self, 
-        memory: &mut GuestMemory<'_>,
+        _memory: &mut GuestMemory<'_>,
         handle: types::S3Handle
     ) -> Result<(), S3ErrorKind> {
         s3_driver::close(handle.into()).await
