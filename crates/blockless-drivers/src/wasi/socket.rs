@@ -9,7 +9,7 @@ use wasi_common::{
 use crate::BlocklessSocketErrorKind;
 use log::error;
 use std::net::{TcpListener, TcpStream};
-use wiggle::GuestPtr;
+use wiggle::{GuestMemory, GuestPtr};
 
 wiggle::from_witx!({
     witx: ["$BLOCKLESS_DRIVERS_ROOT/witx/blockless_socket.witx"],
@@ -76,12 +76,12 @@ async fn tcp_bind(addr: &str) -> Result<Box<dyn WasiFile>, BlocklessSocketErrorK
 
 #[wiggle::async_trait]
 impl blockless_socket::BlocklessSocket for WasiCtx {
-    async fn create_tcp_bind_socket<'a>(
+    async fn create_tcp_bind_socket(
         &mut self,
-        bind: &GuestPtr<'a, str>,
+        memory: &mut GuestMemory<'_>,
+        bind: GuestPtr<str>,
     ) -> Result<types::SocketHandle, BlocklessSocketErrorKind> {
-        let addr = bind
-            .as_str()
+        let addr = memory.as_str(bind)
             .map_err(|_| BlocklessSocketErrorKind::ParameterError)?
             .unwrap();
         let mode = FileAccessMode::READ | FileAccessMode::WRITE;
@@ -98,12 +98,12 @@ impl blockless_socket::BlocklessSocket for WasiCtx {
         }
     }
 
-    async fn tcp_connect<'a>(
+    async fn tcp_connect(
         &mut self,
-        target: &GuestPtr<'a, str>,
+        memory: &mut GuestMemory<'_>,
+        target: GuestPtr<str>,
     ) -> Result<types::SocketHandle, BlocklessSocketErrorKind> {
-        let addr = target
-            .as_str()
+        let addr = memory.as_str(target)
             .map_err(|_| BlocklessSocketErrorKind::ParameterError)?
             .unwrap();
         let mode = FileAccessMode::READ | FileAccessMode::WRITE;

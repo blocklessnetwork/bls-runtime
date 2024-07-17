@@ -228,7 +228,7 @@ mod test {
     use crate::error::HttpErrorKind;
     use bytes::BytesMut;
     use json::JsonValue;
-    use reqwest::header::{HeaderMap, HeaderName, HeaderValue};
+    use reqwest::header::{HeaderMap, HeaderValue};
     use std::task::Poll;
     use tokio::runtime::{Builder, Runtime};
 

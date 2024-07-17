@@ -34,7 +34,6 @@
 
 (typename $status_code u32)
 
-(typename $incoming_body_ptr (@witx pointer u8))
 
 ;;; Number of bytes 
 (typename $num_bytes u32)
@@ -48,14 +47,14 @@
 
     (@interface func (export "bucket_put_object")
         (param $params string)
-        (param $body_buf $incoming_body_ptr)
+        (param $body_buf (@witx pointer u8))
         (param $body_buf_len u32)
         (result $error (expected (error $s3_error)))
     )
 
     (@interface func (export "s3_read")
         (param $ipfs_handle $s3_handle)
-        (param $body_buf $incoming_body_ptr)
+        (param $body_buf (@witx pointer u8))
         (param $body_buf_len u32)
         (result $error (expected $num_bytes (error $s3_error)))
     )

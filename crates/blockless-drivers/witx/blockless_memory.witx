@@ -12,21 +12,19 @@
 )
 
 
-(typename $incoming_body_ptr (@witx pointer u8))
-
 ;;; Number of bytes 
 (typename $num_bytes u32)
 
 (module $blockless_memory
     
     (@interface func (export "memory_read")
-        (param $body_buf $incoming_body_ptr)
+        (param $body_buf (@witx pointer u8))
         (param $body_buf_len u32)
         (result $error (expected $num_bytes (error $blockless_memory_error)))
     )
 
     (@interface func (export "env_var_read")
-        (param $body_buf $incoming_body_ptr)
+        (param $body_buf (@witx pointer u8))
         (param $body_buf_len u32)
         (result $error (expected $num_bytes (error $blockless_memory_error)))
     )

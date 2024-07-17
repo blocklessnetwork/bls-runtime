@@ -28,8 +28,6 @@
 
 (typename $status_code u32)
 
-(typename $incoming_body_ptr (@witx pointer u8))
-
 
 ;;; Number of bytes 
 (typename $num_bytes u32)
@@ -44,7 +42,7 @@
 
     (@interface func (export "ipfs_read")
         (param $ipfs_handle $ipfs_handle)
-        (param $body_buf $incoming_body_ptr)
+        (param $body_buf (@witx pointer u8))
         (param $body_buf_len u32)
         (result $error (expected $num_bytes (error $ipfs_error)))
     )
@@ -57,7 +55,7 @@
 
     (@interface func (export "ipfs_write")
         (param $ipfs_handle $ipfs_handle)
-        (param $body_buf $incoming_body_ptr)
+        (param $body_buf (@witx pointer u8))
         (param $body_buf_len u32)
         (result $error (expected $num_bytes (error $ipfs_error)))
     )

@@ -2,13 +2,12 @@
 use crate::{memory_driver, BlocklessMemoryErrorKind};
 use std::env;
 use wasi_common::WasiCtx;
-use wiggle::GuestPtr;
+use wiggle::{GuestMemory, GuestPtr};
 
 wiggle::from_witx!({
     witx: ["$BLOCKLESS_DRIVERS_ROOT/witx/blockless_memory.witx"],
     errors: { blockless_memory_error => BlocklessMemoryErrorKind },
     async: *,
-    wasmtime: false,
 });
 
 impl types::UserErrorConversion for WasiCtx {
@@ -40,25 +39,26 @@ impl wiggle::GuestErrorType for types::BlocklessMemoryError {
 
 #[wiggle::async_trait]
 impl blockless_memory::BlocklessMemory for WasiCtx {
-    async fn memory_read<'a>(
+    async fn memory_read(
         &mut self,
-        buf: &GuestPtr<'a, u8>,
+        memory: &mut GuestMemory<'_>,
+        buf: GuestPtr<u8>,
         buf_len: u32,
     ) -> Result<u32, BlocklessMemoryErrorKind> {
         let stdin = self.config_stdin_ref().unwrap();
         let mut dest_buf = vec![0; buf_len as _];
         let rs = memory_driver::read(&mut dest_buf, stdin.to_string()).await?;
         if rs > 0 {
-            buf.as_array(rs)
-                .copy_from_slice(&dest_buf[0..rs as _])
+            memory.copy_from_slice(&dest_buf[0..rs as _], buf.as_array(rs))
                 .map_err(|_| BlocklessMemoryErrorKind::RuntimeError)?;
         }
         Ok(rs)
     }
 
-    async fn env_var_read<'a>(
+    async fn env_var_read(
         &mut self,
-        buf: &GuestPtr<'a, u8>,
+        memory: &mut GuestMemory<'_>,
+        buf: GuestPtr<u8>,
         buf_len: u32,
     ) -> Result<u32, BlocklessMemoryErrorKind> {
         // get the list of env_vars to load into the wasi assembly
@@ -82,8 +82,7 @@ impl blockless_memory::BlocklessMemory for WasiCtx {
         let mut dest_buf = vec![0; buf_len as _];
         let rs = memory_driver::read(&mut dest_buf, owned_string.to_string()).await?;
         if rs > 0 {
-            buf.as_array(rs)
-                .copy_from_slice(&dest_buf[0..rs as _])
+            memory.copy_from_slice(&dest_buf[0..rs as _], buf.as_array(rs))
                 .map_err(|_| BlocklessMemoryErrorKind::RuntimeError)?;
         }
         Ok(rs)

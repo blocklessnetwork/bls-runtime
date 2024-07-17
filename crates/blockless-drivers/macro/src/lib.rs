@@ -59,17 +59,25 @@ fn generate_func(
         .map(|i| Ident::new(&format!("arg{}", i), Span::call_site()))
         .collect::<Vec<_>>();
 
-    let arg_decls = params
+    let arg_name_decls = params
         .iter()
         .enumerate()
         .map(|(i, ty)| {
             let name = &arg_names[i];
             let wasm = names::wasm_type(*ty);
-            quote! { #name: #wasm }
+            quote! { #name, }
         })
         .collect::<Vec<_>>();
-
-    let wrapper = format_ident!("func_wrap{}_async", params.len());
+    let arg_type_decls = params
+        .iter()
+        .enumerate()
+        .map(|(i, ty)| {
+            let name = &arg_names[i];
+            let wasm = names::wasm_type(*ty);
+            quote! { #wasm, }
+        })
+        .collect::<Vec<_>>();
+    
     let func_name = func.name.as_str();
     let func_ident = names::func(&func.name);
     let ret_ty = match results.len() {
@@ -79,10 +87,10 @@ fn generate_func(
     };
     let abi_func = quote!( #target_path::#module_ident::#func_ident );
     let linker = quote!(
-        linker.#wrapper(
+        linker.func_wrap_async(
             #module_name,
             #func_name,
-            move |mut caller: wiggle::wasmtime_crate::Caller<'_, T> #(, #arg_decls)*| {
+            move |mut caller: wiggle::wasmtime_crate::Caller<'_, T> ,(#( #arg_name_decls)*):(#(#arg_type_decls)*)| {
                 Box::new(async move {
                     let mem = match caller.get_export("memory") {
                         Some(wiggle::wasmtime_crate::Extern::Memory(m)) => m,
@@ -91,9 +99,9 @@ fn generate_func(
                         }
                     };
                     let (mem, data) = mem.data_and_store_mut(&mut caller);
-                    let mem = wiggle::wasmtime::WasmtimeGuestMemory::new(mem);
+                    let mut mem = wiggle::GuestMemory::Unshared(mem);
                     let ctx = get_ctx(data);
-                    Ok(<#ret_ty>::from(#abi_func(ctx, &mem #(, #arg_names)*).await ?))
+                    Ok(<#ret_ty>::from(#abi_func(ctx, &mut mem #(, #arg_names)*).await ?))
                 })
             },
         )?;
