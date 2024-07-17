@@ -96,17 +96,13 @@ impl blockless_ipfs::BlocklessIpfs for WasiCtx {
         buf: GuestPtr<u8>,
         buf_len: u32,
     ) -> Result<u32, IpfsErrorKind> {
-        todo!()
-        // let params = buf
-        //     .as_array(buf_len)
-        //     .as_slice()
-        //     .map_err(|e| {
-        //         error!("guest url error: {}", e);
-        //         IpfsErrorKind::InvalidParameter
-        //     })?
-        //     .unwrap();
-        // let buf = unsafe { std::slice::from_raw_parts(params.as_ptr(), buf_len as _) };
-        // let rs = ipfs_driver::write_body(handle.into(), buf).await?;
-        // Ok(rs)
+        let buf = memory.as_slice(buf.as_array(buf_len))
+            .map_err(|e| {
+                error!("guest url error: {}", e);
+                IpfsErrorKind::InvalidParameter
+            })?
+            .unwrap();
+        let rs = ipfs_driver::write_body(handle.into(), buf).await?;
+        Ok(rs)
     }
 }

@@ -59,24 +59,19 @@ fn generate_func(
         .map(|i| Ident::new(&format!("arg{}", i), Span::call_site()))
         .collect::<Vec<_>>();
 
-    let arg_name_decls = params
+    let mut arg_name_decls = Vec::new();
+    let mut arg_type_decls = Vec::new();
+    params
         .iter()
         .enumerate()
-        .map(|(i, ty)| {
+        .for_each(|(i, ty)| {
             let name = &arg_names[i];
             let wasm = names::wasm_type(*ty);
-            quote! { #name, }
-        })
-        .collect::<Vec<_>>();
-    let arg_type_decls = params
-        .iter()
-        .enumerate()
-        .map(|(i, ty)| {
-            let name = &arg_names[i];
-            let wasm = names::wasm_type(*ty);
-            quote! { #wasm, }
-        })
-        .collect::<Vec<_>>();
+            
+            arg_name_decls.push(quote! { #name, });
+            arg_type_decls.push(quote! { #wasm, });
+        });
+   
     
     let func_name = func.name.as_str();
     let func_ident = names::func(&func.name);
