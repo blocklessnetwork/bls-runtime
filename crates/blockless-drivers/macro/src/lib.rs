@@ -6,6 +6,7 @@ use quote::{format_ident, quote};
 use syn::parse_macro_input;
 use wiggle_generate::names;
 
+/// integration the extensions define by wit to linker.
 #[proc_macro]
 pub fn linker_integration(args: TokenStream) -> proc_macro::TokenStream {
     let config = parse_macro_input!(args as BlocklessConfig);
@@ -46,6 +47,8 @@ pub fn linker_integration(args: TokenStream) -> proc_macro::TokenStream {
     s.into()
 }
 
+/// generator the func for add the linker extension method
+/// use func_wrap_async in linker.
 fn generate_func(
     module: &witx::Module,
     func: &witx::InterfaceFunc,
@@ -61,10 +64,10 @@ fn generate_func(
 
     let mut arg_name_decls = Vec::new();
     let mut arg_type_decls = Vec::new();
+    // signature like (arg0, arg1): (u32, u32) as parameters
     params.iter().enumerate().for_each(|(i, ty)| {
         let name = &arg_names[i];
         let wasm = names::wasm_type(*ty);
-
         arg_name_decls.push(quote! { #name, });
         arg_type_decls.push(quote! { #wasm, });
     });
