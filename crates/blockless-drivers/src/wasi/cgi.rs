@@ -46,6 +46,7 @@ impl wiggle::GuestErrorType for types::CgiError {
 
 #[wiggle::async_trait]
 impl blockless_cgi::BlocklessCgi for WasiCtx {
+    /// open the cgi with the cgi command.
     async fn cgi_open(
         &mut self,
         memory: &mut GuestMemory<'_>,
@@ -70,6 +71,7 @@ impl blockless_cgi::BlocklessCgi for WasiCtx {
         cgi_directory_list_exec(&root_path).await.map(|r| r.into())
     }
 
+    /// read the cgi list
     async fn cgi_list_read(
         &mut self,
         memory: &mut GuestMemory<'_>,

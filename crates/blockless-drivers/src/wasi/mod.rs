@@ -1,6 +1,6 @@
 #![allow(non_upper_case_globals)]
 pub mod cgi;
-// pub mod guest_ptr;
+pub mod guest_ptr;
 pub mod http;
 pub mod ipfs;
 pub mod memory;
