@@ -1,10 +1,11 @@
 use std::mem;
-use wiggle::{GuestPtr, GuestType};
+use wiggle::{GuestMemory, GuestPtr, GuestType};
 
 #[derive(Debug)]
 pub struct ArrayTuple(u32, u32);
 
-impl<'a> GuestType<'a> for ArrayTuple {
+/// the tuple type.
+impl GuestType for ArrayTuple {
     fn guest_size() -> u32 {
         mem::size_of::<Self>() as u32
     }
@@ -13,16 +14,23 @@ impl<'a> GuestType<'a> for ArrayTuple {
         mem::align_of::<Self>()
     }
 
-    fn read(ptr: &GuestPtr<'a, Self>) -> Result<Self, wiggle::GuestError> {
-        let offset = ptr.cast::<u32>().read()?;
-        let len = ptr.cast::<u32>().add(1)?.read()?;
+    /// read tuple from memoery
+    fn read(memory: &GuestMemory<'_>, ptr: GuestPtr<Self>) -> Result<Self, wiggle::GuestError> {
+        let offset = memory.read(ptr.cast::<u32>())?;
+        let len = memory.read(ptr.cast::<u32>().add(1)?)?;
         Ok(ArrayTuple(offset, len))
     }
 
-    fn write(ptr: &GuestPtr<'_, Self>, val: Self) -> Result<(), wiggle::GuestError> {
+    /// write tuple to memoery
+    fn write(
+        memory: &mut GuestMemory<'_>,
+        ptr: GuestPtr<Self>,
+        val: Self,
+    ) -> Result<(), wiggle::GuestError> {
         let (offs, len) = (val.0, val.1);
         let len_ptr = ptr.cast::<u32>().add(1)?;
-        ptr.cast::<u32>().write(offs)?;
-        len_ptr.write(len)
+        memory.write(ptr.cast::<u32>(), offs)?;
+        memory.write(len_ptr, len)?;
+        Ok(())
     }
 }

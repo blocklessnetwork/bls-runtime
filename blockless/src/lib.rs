@@ -115,7 +115,7 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
 
         if let Some(m) = self.get_limited_memory() {
             let mut allocation_config = PoolingAllocationConfig::default();
-            allocation_config.memory_pages(m);
+            allocation_config.max_memory_size(m as _);
             conf.allocation_strategy(InstanceAllocationStrategy::Pooling(allocation_config));
         }
 

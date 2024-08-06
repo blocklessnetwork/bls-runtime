@@ -8,11 +8,11 @@ pub mod s3;
 pub mod socket;
 use crate::ErrorKind;
 use crate::{Driver, DriverConetxt};
-pub use guest_ptr::ArrayTuple;
+// pub use guest_ptr::ArrayTuple;
 use std::sync::Arc;
 use wasi_common::file::{FileAccessMode, FileEntry};
 use wasi_common::WasiCtx;
-use wiggle::GuestPtr;
+use wiggle::{GuestMemory, GuestPtr};
 
 wiggle::from_witx!({
     witx: ["$BLOCKLESS_DRIVERS_ROOT/witx/blockless_drivers.witx"],
@@ -92,13 +92,20 @@ impl wiggle::GuestErrorType for types::Errno {
 
 #[wiggle::async_trait]
 impl blockless_drivers::BlocklessDrivers for WasiCtx {
-    async fn blockless_open<'a>(
+    async fn blockless_open(
         &mut self,
-        path: &GuestPtr<'a, str>,
-        opts: &GuestPtr<'a, str>,
+        memory: &mut GuestMemory<'_>,
+        path: GuestPtr<str>,
+        opts: GuestPtr<str>,
     ) -> Result<types::Fd, ErrorKind> {
-        let path: &str = &path.as_str().unwrap().unwrap();
-        let opts: &str = &opts.as_str().unwrap().unwrap();
+        let path = memory
+            .as_str(path)
+            .map_err(|_| ErrorKind::DriverBadParams)?
+            .unwrap();
+        let opts = memory
+            .as_str(opts)
+            .map_err(|_| ErrorKind::DriverBadParams)?
+            .unwrap();
         let drv: Arc<dyn Driver + Sync + Send> = match DriverConetxt::find_driver(path) {
             Some(d) => d,
             None => return Err(ErrorKind::DriverNotFound),

@@ -41,24 +41,12 @@
 (typename $response_handle $http_handle)
 
 ;;; Buffer to store a header value
-(typename $header_value_ptr (@witx pointer u8))
-
-(typename $incoming_body_ptr (@witx pointer u8))
 
 ;;; Number of bytes having been written
 (typename $written_bytes u32)
 
 ;;; http response code
 (typename $code_type s32)
-
-(typename $outgoing_body
-  (record
-    ;;; The address of the buffer to be filled.
-    (field $buf (@witx pointer u8))
-    ;;; The length of the buffer to be filled.
-    (field $buf_len u32)
-  )
-)
 
 (typename $headers_array (list string))
 
@@ -81,14 +69,14 @@
     (@interface func (export "http_read_header")
         (param $response_handle $response_handle)
         (param $header_name string)
-        (param $header_value_buf $header_value_ptr)
+        (param $header_value_buf (@witx pointer u8))
         (param $header_value_buf_len u32)
         (result $error (expected $written_bytes (error $http_error)))
     )
 
     (@interface func (export "http_read_body")
         (param $response_handle $response_handle)
-        (param $body_buf $incoming_body_ptr)
+        (param $body_buf (@witx pointer u8))
         (param $body_buf_len u32)
         (result $error (expected $written_bytes (error $http_error)))
     )

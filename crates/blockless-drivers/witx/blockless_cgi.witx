@@ -14,9 +14,6 @@
 )
 
 
-(typename $incoming_read_ptr (@witx pointer u8))
-(typename $incoming_write_ptr (@witx pointer u8))
-
 ;;; Number of bytes 
 (typename $num_bytes u32)
 
@@ -30,7 +27,7 @@
 
     (@interface func (export "cgi_list_read")
         (param $handle $cgi_handle)
-        (param $buf $incoming_read_ptr)
+        (param $buf (@witx pointer u8))
         (param $buf_len u32)
         (result $error (expected $num_bytes (error $cgi_error)))
     )
@@ -44,21 +41,21 @@
     
     (@interface func (export "cgi_stdout_read")
         (param $handle $cgi_handle)
-        (param $buf $incoming_read_ptr)
+        (param $buf (@witx pointer u8))
         (param $buf_len u32)
         (result $error (expected $num_bytes (error $cgi_error)))
     )
 
     (@interface func (export "cgi_stderr_read")
         (param $handle $cgi_handle)
-        (param $buf $incoming_read_ptr)
+        (param $buf (@witx pointer u8))
         (param $buf_len u32)
         (result $error (expected $num_bytes (error $cgi_error)))
     )
 
     (@interface func (export "cgi_stdin_write")
         (param $handle $cgi_handle)
-        (param $buf $incoming_write_ptr)
+        (param $buf (@witx pointer u8))
         (param $buf_len u32)
         (result $error (expected $num_bytes (error $cgi_error)))
     )

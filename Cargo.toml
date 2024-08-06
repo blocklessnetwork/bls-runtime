@@ -10,7 +10,7 @@ members = [
 ]
 
 [workspace.package]
-version = "21.0.0"
+version = "22.0.0"
 authors = ["The Blockless Project Developers"]
 edition = "2021"
 
@@ -21,13 +21,13 @@ wasi-common = {path = "crates/wasi-common"}
 [workspace.dependencies]
 tempfile = "3.1.0"
 libc = "0.2.60"
-wasmtime = "21.0.0"
-wasmtime-wasi = "21.0.0"
-wiggle-generate = "21.0.0"
-wasmtime-wasi-threads = "21.0.0" 
-wasi-common = { path = "crates/wasi-common", version="21.0.0" }
+wasmtime = "=22.0.0"
+wasmtime-wasi = "=22.0.0"
+wiggle-generate = "=22.0.0"
+wasmtime-wasi-threads = "=22.0.0" 
+wasi-common = { path = "crates/wasi-common", version="=22.0.0" }
 # witx dependency by wiggle
-wiggle = "21.0.0"
+wiggle = "=22.0.0"
 witx = "0.9.1"
 
 anyhow = "1.0.22"
@@ -44,7 +44,7 @@ is-terminal = "0.4.0"
 bitflags = "2.0"
 async-trait = "0.1.71"
 tracing = "0.1.26"
-url = "2.2"
+url = "2.3.1"
 io-lifetimes = { version = "2.0.3", default-features = false }
 log = { version = "0.4.8", default-features = false }
 thiserror = "1.0.43"

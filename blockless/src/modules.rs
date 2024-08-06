@@ -402,27 +402,21 @@ impl<'a> ModuleLinker<'a> {
         modules.sort_by(|a, b| a.module_type.partial_cmp(&b.module_type).unwrap());
         let mut entry = None;
         self.linker
-            .func_wrap4_async(
+            .func_wrap_async(
                 "blockless",
                 "mcall",
                 |caller: Caller<'_, BSContext>,
-                 addr: u32,
-                 addr_len: u32,
-                 buf: u32,
-                 buf_len: u32| {
+                 (addr, addr_len, buf, buf_len): (u32, u32, u32, u32)| {
                     Self::mcall_fn(caller, addr, addr_len, buf, buf_len)
                 },
             )
             .unwrap();
         self.linker
-            .func_wrap4_async(
+            .func_wrap_async(
                 "blockless",
                 "register",
                 |caller: Caller<'_, BSContext>,
-                 addr: u32,
-                 addr_len: u32,
-                 buf: u32,
-                 buf_len: u32| {
+                 (addr, addr_len, buf, buf_len): (u32, u32, u32, u32)| {
                     Self::register_fn(caller, addr, addr_len, buf, buf_len)
                 },
             )
