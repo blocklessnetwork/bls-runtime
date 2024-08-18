@@ -24,6 +24,7 @@ libc = "0.2.60"
 wasmtime = "=22.0.0"
 wasmtime-wasi = "=22.0.0"
 wiggle-generate = "=22.0.0"
+wasmtime-cli-flags = "=22.0.0"
 wasmtime-wasi-threads = "=22.0.0" 
 wasi-common = { path = "crates/wasi-common", version="=22.0.0" }
 # witx dependency by wiggle
