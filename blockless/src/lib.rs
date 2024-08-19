@@ -77,8 +77,7 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
         });
         let mut builder = WasiCtxBuilder::new();
         //stdout file process for setting.
-        builder.inherit_stdio();
-        // b_conf.preview1_set_stdouterr(&mut builder, true);
+        b_conf.preview1_set_stdio(&mut builder);
         let entry_module = b_conf.entry_module().unwrap();
         let mut args = vec![entry_module];
         args.extend_from_slice(&b_conf.stdin_args_ref()[..]);
@@ -178,26 +177,6 @@ impl BlocklessRunner {
             fuel: store.get_fuel().ok(),
             code: exit_code,
         }
-        // let run_common: RunCommon = RunCommon {
-        //         common: CommonOptions {
-        //             wasm: Default::default(),
-        //             wasi: Default::default(),
-        //         },
-        //         allow_precompiled: false,
-        //         profile: None,
-        //         dirs: Vec::new(),
-        //         vars: Vec::new(),
-        //     };
-        // let run = run_common;
-        // let mut run = RunCommand {
-        //     run,
-        //     invoke: None,
-        //     preloads: Vec::new(),
-        //     argv0: None,
-        //     module_and_args: vec!["../index.wasm".into()],
-        // };
-        // run.execute().unwrap();
-        // panic!("");
     }
 
     fn preview1_setup_linker(linker: &mut Linker<BlocklessContext>, support_thread: bool) {

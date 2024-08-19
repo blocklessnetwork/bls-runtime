@@ -22,7 +22,6 @@ lazy_static = {workspace = true}
 wasmtime-wasi-threads = { workspace = true }
 json = { workspace = true }
 tokio = {workspace = true, features = ["sync"]}
-clap = {workspace = true}
 
 [dev-dependencies]
 tempdir = {workspace = true}
