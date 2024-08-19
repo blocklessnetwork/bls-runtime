@@ -14,7 +14,8 @@ use std::{env, path::Path, sync::Arc};
 use wasi_common::sync::WasiCtxBuilder;
 pub use wasi_common::*;
 use wasmtime::{
-    Config, Engine, InstanceAllocationStrategy, Linker, Module, PoolingAllocationConfig, Store, Trap
+    Config, Engine, InstanceAllocationStrategy, Linker, Module, PoolingAllocationConfig, Store,
+    Trap,
 };
 use wasmtime_wasi_threads::WasiThreadsCtx;
 
@@ -25,7 +26,6 @@ pub struct ExitStatus {
     pub fuel: Option<u64>,
     pub code: i32,
 }
-
 
 trait BlocklessConfig2Preview1WasiBuilder {
     fn preview1_builder(&self) -> WasiCtxBuilder;
@@ -188,7 +188,7 @@ impl BlocklessRunner {
                 };
             }
             add_to_linker!(blockless_env::add_drivers_to_linker);
-            add_to_linker!(blockless_env::add_http_to_linker);  
+            add_to_linker!(blockless_env::add_http_to_linker);
             add_to_linker!(blockless_env::add_ipfs_to_linker);
             add_to_linker!(blockless_env::add_s3_to_linker);
             add_to_linker!(blockless_env::add_memory_to_linker);
