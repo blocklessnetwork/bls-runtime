@@ -32,17 +32,7 @@ trait BlocklessConfig2Preview1WasiBuilder {
     fn preview1_set_stdio(&self, builder: &mut WasiCtxBuilder);
     fn preview1_engine_config(&self) -> Config;
 
-    fn create_output_file(file_name: &PathBuf) -> Option<Box<sync::file::File>> {
-        let mut file_opts = std::fs::File::options();
-        file_opts.create(true);
-        file_opts.append(true);
-        file_opts.write(true);
-        file_opts.open(file_name).ok().map(|file| {
-            let file = cap_std::fs::File::from_std(file);
-            let f = wasi_common::sync::file::File::from_cap_std(file);
-            Box::new(f)
-        })
-    }
+    
 }
 
 impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
@@ -50,46 +40,43 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
     /// the stdout adn stderr can be setting to file or inherit the stdout and stderr.
     fn preview1_set_stdio(&self, builder: &mut WasiCtxBuilder) {
         let b_conf = self;
-        match b_conf.stdout_ref() {
-            &Stdout::FileName(ref file_name) => {
-                let mut is_set_fileout = false;
-                if let Some(r) = b_conf.fs_root_path_ref() {
-                    let root = Path::new(r);
-                    let file_name = root.join(file_name);
-                    if let Some(f) = Self::create_output_file(&file_name) {
-                        is_set_fileout = true;
-                        builder.stdout(f);
-                    }
-                }
-                if !is_set_fileout {
-                    builder.inherit_stdout();
-                }
-            }
-            &Stdout::Inherit => {
-                builder.inherit_stdout();
-            }
-            &Stdout::Null => {}
+        fn create_output_file(file_name: &PathBuf) -> Option<Box<sync::file::File>> {
+            let mut file_opts = std::fs::File::options();
+            file_opts.create(true);
+            file_opts.append(true);
+            file_opts.write(true);
+            file_opts.open(file_name).ok().map(|file| {
+                let file = cap_std::fs::File::from_std(file);
+                let f = wasi_common::sync::file::File::from_cap_std(file);
+                Box::new(f)
+            })
         }
-        match b_conf.stderr_ref() {
-            &Stderr::FileName(ref file_name) => {
-                let mut is_set_fileout = false;
-                if let Some(r) = b_conf.fs_root_path_ref() {
-                    let root = Path::new(r);
-                    let file_name = root.join(file_name);
-                    if let Some(f) = Self::create_output_file(&file_name) {
-                        is_set_fileout = true;
-                        builder.stderr(f);
+        macro_rules! process_output {
+            ($out_ref: expr, $out_expr: tt, $stdout: tt, $inherit_stdout: tt) => {
+                match $out_ref {
+                    &$out_expr::FileName(ref file_name) => {
+                        let mut is_set_fileout = false;
+                        if let Some(r) = b_conf.fs_root_path_ref() {
+                            let root = Path::new(r);
+                            let file_name = root.join(file_name);
+                            if let Some(f) = create_output_file(&file_name) {
+                                is_set_fileout = true;
+                                builder.$stdout(f);
+                            }
+                        }
+                        if !is_set_fileout {
+                            builder.$inherit_stdout();
+                        }
                     }
+                    &$out_expr::Inherit => {
+                        builder.$inherit_stdout();
+                    }
+                    &$out_expr::Null => {}
                 }
-                if !is_set_fileout {
-                    builder.inherit_stderr();
-                }
-            }
-            &Stderr::Inherit => {
-                builder.inherit_stderr();
-            }
-            &Stderr::Null => {}
+            };
         }
+        process_output!(b_conf.stdout_ref(), Stdout, stdout, inherit_stdout);
+        process_output!(b_conf.stderr_ref(), Stderr, stderr, inherit_stderr);
     }
 
     /// create the preview1_builder by the configure.
