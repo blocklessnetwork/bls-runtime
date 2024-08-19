@@ -29,14 +29,14 @@ pub struct ExitStatus {
 
 trait BlocklessConfig2Preview1WasiBuilder {
     fn preview1_builder(&self) -> WasiCtxBuilder;
-    fn preview1_set_stdouterr(&self, builder: WasiCtxBuilder, is_err: bool) -> WasiCtxBuilder;
+    fn preview1_set_stdio(&self, builder: &mut WasiCtxBuilder);
     fn preview1_engine_config(&self) -> Config;
 }
 
 impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
     /// set the stdout and stderr for the wasm.
     /// the stdout adn stderr can be setting to file or inherit the stdout and stderr.
-    fn preview1_set_stdouterr(&self, mut builder: WasiCtxBuilder, is_err: bool) -> WasiCtxBuilder {
+    fn preview1_set_stdio(&self, builder: &mut WasiCtxBuilder) {
         let b_conf = self;
         match b_conf.stdout_ref() {
             &Stdout::FileName(ref file_name) => {
@@ -55,31 +55,18 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
                         Box::new(f)
                     }) {
                         is_set_fileout = true;
-                        if is_err {
-                            builder.stdout(f);
-                        } else {
-                            builder.stderr(f);
-                        }
+                        builder.stdout(f);
                     }
                 }
                 if !is_set_fileout {
-                    if is_err {
-                        builder.inherit_stdout();
-                    } else {
-                        builder.inherit_stderr();
-                    }
+                    builder.inherit_stdio();
                 }
             }
             &Stdout::Inherit => {
-                if is_err {
-                    builder.inherit_stdout();
-                } else {
-                    builder.inherit_stderr();
-                }
+                builder.inherit_stdio();
             }
             &Stdout::Null => {}
         }
-        builder
     }
 
     /// create the preview1_builder by the configure.
@@ -90,7 +77,7 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
         });
         let mut builder = WasiCtxBuilder::new();
         //stdout file process for setting.
-        builder = b_conf.preview1_set_stdouterr(builder, true);
+        b_conf.preview1_set_stdio(&mut builder);
         let entry_module = b_conf.entry_module().unwrap();
         let mut args = vec![entry_module];
         args.extend_from_slice(&b_conf.stdin_args_ref()[..]);
@@ -148,7 +135,7 @@ impl BlocklessRunner {
 
         let conf = b_conf.preview1_engine_config();
         let engine = Engine::new(&conf).unwrap();
-        let mut linker = Linker::new(&engine);
+        let mut linker = wasmtime::Linker::new(&engine);
         let support_thread = b_conf.feature_thread();
         let mut builder = b_conf.preview1_builder();
         let mut preview1_ctx = builder.build();
@@ -192,7 +179,6 @@ impl BlocklessRunner {
         }
     }
 
-    /// setup functions the preview1 for linker
     fn preview1_setup_linker(linker: &mut Linker<BlocklessContext>, support_thread: bool) {
         if !support_thread {
             // define the macro of extends.
