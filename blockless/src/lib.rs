@@ -1,19 +1,15 @@
 mod context;
 pub mod error;
 mod modules;
-mod common;
-mod run;
 
 use blockless_drivers::{CdylibDriver, DriverConetxt};
 use blockless_env;
 pub use blockless_multiaddr::MultiAddr;
 use cap_std::ambient_authority;
-use common::{CommonOptions, RunCommon, WasiConfigure, WasmConfigure};
 use context::BlocklessContext;
 pub use error::*;
 use log::{debug, error};
 use modules::ModuleLinker;
-use run::RunCommand;
 use std::{env, path::Path, sync::Arc};
 use wasi_common::sync::WasiCtxBuilder;
 pub use wasi_common::*;
@@ -30,21 +26,17 @@ pub struct ExitStatus {
     pub code: i32,
 }
 
-enum BlsLinker {
-    CoreLinker(wasmtime::Linker<BlocklessContext>),
-    ComponentLinker(wasmtime::component::Linker<BlocklessContext>),
-}
 
 trait BlocklessConfig2Preview1WasiBuilder {
     fn preview1_builder(&self) -> WasiCtxBuilder;
-    fn preview1_set_stdouterr(&self, builder: WasiCtxBuilder, is_err: bool) -> WasiCtxBuilder;
+    fn preview1_set_stdio(&self, builder: &mut WasiCtxBuilder);
     fn preview1_engine_config(&self) -> Config;
 }
 
 impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
     /// set the stdout and stderr for the wasm.
     /// the stdout adn stderr can be setting to file or inherit the stdout and stderr.
-    fn preview1_set_stdouterr(&self, mut builder: WasiCtxBuilder, is_err: bool) -> WasiCtxBuilder {
+    fn preview1_set_stdio(&self, builder: &mut WasiCtxBuilder) {
         let b_conf = self;
         match b_conf.stdout_ref() {
             &Stdout::FileName(ref file_name) => {
@@ -63,31 +55,18 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
                         Box::new(f)
                     }) {
                         is_set_fileout = true;
-                        if is_err {
-                            builder.stdout(f);
-                        } else {
-                            builder.stderr(f);
-                        }
+                        builder.stdout(f);
                     }
                 }
                 if !is_set_fileout {
-                    if is_err {
-                        builder.inherit_stdout();
-                    } else {
-                        builder.inherit_stderr();
-                    }
+                    builder.inherit_stdio();
                 }
             }
             &Stdout::Inherit => {
-                if is_err {
-                    builder.inherit_stdout();
-                } else {
-                    builder.inherit_stderr();
-                }
+                builder.inherit_stdio();
             }
             &Stdout::Null => {}
         }
-        builder
     }
 
     /// create the preview1_builder by the configure.
@@ -98,7 +77,8 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
         });
         let mut builder = WasiCtxBuilder::new();
         //stdout file process for setting.
-        builder = b_conf.preview1_set_stdouterr(builder, true);
+        builder.inherit_stdio();
+        // b_conf.preview1_set_stdouterr(&mut builder, true);
         let entry_module = b_conf.entry_module().unwrap();
         let mut args = vec![entry_module];
         args.extend_from_slice(&b_conf.stdin_args_ref()[..]);
@@ -141,79 +121,83 @@ struct BlocklessRunner(BlocklessConfig);
 impl BlocklessRunner {
     /// blockless run method, it execute the wasm program with configure file.
     async fn run(self) -> ExitStatus {
-        // let b_conf = self.0;
-        // let max_fuel = b_conf.get_limited_fuel();
-        // // set the drivers root path, if not setting use exe file path.
-        // let drivers_root_path = b_conf
-        //     .drivers_root_path_ref()
-        //     .map(|p| p.into())
-        //     .unwrap_or_else(|| {
-        //         let mut current_exe_path = env::current_exe().unwrap();
-        //         current_exe_path.pop();
-        //         String::from(current_exe_path.to_str().unwrap())
-        //     });
-        // DriverConetxt::init_built_in_drivers(drivers_root_path);
+        let b_conf = self.0;
+        let max_fuel = b_conf.get_limited_fuel();
+        // set the drivers root path, if not setting use exe file path.
+        let drivers_root_path = b_conf
+            .drivers_root_path_ref()
+            .map(|p| p.into())
+            .unwrap_or_else(|| {
+                let mut current_exe_path = env::current_exe().unwrap();
+                current_exe_path.pop();
+                String::from(current_exe_path.to_str().unwrap())
+            });
+        DriverConetxt::init_built_in_drivers(drivers_root_path);
 
-        // let conf = b_conf.preview1_engine_config();
-        // let engine = Engine::new(&conf).unwrap();
-        // let mut linker = wasmtime::Linker::new(&engine);
-        // let support_thread = b_conf.feature_thread();
-        // let mut builder = b_conf.preview1_builder();
-        // let mut preview1_ctx = builder.build();
-        // let drivers = b_conf.drivers_ref();
-        // Self::load_driver(drivers);
-        // let entry: String = b_conf.entry_ref().into();
-        // let version = b_conf.version();
-        // preview1_ctx.set_blockless_config(Some(b_conf));
-        // let mut ctx = BlocklessContext::default();
-        // ctx.preview1_ctx = Some(preview1_ctx);
-        // let mut store = Store::new(&engine, ctx);
-        // Self::preview1_setup_linker(&mut linker, support_thread);
-        // let (module, entry) = Self::module_linker(version, entry, &mut store, &mut linker).await;
-        // // support thread.
-        // if support_thread {
-        //     Self::preview1_setup_thread_support(&mut linker, &mut store, &module);
-        // }
-        // let inst = if support_thread {
-        //     linker.instantiate(&mut store, &module).unwrap()
-        // } else {
-        //     linker.instantiate_async(&mut store, &module).await.unwrap()
-        // };
-        // let func = inst.get_typed_func::<(), ()>(&mut store, &entry).unwrap();
-        // // if thread multi thread use sync model.
-        // // The multi-thread model is used for the cpu intensive program.
-        // let result = if support_thread {
-        //     func.call(&mut store, ())
-        // } else {
-        //     func.call_async(&mut store, ()).await
-        // };
-        // let exit_code = match result {
-        //     Err(ref t) => Self::error_process(t, || store.get_fuel().unwrap(), max_fuel),
-        //     Ok(_) => {
-        //         debug!("program exit normal.");
-        //         0
-        //     }
-        // };
-        let run_common: RunCommon = RunCommon {
-                common: CommonOptions {
-                    wasm: Default::default(),
-                    wasi: Default::default(),
-                },
-                allow_precompiled: false,
-                profile: None,
-                dirs: Vec::new(),
-                vars: Vec::new(),
-            };
-        let run = run_common;
-        let mut run = RunCommand {
-            run,
-            invoke: None,
-            preloads: Vec::new(),
-            argv0: None,
-            module_and_args: vec!["../index.wasm".into()],
+        let conf = b_conf.preview1_engine_config();
+        let engine = Engine::new(&conf).unwrap();
+        let mut linker = wasmtime::Linker::new(&engine);
+        let support_thread = b_conf.feature_thread();
+        let mut builder = b_conf.preview1_builder();
+        let mut preview1_ctx = builder.build();
+        let drivers = b_conf.drivers_ref();
+        Self::load_driver(drivers);
+        let entry: String = b_conf.entry_ref().into();
+        let version = b_conf.version();
+        preview1_ctx.set_blockless_config(Some(b_conf));
+        let mut ctx = BlocklessContext::default();
+        ctx.preview1_ctx = Some(preview1_ctx);
+        let mut store = Store::new(&engine, ctx);
+        Self::preview1_setup_linker(&mut linker, support_thread);
+        let (module, entry) = Self::module_linker(version, entry, &mut store, &mut linker).await;
+        // support thread.
+        if support_thread {
+            Self::preview1_setup_thread_support(&mut linker, &mut store, &module);
+        }
+        let inst = if support_thread {
+            linker.instantiate(&mut store, &module).unwrap()
+        } else {
+            linker.instantiate_async(&mut store, &module).await.unwrap()
         };
-        run.execute().unwrap();
-        panic!("");
+        let func = inst.get_typed_func::<(), ()>(&mut store, &entry).unwrap();
+        // if thread multi thread use sync model.
+        // The multi-thread model is used for the cpu intensive program.
+        let result = if support_thread {
+            func.call(&mut store, ())
+        } else {
+            func.call_async(&mut store, ()).await
+        };
+        let exit_code = match result {
+            Err(ref t) => Self::error_process(t, || store.get_fuel().unwrap(), max_fuel),
+            Ok(_) => {
+                debug!("program exit normal.");
+                0
+            }
+        };
+        ExitStatus {
+            fuel: store.get_fuel().ok(),
+            code: exit_code,
+        }
+        // let run_common: RunCommon = RunCommon {
+        //         common: CommonOptions {
+        //             wasm: Default::default(),
+        //             wasi: Default::default(),
+        //         },
+        //         allow_precompiled: false,
+        //         profile: None,
+        //         dirs: Vec::new(),
+        //         vars: Vec::new(),
+        //     };
+        // let run = run_common;
+        // let mut run = RunCommand {
+        //     run,
+        //     invoke: None,
+        //     preloads: Vec::new(),
+        //     argv0: None,
+        //     module_and_args: vec!["../index.wasm".into()],
+        // };
+        // run.execute().unwrap();
+        // panic!("");
     }
 
     fn preview1_setup_linker(linker: &mut Linker<BlocklessContext>, support_thread: bool) {
