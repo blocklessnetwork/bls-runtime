@@ -10,7 +10,7 @@ use context::BlocklessContext;
 pub use error::*;
 use log::{debug, error};
 use modules::ModuleLinker;
-use std::{env, path::Path, sync::Arc};
+use std::{env, path::{Path, PathBuf}, sync::Arc};
 use wasi_common::sync::WasiCtxBuilder;
 pub use wasi_common::*;
 use wasmtime::{
@@ -31,6 +31,18 @@ trait BlocklessConfig2Preview1WasiBuilder {
     fn preview1_builder(&self) -> WasiCtxBuilder;
     fn preview1_set_stdio(&self, builder: &mut WasiCtxBuilder);
     fn preview1_engine_config(&self) -> Config;
+
+    fn create_output_file(file_name: &PathBuf) -> Option<Box<sync::file::File>> {
+        let mut file_opts = std::fs::File::options();
+        file_opts.create(true);
+        file_opts.append(true);
+        file_opts.write(true);
+        file_opts.open(file_name).ok().map(|file| {
+            let file = cap_std::fs::File::from_std(file);
+            let f = wasi_common::sync::file::File::from_cap_std(file);
+            Box::new(f)
+        })
+    }
 }
 
 impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
@@ -44,28 +56,39 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
                 if let Some(r) = b_conf.fs_root_path_ref() {
                     let root = Path::new(r);
                     let file_name = root.join(file_name);
-                    let mut file_opts = std::fs::File::options();
-                    file_opts.create(true);
-                    file_opts.append(true);
-                    file_opts.write(true);
-
-                    if let Some(f) = file_opts.open(file_name).ok().map(|file| {
-                        let file = cap_std::fs::File::from_std(file);
-                        let f = wasi_common::sync::file::File::from_cap_std(file);
-                        Box::new(f)
-                    }) {
+                    if let Some(f) = Self::create_output_file(&file_name) {
                         is_set_fileout = true;
                         builder.stdout(f);
                     }
                 }
                 if !is_set_fileout {
-                    builder.inherit_stdio();
+                    builder.inherit_stdout();
                 }
             }
             &Stdout::Inherit => {
-                builder.inherit_stdio();
+                builder.inherit_stdout();
             }
             &Stdout::Null => {}
+        }
+        match b_conf.stderr_ref() {
+            &Stderr::FileName(ref file_name) => {
+                let mut is_set_fileout = false;
+                if let Some(r) = b_conf.fs_root_path_ref() {
+                    let root = Path::new(r);
+                    let file_name = root.join(file_name);
+                    if let Some(f) = Self::create_output_file(&file_name) {
+                        is_set_fileout = true;
+                        builder.stderr(f);
+                    }
+                }
+                if !is_set_fileout {
+                    builder.inherit_stderr();
+                }
+            }
+            &Stderr::Inherit => {
+                builder.inherit_stderr();
+            }
+            &Stderr::Null => {}
         }
     }
 
