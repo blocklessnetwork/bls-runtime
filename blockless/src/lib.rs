@@ -53,6 +53,7 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
         }
         macro_rules! process_output {
             ($out_ref: expr, $out_expr: tt, $stdout: tt, $inherit_stdout: tt) => {
+                //$out_ref is b_conf.stdout_ref() or b_conf.stderr_ref()
                 match $out_ref {
                     &$out_expr::FileName(ref file_name) => {
                         let mut is_set_fileout = false;
@@ -61,10 +62,12 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
                             let file_name = root.join(file_name);
                             if let Some(f) = create_output_file(&file_name) {
                                 is_set_fileout = true;
+                                //builder.stdout() or builder.stderr()
                                 builder.$stdout(f);
                             }
                         }
                         if !is_set_fileout {
+                            //$inherit_stdout is inherit_stdout() or inherit_stderr()
                             builder.$inherit_stdout();
                         }
                     }
