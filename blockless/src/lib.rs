@@ -38,17 +38,6 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
     /// the stdout adn stderr can be setting to file or inherit the stdout and stderr.
     fn preview1_set_stdio(&self, builder: &mut WasiCtxBuilder) {
         let b_conf = self;
-        fn create_output_file(file_name: &PathBuf) -> Option<Box<sync::file::File>> {
-            let mut file_opts = std::fs::File::options();
-            file_opts.create(true);
-            file_opts.append(true);
-            file_opts.write(true);
-            file_opts.open(file_name).ok().map(|file| {
-                let file = cap_std::fs::File::from_std(file);
-                let f = wasi_common::sync::file::File::from_cap_std(file);
-                Box::new(f)
-            })
-        }
         macro_rules! process_output {
             ($out_ref: expr, $out_expr: tt, $stdout: tt, $inherit_stdout: tt) => {
                 //$out_ref is b_conf.stdout_ref() or b_conf.stderr_ref()
@@ -58,7 +47,17 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
                         if let Some(r) = b_conf.fs_root_path_ref() {
                             let root = Path::new(r);
                             let file_name = root.join(file_name);
-                            if let Some(f) = create_output_file(&file_name) {
+                            if let Some(f) = {
+                                let mut file_opts = std::fs::File::options();
+                                file_opts.create(true);
+                                file_opts.append(true);
+                                file_opts.write(true);
+                                file_opts.open(file_name).ok().map(|file| {
+                                    let file = cap_std::fs::File::from_std(file);
+                                    let f = wasi_common::sync::file::File::from_cap_std(file);
+                                    Box::new(f)
+                                })
+                            } {
                                 is_set_fileout = true;
                                 //builder.stdout() or builder.stderr()
                                 builder.$stdout(f);
