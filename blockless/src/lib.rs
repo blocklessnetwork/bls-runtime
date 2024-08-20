@@ -24,6 +24,10 @@ pub struct ExitStatus {
     pub code: i32,
 }
 
+pub enum RunTarget {
+    Module(Module),
+}
+
 trait BlocklessConfig2Preview1WasiBuilder {
     fn preview1_builder(&self) -> WasiCtxBuilder;
     fn preview1_set_stdio(&self, builder: &mut WasiCtxBuilder);
@@ -195,7 +199,15 @@ impl BlocklessRunner {
         } else {
             linker.instantiate_async(&mut store, &module).await?
         };
-        let func = inst.get_typed_func::<(), ()>(&mut store, &entry)?;
+
+        let func = match version {
+            BlocklessConfigVersion::Version0 => {
+                inst
+                    .get_typed_func::<(), ()>(&mut store, "")
+                    .or_else(|_| inst.get_typed_func::<(), ()>(&mut store, ENTRY))?
+            },
+            BlocklessConfigVersion::Version1 => inst.get_typed_func::<(), ()>(&mut store, &entry)?,
+        };
         // if thread multi thread use sync model.
         // The multi-thread model is used for the cpu intensive program.
         let result = if support_thread {
