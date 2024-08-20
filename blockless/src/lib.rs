@@ -10,12 +10,11 @@ use context::BlocklessContext;
 pub use error::*;
 use log::{debug, error};
 use modules::ModuleLinker;
-use std::{env, path::{Path, PathBuf}, sync::Arc};
+use std::{env, path::Path, sync::Arc};
 use wasi_common::sync::WasiCtxBuilder;
 pub use wasi_common::*;
 use wasmtime::{
-    Config, Engine, InstanceAllocationStrategy, Linker, Module, PoolingAllocationConfig, Store,
-    Trap,
+    Config, Engine, Linker, Module, Store, StoreLimits, StoreLimitsBuilder, Trap
 };
 use wasmtime_wasi_threads::WasiThreadsCtx;
 
@@ -31,9 +30,37 @@ trait BlocklessConfig2Preview1WasiBuilder {
     fn preview1_builder(&self) -> WasiCtxBuilder;
     fn preview1_set_stdio(&self, builder: &mut WasiCtxBuilder);
     fn preview1_engine_config(&self) -> Config;
+    fn store_limits(&self) -> StoreLimits;
 }
 
 impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
+    
+    /// config to store limit.
+    fn store_limits(&self) -> StoreLimits {
+        let mut builder = StoreLimitsBuilder::new();
+        let store_limited = self.store_limited();
+        if let Some(m) = store_limited.max_memory_size {
+            builder = builder.memory_size(m);
+        }
+        if let Some(m) = store_limited.max_instances {
+            builder = builder.instances(m);
+        }
+        if let Some(m) = store_limited.max_table_elements {
+            builder = builder.table_elements(m);
+        }
+        if let Some(m) = store_limited.max_tables {
+            builder = builder.table_elements(m);
+        }
+        
+        if let Some(m) = store_limited.max_memories {
+            builder = builder.memories(m);
+        }
+        if let Some(m) = store_limited.trap_on_grow_failure {
+            builder = builder.trap_on_grow_failure(m);
+        }
+
+        builder.build()
+    }
     /// set the stdout and stderr for the wasm.
     /// the stdout adn stderr can be setting to file or inherit the stdout and stderr.
     fn preview1_set_stdio(&self, builder: &mut WasiCtxBuilder) {
@@ -88,6 +115,7 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
         let mut builder = WasiCtxBuilder::new();
         //stdout file process for setting.
         b_conf.preview1_set_stdio(&mut builder);
+        // configure to storeLimit
         let entry_module = b_conf.entry_module().unwrap();
         let mut args = vec![entry_module];
         args.extend_from_slice(&b_conf.stdin_args_ref()[..]);
@@ -108,12 +136,6 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
         if let Some(_) = self.get_limited_fuel() {
             //fuel is enable.
             conf.consume_fuel(true);
-        }
-
-        if let Some(m) = self.get_limited_memory() {
-            let mut allocation_config = PoolingAllocationConfig::default();
-            allocation_config.max_memory_size(m as _);
-            conf.allocation_strategy(InstanceAllocationStrategy::Pooling(allocation_config));
         }
 
         if self.feature_thread() {
@@ -153,10 +175,13 @@ impl BlocklessRunner {
         Self::load_driver(drivers);
         let entry: String = b_conf.entry_ref().into();
         let version = b_conf.version();
+        let store_limits = b_conf.store_limits();
         preview1_ctx.set_blockless_config(Some(b_conf));
         let mut ctx = BlocklessContext::default();
+        ctx.store_limits = store_limits;
         ctx.preview1_ctx = Some(preview1_ctx);
         let mut store = Store::new(&engine, ctx);
+        store.limiter(|ctx| &mut ctx.store_limits);
         Self::preview1_setup_linker(&mut linker, support_thread);
         let (module, entry) = Self::module_linker(version, entry, &mut store, &mut linker).await;
         // support thread.

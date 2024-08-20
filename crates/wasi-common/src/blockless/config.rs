@@ -128,6 +128,16 @@ impl From<usize> for BlocklessConfigVersion {
     }
 }
 
+#[derive(Default)]
+pub struct StoreLimited {
+    pub max_memory_size: Option<usize>,
+    pub max_table_elements: Option<u32>,
+    pub max_instances: Option<usize>,
+    pub max_tables: Option<u32>,
+    pub max_memories: Option<usize>,
+    pub trap_on_grow_failure: Option<bool>,
+}
+
 pub struct BlocklessConfig {
     entry: String,
     stdin: String,
@@ -141,7 +151,7 @@ pub struct BlocklessConfig {
     limited_fuel: Option<u64>,
     limited_time: Option<u64>,
     drivers: Vec<DriverConfig>,
-    limited_memory: Option<u64>,
+    store_limited: StoreLimited,
     envs: Vec<(String, String)>,
     permisions: Vec<Permission>,
     fs_root_path: Option<String>,
@@ -173,7 +183,7 @@ impl BlocklessConfig {
             limited_time: None,
             stdin_args: Vec::new(),
             //memory limit, 1 page = 64k.
-            limited_memory: None,
+            store_limited: Default::default(),
             extensions_path: None,
             stderr: Stderr::Inherit,
             drivers_root_path: None,
@@ -438,16 +448,21 @@ impl BlocklessConfig {
 
     #[inline(always)]
     pub fn limited_memory(&mut self, m: Option<u64>) {
-        self.limited_memory = m
+        self.store_limited.max_memories = m.map(|s| s as _);
     }
 
     #[inline(always)]
     pub fn get_limited_memory(&self) -> Option<u64> {
-        self.limited_memory
+        self.store_limited.max_memories.map(|m| m as u64)
     }
 
     pub fn resource_permission(&self, url: &str) -> bool {
         self.permisions.iter().any(|p| p.is_permision(url))
+    }
+
+    #[inline(always)]
+    pub fn store_limited(&self) -> &StoreLimited {
+        &self.store_limited
     }
 }
 

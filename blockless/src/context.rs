@@ -1,5 +1,6 @@
 use std::sync::{Arc, Mutex};
 
+use wasmtime::StoreLimits;
 use wasmtime_wasi::preview1::WasiP1Ctx;
 use wasmtime_wasi_threads::WasiThreadsCtx;
 
@@ -10,6 +11,8 @@ pub(crate) struct BlocklessContext {
     pub(crate) preview2_ctx: Option<Arc<Mutex<WasiP1Ctx>>>,
 
     pub(crate) wasi_threads: Option<Arc<WasiThreadsCtx<BlocklessContext>>>,
+
+    pub(crate) store_limits: StoreLimits,
 }
 
 impl Default for BlocklessContext {
@@ -18,6 +21,7 @@ impl Default for BlocklessContext {
             preview1_ctx: None,
             preview2_ctx: None,
             wasi_threads: None,
+            store_limits: Default::default(),
         }
     }
 }
