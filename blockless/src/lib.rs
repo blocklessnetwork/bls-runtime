@@ -31,8 +31,6 @@ trait BlocklessConfig2Preview1WasiBuilder {
     fn preview1_builder(&self) -> WasiCtxBuilder;
     fn preview1_set_stdio(&self, builder: &mut WasiCtxBuilder);
     fn preview1_engine_config(&self) -> Config;
-
-    
 }
 
 impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
