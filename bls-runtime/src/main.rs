@@ -13,7 +13,7 @@ use config::load_cli_config_extract_from_car;
 #[allow(unused_imports)]
 use config::CliConfig;
 use env_logger::Target;
-use error::CLIExitCode;
+use error::CliExitCode;
 use log::{error, info, LevelFilter};
 use std::fs;
 use std::path::Path;
@@ -24,7 +24,7 @@ use v86config::load_v86conf_extract_from_car;
 const ENV_ROOT_PATH_NAME: &str = "ENV_ROOT_PATH";
 
 /// set the logger output and filter level.
-fn logger_init_with_config(cfg: &CliConfig) -> Result<(), CLIExitCode> {
+fn logger_init_with_config(cfg: &CliConfig) -> Result<(), CliExitCode> {
     let rt_logger = cfg.0.runtime_logger_path();
     let rt_logger_level = cfg.0.get_runtime_logger_level();
     logger_init(rt_logger, rt_logger_level)?;
@@ -37,7 +37,7 @@ fn logger_init_with_config(cfg: &CliConfig) -> Result<(), CLIExitCode> {
 fn logger_init(
     rt_logger: Option<PathBuf>,
     rt_logger_level: LoggerLevel,
-) -> Result<(), CLIExitCode> {
+) -> Result<(), CliExitCode> {
     let mut builder = env_logger::Builder::from_default_env();
     let filter_level = match rt_logger_level {
         LoggerLevel::INFO => LevelFilter::Info,
@@ -57,7 +57,7 @@ fn logger_init(
                 .write(true)
                 .open(f)
                 .map_err(|_e| {
-                    CLIExitCode::UnknownError(
+                    CliExitCode::UnknownError(
                         "the runtime logger file does not exist or is unreadable.".into(),
                     )
                 })?;
@@ -70,9 +70,9 @@ fn logger_init(
     Ok(())
 }
 
-fn file_md5(f: impl AsRef<Path>) -> Result<String, CLIExitCode> {
+fn file_md5(f: impl AsRef<Path>) -> Result<String, CliExitCode> {
     let mut file = fs::OpenOptions::new().read(true).open(f).map_err(|_e| {
-        CLIExitCode::UnknownError(
+        CliExitCode::UnknownError(
             "the module file either does not exist or is inaccessible.".into(),
         )
     })?;
@@ -80,7 +80,7 @@ fn file_md5(f: impl AsRef<Path>) -> Result<String, CLIExitCode> {
     let mut md5_ctx = md5::Context::new();
     loop {
         let n = file.read(&mut buf).map_err(|_e| {
-            CLIExitCode::UnknownError(
+            CliExitCode::UnknownError(
                 "the module file either does not exist or is inaccessible.".into(),
             )
         })?;
@@ -93,13 +93,13 @@ fn file_md5(f: impl AsRef<Path>) -> Result<String, CLIExitCode> {
     Ok(format!("{digest:x}"))
 }
 
-fn check_module_sum(cfg: &CliConfig) -> Result<(), CLIExitCode> {
+fn check_module_sum(cfg: &CliConfig) -> Result<(), CliExitCode> {
     for module in cfg.0.modules_ref() {
         let m_file = &module.file;
         let md5sum = file_md5(m_file)?;
         if md5sum != module.md5 {
             perror!("the module {m_file} file md5 checksum is not correctly.");
-            return Err(CLIExitCode::ConfigureError);
+            return Err(CliExitCode::ConfigureError);
         }
     }
     Ok(())
@@ -109,7 +109,7 @@ fn check_module_sum(cfg: &CliConfig) -> Result<(), CLIExitCode> {
 /// 1. the car file format, all files archive into the car file.
 /// 2. the wasm or wasi file format, will run wasm directly.
 /// 3. the the config file, format, all files is define in the config file.
-fn load_cli_config(file_path: &str) -> Result<CliConfig, CLIExitCode> {
+fn load_cli_config(file_path: &str) -> Result<CliConfig, CliExitCode> {
     let ext = Path::new(file_path).extension();
     let cfg = ext.and_then(|ext| ext.to_str().map(str::to_ascii_lowercase));
     let cli_config = match cfg {
@@ -118,7 +118,7 @@ fn load_cli_config(file_path: &str) -> Result<CliConfig, CLIExitCode> {
                 .read(true)
                 .open(file_path)
                 .map_err(|_e| {
-                    CLIExitCode::UnknownError(
+                    CliExitCode::UnknownError(
                         "the car file does not exist or is unreadable.".into(),
                     )
                 })?;
@@ -131,12 +131,12 @@ fn load_cli_config(file_path: &str) -> Result<CliConfig, CLIExitCode> {
     };
     cli_config
         .unwrap_or_else(|| CliConfig::from_file(file_path))
-        .map_err(|e| CLIExitCode::UnknownError(e.to_string()))
+        .map_err(|e| CliExitCode::UnknownError(e.to_string()))
 }
 
-fn v86_runtime(path: &str) -> Result<i32, CLIExitCode> {
+fn v86_runtime(path: &str) -> Result<i32, CliExitCode> {
     let file = fs::OpenOptions::new().read(true).open(path).map_err(|e| {
-        CLIExitCode::UnknownError(format!(
+        CliExitCode::UnknownError(format!(
             "the v86 car file does not exist or is unreadable: {}",
             e
         ))
@@ -146,14 +146,14 @@ fn v86_runtime(path: &str) -> Result<i32, CLIExitCode> {
     let v86 = V86Lib::load(&cfg.dynamic_lib_path)?;
 
     let raw_config_json = &cfg.raw_config.ok_or_else(|| {
-        CLIExitCode::UnknownError(
+        CliExitCode::UnknownError(
             "the v86 config file does not exist or is unreadable.".to_string(),
         )
     })?;
     Ok(v86.v86_wasi_run(raw_config_json))
 }
 
-async fn wasm_runtime(mut cfg: CliConfig, cli_command_opts: CliCommandOpts) -> CLIExitCode {
+async fn wasm_runtime(mut cfg: CliConfig, cli_command_opts: CliCommandOpts) -> CliExitCode {
     if let Err(err) = logger_init_with_config(&cfg) {
         perror!("failed to init logger: {}", err);
         return err;
@@ -171,7 +171,7 @@ async fn wasm_runtime(mut cfg: CliConfig, cli_command_opts: CliCommandOpts) -> C
         let _ = tokio::spawn(async move {
             tokio::time::sleep(Duration::from_millis(time)).await;
             info!("The wasm execute finish, the exit code: 15");
-            std::process::exit(CLIExitCode::AppTimeout.into());
+            std::process::exit(CliExitCode::AppTimeout.into());
         })
         .await;
     }
@@ -182,7 +182,7 @@ async fn wasm_runtime(mut cfg: CliConfig, cli_command_opts: CliCommandOpts) -> C
         perror!("WASM app crashed, please check the runtime.log file");
     }));
 
-    let exit_status = blockless_run(cfg.0).await;
+    let exit_status = blockless_run(cfg.0).await.unwrap();
     info!(
         "The wasm execute finish, the exit code: {}",
         exit_status.code
@@ -213,7 +213,7 @@ async fn non_blocking_read<R: Read + Send + 'static>(mut reader: R) -> Option<St
 }
 
 #[tokio::main]
-async fn main() -> CLIExitCode {
+async fn main() -> CliExitCode {
     let cli_command_opts = CliCommandOpts::parse();
     set_root_path_env_var(&cli_command_opts);
     let path = cli_command_opts.input_ref();

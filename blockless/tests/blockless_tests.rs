@@ -21,7 +21,7 @@ fn test_outof_fuel() {
     let mut config = BlocklessConfig::new(path);
     config.limited_fuel(Some(1));
     config.set_version(BlocklessConfigVersion::Version0);
-    let code = run_blockless(config);
+    let code = run_blockless(config).unwrap();
     assert_eq!(code.code, 1);
 }
 
@@ -39,6 +39,6 @@ fn test_blockless_normal() {
     let path = file_path.to_str().unwrap();
     let mut config = BlocklessConfig::new(path);
     config.set_version(BlocklessConfigVersion::Version0);
-    let code = run_blockless(config);
+    let code = run_blockless(config).unwrap();
     assert_eq!(code.code, 0);
 }

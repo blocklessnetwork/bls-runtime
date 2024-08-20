@@ -58,7 +58,7 @@ fn test_linker_module() {
     let mut config = BlocklessConfig::new("_start");
     config.set_version(BlocklessConfigVersion::Version1);
     config.set_modules(modules);
-    let code = run_blockless(config);
+    let code = run_blockless(config).unwrap();
     assert_eq!(code.code, 0);
 }
 
@@ -110,7 +110,7 @@ fn test_blockless_extension_http_req() {
     let mut config = BlocklessConfig::new("_start");
     config.set_version(BlocklessConfigVersion::Version1);
     config.set_modules(modules);
-    let code = run_blockless(config);
+    let code = run_blockless(config).unwrap();
     assert_eq!(code.code, 0);
 }
 
@@ -160,7 +160,7 @@ fn test_blockless_run_primary_module_can_call_reactor_module() {
     let mut config = BlocklessConfig::new("_start");
     config.set_version(BlocklessConfigVersion::Version1);
     config.set_modules(modules);
-    let code = run_blockless(config);
+    let code = run_blockless(config).unwrap();
     assert_eq!(code.code, 0);
 }
 
@@ -233,7 +233,7 @@ fn test_blockless_primary_module_can_call_multiple_reactor_modules() {
     let mut config = BlocklessConfig::new("_start");
     config.set_version(BlocklessConfigVersion::Version1);
     config.set_modules(modules);
-    let code = run_blockless(config);
+    let code = run_blockless(config).unwrap();
     assert_eq!(code.code, 0);
 }
 
@@ -302,7 +302,7 @@ fn test_blockless_reactor_module_can_call_reactor_module() {
     let mut config = BlocklessConfig::new("_start");
     config.set_version(BlocklessConfigVersion::Version1);
     config.set_modules(modules);
-    let code = run_blockless(config);
+    let code = run_blockless(config).unwrap();
     assert_eq!(code.code, 0);
 }
 
@@ -376,7 +376,7 @@ fn test_blockless_reactor_module_can_call_reactor_module_with_callback_support()
     let mut config = BlocklessConfig::new("_start");
     config.set_version(BlocklessConfigVersion::Version1);
     config.set_modules(modules);
-    let code = run_blockless(config);
+    let code = run_blockless(config).unwrap();
     assert_eq!(code.code, 0);
 }
 
@@ -445,6 +445,6 @@ fn test_blockless_reactor_module_can_call_reactor_module_with_callback_endless_l
     let mut config = BlocklessConfig::new("_start");
     config.set_version(BlocklessConfigVersion::Version1);
     config.set_modules(modules);
-    let code = run_blockless(config);
+    let code = run_blockless(config).unwrap();
     assert_eq!(code.code, 0);
 }

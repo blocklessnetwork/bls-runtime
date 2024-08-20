@@ -13,9 +13,7 @@ use modules::ModuleLinker;
 use std::{env, path::Path, sync::Arc};
 use wasi_common::sync::WasiCtxBuilder;
 pub use wasi_common::*;
-use wasmtime::{
-    Config, Engine, Linker, Module, Store, StoreLimits, StoreLimitsBuilder, Trap
-};
+use wasmtime::{Config, Engine, Linker, Module, Store, StoreLimits, StoreLimitsBuilder, Trap};
 use wasmtime_wasi_threads::WasiThreadsCtx;
 
 // the default wasm entry name.
@@ -34,7 +32,6 @@ trait BlocklessConfig2Preview1WasiBuilder {
 }
 
 impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
-    
     /// config to store limit.
     fn store_limits(&self) -> StoreLimits {
         let mut builder = StoreLimitsBuilder::new();
@@ -51,7 +48,7 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
         if let Some(m) = store_limited.max_tables {
             builder = builder.table_elements(m);
         }
-        
+
         if let Some(m) = store_limited.max_memories {
             builder = builder.memories(m);
         }
@@ -151,7 +148,7 @@ struct BlocklessRunner(BlocklessConfig);
 
 impl BlocklessRunner {
     /// blockless run method, it execute the wasm program with configure file.
-    async fn run(self) -> ExitStatus {
+    async fn run(self) -> anyhow::Result<ExitStatus> {
         let b_conf = self.0;
         let max_fuel = b_conf.get_limited_fuel();
         // set the drivers root path, if not setting use exe file path.
@@ -166,7 +163,7 @@ impl BlocklessRunner {
         DriverConetxt::init_built_in_drivers(drivers_root_path);
 
         let conf = b_conf.preview1_engine_config();
-        let engine = Engine::new(&conf).unwrap();
+        let engine = Engine::new(&conf)?;
         let mut linker = wasmtime::Linker::new(&engine);
         let support_thread = b_conf.feature_thread();
         let mut builder = b_conf.preview1_builder();
@@ -176,12 +173,17 @@ impl BlocklessRunner {
         let entry: String = b_conf.entry_ref().into();
         let version = b_conf.version();
         let store_limits = b_conf.store_limits();
+        let fule = b_conf.get_limited_fuel();
         preview1_ctx.set_blockless_config(Some(b_conf));
         let mut ctx = BlocklessContext::default();
         ctx.store_limits = store_limits;
         ctx.preview1_ctx = Some(preview1_ctx);
         let mut store = Store::new(&engine, ctx);
         store.limiter(|ctx| &mut ctx.store_limits);
+        // set the fule in store.
+        if let Some(f) = fule {
+            store.set_fuel(f).unwrap();
+        }
         Self::preview1_setup_linker(&mut linker, support_thread);
         let (module, entry) = Self::module_linker(version, entry, &mut store, &mut linker).await;
         // support thread.
@@ -189,11 +191,11 @@ impl BlocklessRunner {
             Self::preview1_setup_thread_support(&mut linker, &mut store, &module);
         }
         let inst = if support_thread {
-            linker.instantiate(&mut store, &module).unwrap()
+            linker.instantiate(&mut store, &module)?
         } else {
-            linker.instantiate_async(&mut store, &module).await.unwrap()
+            linker.instantiate_async(&mut store, &module).await?
         };
-        let func = inst.get_typed_func::<(), ()>(&mut store, &entry).unwrap();
+        let func = inst.get_typed_func::<(), ()>(&mut store, &entry)?;
         // if thread multi thread use sync model.
         // The multi-thread model is used for the cpu intensive program.
         let result = if support_thread {
@@ -208,10 +210,10 @@ impl BlocklessRunner {
                 0
             }
         };
-        ExitStatus {
+        Ok(ExitStatus {
             fuel: store.get_fuel().ok(),
             code: exit_code,
-        }
+        })
     }
 
     fn preview1_setup_linker(linker: &mut Linker<BlocklessContext>, support_thread: bool) {
@@ -322,7 +324,7 @@ impl BlocklessRunner {
     }
 }
 
-pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
+pub async fn blockless_run(b_conf: BlocklessConfig) -> anyhow::Result<ExitStatus> {
     BlocklessRunner(b_conf).run().await
 }
 
