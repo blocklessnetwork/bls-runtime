@@ -1,4 +1,4 @@
-use anyhow::Context;
+use anyhow::{anyhow, bail, Context};
 use json::JsonValue;
 use lazy_static::lazy_static;
 use std::future::Future;
@@ -392,11 +392,16 @@ impl<'a> ModuleLinker<'a> {
 
     /// export the ```blockless.mcall``` and ```blockless.register``` in the runtime.
     /// The modules can be use the register to register the moudle's function for mcall.
-    pub(crate) async fn link_modules(&mut self) -> Option<Module> {
+    pub(crate) async fn link_modules(&mut self) -> anyhow::Result<Module> {
         let mut modules: Vec<BlocklessModule> = {
-            let preview1 = self.store.data().preview1_ctx.as_ref().unwrap();
+            let preview1 = self
+                .store
+                .data()
+                .preview1_ctx
+                .as_ref()
+                .ok_or(anyhow!("get preview1_ctx fail"))?;
             let lock = preview1.blockless_config.lock().unwrap();
-            let cfg = lock.as_ref().unwrap();
+            let cfg = lock.as_ref().ok_or(anyhow!("get the lock fail"))?;
             cfg.modules_ref().iter().map(|m| (*m).clone()).collect()
         };
         modules.sort_by(|a, b| a.module_type.partial_cmp(&b.module_type).unwrap());
@@ -409,8 +414,7 @@ impl<'a> ModuleLinker<'a> {
                  (addr, addr_len, buf, buf_len): (u32, u32, u32, u32)| {
                     Self::mcall_fn(caller, addr, addr_len, buf, buf_len)
                 },
-            )
-            .unwrap();
+            )?;
         self.linker
             .func_wrap_async(
                 "blockless",
@@ -419,21 +423,20 @@ impl<'a> ModuleLinker<'a> {
                  (addr, addr_len, buf, buf_len): (u32, u32, u32, u32)| {
                     Self::register_fn(caller, addr, addr_len, buf, buf_len)
                 },
-            )
-            .unwrap();
+            )?;
         for m in modules {
             let (m_name, is_entry) = match m.module_type {
                 ModuleType::Module => (m.name.as_str(), false),
                 ModuleType::Entry => ("", true),
             };
-            let module = Module::from_file(self.store.engine(), &m.file).unwrap();
+            let module = Module::from_file(self.store.engine(), &m.file)?;
             if is_entry {
                 entry = Some(module);
             } else {
-                self.instance_module(m_name, &module).await.unwrap();
+                self.instance_module(m_name, &module).await?;
             }
         }
-        entry
+        entry.ok_or(anyhow!("can't find the entry"))
     }
 
     ///instance module and inital the context.

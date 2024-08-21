@@ -2,6 +2,7 @@ mod context;
 pub mod error;
 mod modules;
 
+use anyhow::Context;
 use blockless_drivers::{CdylibDriver, DriverConetxt};
 use blockless_env;
 pub use blockless_multiaddr::MultiAddr;
@@ -10,7 +11,7 @@ use context::BlocklessContext;
 pub use error::*;
 use log::{debug, error};
 use modules::ModuleLinker;
-use std::{env, path::Path, sync::Arc};
+use std::{any, env, path::Path, sync::Arc};
 use wasi_common::sync::WasiCtxBuilder;
 pub use wasi_common::*;
 use wasmtime::{Config, Engine, Linker, Module, Store, StoreLimits, StoreLimitsBuilder, Trap};
@@ -189,7 +190,7 @@ impl BlocklessRunner {
             store.set_fuel(f).unwrap();
         }
         Self::preview1_setup_linker(&mut linker, support_thread);
-        let (module, entry) = Self::module_linker(version, entry, &mut store, &mut linker).await;
+        let (module, entry) = Self::module_linker(version, entry, &mut store, &mut linker).await?;
         // support thread.
         if support_thread {
             Self::preview1_setup_thread_support(&mut linker, &mut store, &module);
@@ -268,20 +269,23 @@ impl BlocklessRunner {
         mut entry: String,
         store: &'a mut Store<BlocklessContext>,
         linker: &'a mut Linker<BlocklessContext>,
-    ) -> (Module, String) {
+    ) -> anyhow::Result<(Module, String)> {
         match version {
             // this is older configure for bls-runtime, this only run single wasm.
             BlocklessConfigVersion::Version0 => {
-                let module = Module::from_file(store.engine(), &entry).unwrap();
-                (module, ENTRY.to_string())
+                let module = Module::from_file(store.engine(), &entry)?;
+                Ok((module, ENTRY.to_string()))
             }
             BlocklessConfigVersion::Version1 => {
                 if entry.is_empty() {
                     entry = ENTRY.to_string();
                 }
                 let mut module_linker = ModuleLinker::new(linker, store);
-                let module = module_linker.link_modules().await.unwrap();
-                (module, entry)
+                let module = module_linker
+                    .link_modules()
+                    .await
+                    .context("")?;
+                Ok((module, entry))
             }
         }
     }

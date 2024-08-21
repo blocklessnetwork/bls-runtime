@@ -138,11 +138,113 @@ pub struct StoreLimited {
     pub trap_on_grow_failure: Option<bool>,
 }
 
+#[derive(PartialEq, Clone)]
+pub struct OptimizeOpts {
+    /// Optimization level of generated code (0-2, s; default: 2)
+    pub opt_level: Option<wasmtime::OptLevel>,
+
+    /// Byte size of the guard region after dynamic memories are allocated
+    pub dynamic_memory_guard_size: Option<u64>,
+
+    /// Force using a "static" style for all wasm memories
+    pub static_memory_forced: Option<bool>,
+
+    /// Maximum size in bytes of wasm memory before it becomes dynamically
+    /// relocatable instead of up-front-reserved.
+    pub static_memory_maximum_size: Option<u64>,
+
+    /// Byte size of the guard region after static memories are allocated
+    pub static_memory_guard_size: Option<u64>,
+
+    /// Bytes to reserve at the end of linear memory for growth for dynamic
+    /// memories.
+    pub dynamic_memory_reserved_for_growth: Option<u64>,
+
+    /// Indicates whether an unmapped region of memory is placed before all
+    /// linear memories.
+    pub guard_before_linear_memory: Option<bool>,
+
+    /// Whether to initialize tables lazily, so that instantiation is
+    /// fast but indirect calls are a little slower. If no, tables are
+    /// initialized eagerly from any active element segments that apply to
+    /// them during instantiation. (default: yes)
+    pub table_lazy_init: Option<bool>,
+
+    /// Enable the pooling allocator, in place of the on-demand allocator.
+    pub pooling_allocator: Option<bool>,
+
+    /// The number of decommits to do per batch. A batch size of 1
+    /// effectively disables decommit batching. (default: 1)
+    pub pooling_decommit_batch_size: Option<u32>,
+
+    /// How many bytes to keep resident between instantiations for the
+    /// pooling allocator in linear memories.
+    pub pooling_memory_keep_resident: Option<usize>,
+
+    /// How many bytes to keep resident between instantiations for the
+    /// pooling allocator in tables.
+    pub pooling_table_keep_resident: Option<usize>,
+
+    /// Enable memory protection keys for the pooling allocator; this can
+    /// optimize the size of memory slots.
+    pub memory_protection_keys: Option<bool>,
+
+    /// Configure attempting to initialize linear memory via a
+    /// copy-on-write mapping (default: yes)
+    pub memory_init_cow: Option<bool>,
+
+    /// The maximum number of WebAssembly instances which can be created
+    /// with the pooling allocator.
+    pub pooling_total_core_instances: Option<u32>,
+
+    /// The maximum number of WebAssembly components which can be created
+    /// with the pooling allocator.
+    pub pooling_total_component_instances: Option<u32>,
+
+    /// The maximum number of WebAssembly memories which can be created with
+    /// the pooling allocator.
+    pub pooling_total_memories: Option<u32>,
+
+    /// The maximum number of WebAssembly tables which can be created with
+    /// the pooling allocator.
+    pub pooling_total_tables: Option<u32>,
+
+    /// The maximum number of WebAssembly stacks which can be created with
+    /// the pooling allocator.
+    pub pooling_total_stacks: Option<u32>,
+
+    /// The maximum runtime size of each linear memory in the pooling
+    /// allocator, in bytes.
+    pub pooling_max_memory_size: Option<usize>,
+
+    /// The maximum table elements for any table defined in a module when
+    /// using the pooling allocator.
+    pub pooling_table_elements: Option<u32>,
+
+    /// The maximum size, in bytes, allocated for a core instance's metadata
+    /// when using the pooling allocator.
+    pub pooling_max_core_instance_size: Option<usize>,
+}
+
+pub struct Stdio {
+    pub stdin: String,
+    pub stdout: Stdout,
+    pub stderr: Stderr,
+}
+
+impl Default for Stdio {
+    fn default() -> Self {
+        Stdio { 
+            stdin: String::new(), 
+            stdout: Stdout::Inherit, 
+            stderr: Stderr::Inherit,
+        }
+    }
+}
+
 pub struct BlocklessConfig {
     entry: String,
-    stdin: String,
-    stdout: Stdout,
-    stderr: Stderr,
+    stdio: Stdio,
     debug_info: bool,
     is_carfile: bool,
     feature_thread: bool,
@@ -175,7 +277,7 @@ impl BlocklessConfig {
             fs_root_path: None,
             drivers: Vec::new(),
             modules: Vec::new(),
-            stdin: String::new(),
+            stdio: Default::default(),
             runtime_logger: None,
             feature_thread: false,
             //vm instruction limit.
@@ -185,9 +287,7 @@ impl BlocklessConfig {
             //memory limit, 1 page = 64k.
             store_limited: Default::default(),
             extensions_path: None,
-            stderr: Stderr::Inherit,
             drivers_root_path: None,
-            stdout: Stdout::Inherit,
             entry: String::from(entry),
             permisions: Default::default(),
             group_permisions: HashMap::new(),
@@ -361,7 +461,7 @@ impl BlocklessConfig {
     /// if root_path is not setting, the stdout file will use Inherit
     #[inline(always)]
     pub fn stdout(&mut self, stdout: Stdout) {
-        self.stdout = stdout
+        self.stdio.stdout = stdout
     }
 
     /// the runtime log file name, if the value is None
@@ -398,7 +498,7 @@ impl BlocklessConfig {
 
     #[inline(always)]
     pub fn stdin(&mut self, stdin: String) {
-        self.stdin = stdin
+        self.stdio.stdin = stdin
     }
 
     #[inline(always)]
@@ -413,17 +513,17 @@ impl BlocklessConfig {
 
     #[inline(always)]
     pub fn stdout_ref(&self) -> &Stdout {
-        &self.stdout
+        &self.stdio.stdout
     }
 
     #[inline(always)]
     pub fn stderr_ref(&self) -> &Stderr {
-        &self.stderr
+        &self.stdio.stderr
     }
 
     #[inline(always)]
     pub fn stdin_ref(&self) -> &String {
-        &self.stdin
+        &self.stdio.stdin
     }
 
     #[inline(always)]
