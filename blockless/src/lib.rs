@@ -11,7 +11,7 @@ use context::BlocklessContext;
 pub use error::*;
 use log::{debug, error};
 use modules::ModuleLinker;
-use std::{any, env, path::Path, sync::Arc};
+use std::{env, path::Path, sync::Arc};
 use wasi_common::sync::WasiCtxBuilder;
 pub use wasi_common::*;
 use wasmtime::{Config, Engine, Linker, Module, Store, StoreLimits, StoreLimitsBuilder, Trap};
@@ -132,7 +132,61 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
     /// convert the blockless configure  to wasmtime configure.
     fn preview1_engine_config(&self) -> Config {
         let mut conf = Config::new();
+        if let Some(max) = self.opts.static_memory_maximum_size {
+            conf.static_memory_maximum_size(max);
+        }
 
+        if let Some(enable) = self.opts.static_memory_forced {
+            conf.static_memory_forced(enable);
+        }
+
+        if let Some(size) = self.opts.static_memory_guard_size {
+            conf.static_memory_guard_size(size);
+        }
+
+        if let Some(size) = self.opts.dynamic_memory_guard_size {
+            conf.dynamic_memory_guard_size(size);
+        }
+        if let Some(size) = self.opts.dynamic_memory_reserved_for_growth {
+            conf.dynamic_memory_reserved_for_growth(size);
+        }
+        if let Some(enable) = self.opts.guard_before_linear_memory {
+            conf.guard_before_linear_memory(enable);
+        }
+        if let Some(enable) = self.opts.table_lazy_init {
+            conf.table_lazy_init(enable);
+        }
+        if !self.opts.is_empty() {
+            let mut cfg = wasmtime::PoolingAllocationConfig::default();
+            if let Some(size) = self.opts.pooling_memory_keep_resident {
+                cfg.linear_memory_keep_resident(size);
+            }
+            if let Some(size) = self.opts.pooling_table_keep_resident {
+                cfg.table_keep_resident(size);
+            }
+            if let Some(limit) = self.opts.pooling_total_core_instances {
+                cfg.total_core_instances(limit);
+            }
+            if let Some(limit) = self.opts.pooling_total_component_instances {
+                cfg.total_component_instances(limit);
+            }
+            if let Some(limit) = self.opts.pooling_total_memories {
+                cfg.total_memories(limit);
+            }
+            if let Some(limit) = self.opts.pooling_total_tables {
+                cfg.total_tables(limit);
+            }
+            if let Some(limit) = self.opts.pooling_table_elements {
+                cfg.table_elements(limit);
+            }
+            if let Some(limit) = self.opts.pooling_max_core_instance_size {
+                cfg.max_core_instance_size(limit);
+            }
+            if let Some(limit) = self.opts.pooling_max_memory_size {
+                cfg.max_memory_size(limit);
+            }
+            conf.allocation_strategy(wasmtime::InstanceAllocationStrategy::Pooling(cfg));
+        }
         conf.debug_info(self.get_debug_info());
 
         if let Some(_) = self.get_limited_fuel() {
@@ -166,7 +220,6 @@ impl BlocklessRunner {
                 String::from(current_exe_path.to_str().unwrap())
             });
         DriverConetxt::init_built_in_drivers(drivers_root_path);
-
         let conf = b_conf.preview1_engine_config();
         let engine = Engine::new(&conf)?;
         let mut linker = wasmtime::Linker::new(&engine);
@@ -204,7 +257,8 @@ impl BlocklessRunner {
         let func = match version {
             BlocklessConfigVersion::Version0 => {
                 inst
-                    .get_typed_func::<(), ()>(&mut store, "")
+                    .get_typed_func(&mut store, &entry)
+                    .or_else(|_| inst.get_typed_func::<(), ()>(&mut store, ""))
                     .or_else(|_| inst.get_typed_func::<(), ()>(&mut store, ENTRY))?
             },
             BlocklessConfigVersion::Version1 => inst.get_typed_func::<(), ()>(&mut store, &entry)?,

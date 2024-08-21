@@ -138,7 +138,7 @@ pub struct StoreLimited {
     pub trap_on_grow_failure: Option<bool>,
 }
 
-#[derive(PartialEq, Clone)]
+#[derive(PartialEq, Clone, Default)]
 pub struct OptimizeOpts {
     /// Optimization level of generated code (0-2, s; default: 2)
     pub opt_level: Option<wasmtime::OptLevel>,
@@ -226,6 +226,16 @@ pub struct OptimizeOpts {
     pub pooling_max_core_instance_size: Option<usize>,
 }
 
+impl OptimizeOpts {
+    pub fn is_empty(&self) -> bool {
+        if *self == Default::default() {
+            true
+        } else {
+            false
+        }
+    }
+}
+
 pub struct Stdio {
     pub stdin: String,
     pub stdout: Stdout,
@@ -243,28 +253,29 @@ impl Default for Stdio {
 }
 
 pub struct BlocklessConfig {
-    entry: String,
-    stdio: Stdio,
-    debug_info: bool,
-    is_carfile: bool,
-    feature_thread: bool,
-    run_time: Option<u64>,
-    stdin_args: Vec<String>,
-    limited_fuel: Option<u64>,
-    limited_time: Option<u64>,
-    drivers: Vec<DriverConfig>,
-    store_limited: StoreLimited,
-    envs: Vec<(String, String)>,
-    permisions: Vec<Permission>,
-    fs_root_path: Option<String>,
-    modules: Vec<BlocklessModule>,
-    runtime_logger: Option<String>,
-    extensions_path: Option<String>,
+    pub entry: String,
+    pub stdio: Stdio,
+    pub debug_info: bool,
+    pub is_carfile: bool,
+    pub opts: OptimizeOpts,
+    pub feature_thread: bool,
+    pub run_time: Option<u64>,
+    pub stdin_args: Vec<String>,
+    pub limited_fuel: Option<u64>,
+    pub limited_time: Option<u64>,
+    pub drivers: Vec<DriverConfig>,
+    pub store_limited: StoreLimited,
+    pub envs: Vec<(String, String)>,
+    pub permisions: Vec<Permission>,
+    pub fs_root_path: Option<String>,
+    pub modules: Vec<BlocklessModule>,
+    pub runtime_logger: Option<String>,
+    pub extensions_path: Option<String>,
     // the config version
-    version: BlocklessConfigVersion,
-    drivers_root_path: Option<String>,
-    runtime_logger_level: LoggerLevel,
-    group_permisions: HashMap<String, Vec<Permission>>,
+    pub version: BlocklessConfigVersion,
+    pub drivers_root_path: Option<String>,
+    pub runtime_logger_level: LoggerLevel,
+    pub group_permisions: HashMap<String, Vec<Permission>>,
 }
 
 impl BlocklessConfig {
@@ -291,6 +302,7 @@ impl BlocklessConfig {
             entry: String::from(entry),
             permisions: Default::default(),
             group_permisions: HashMap::new(),
+            opts: Default::default(),
             runtime_logger_level: LoggerLevel::WARN,
             version: BlocklessConfigVersion::Version0,
         }
