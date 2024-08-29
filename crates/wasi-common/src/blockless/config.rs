@@ -233,12 +233,12 @@ impl OptionParser for bool {
         match val {
             "y" | "yes" | "true" => Ok(true),
             "n" | "no" | "false" => Ok(false),
-            s@_ => bail!("unknown boolean flag `{s}`, only yes,no,<nothing> accepted"),
+            s @ _ => bail!("unknown boolean flag `{s}`, only yes,no,<nothing> accepted"),
         }
     }
 }
 
-bls_options!{
+bls_options! {
     #[derive(PartialEq, Clone)]
     pub struct OptimizeOpts {
         /// Optimization level of generated code (0-2, s; default: 2)
@@ -336,9 +336,9 @@ pub struct Stdio {
 
 impl Default for Stdio {
     fn default() -> Self {
-        Stdio { 
-            stdin: String::new(), 
-            stdout: Stdout::Inherit, 
+        Stdio {
+            stdin: String::new(),
+            stdout: Stdout::Inherit,
             stderr: Stderr::Inherit,
         }
     }

@@ -255,13 +255,13 @@ impl BlocklessRunner {
         };
 
         let func = match version {
-            BlocklessConfigVersion::Version0 => {
-                inst
-                    .get_typed_func(&mut store, &entry)
-                    .or_else(|_| inst.get_typed_func::<(), ()>(&mut store, ""))
-                    .or_else(|_| inst.get_typed_func::<(), ()>(&mut store, ENTRY))?
-            },
-            BlocklessConfigVersion::Version1 => inst.get_typed_func::<(), ()>(&mut store, &entry)?,
+            BlocklessConfigVersion::Version0 => inst
+                .get_typed_func(&mut store, &entry)
+                .or_else(|_| inst.get_typed_func::<(), ()>(&mut store, ""))
+                .or_else(|_| inst.get_typed_func::<(), ()>(&mut store, ENTRY))?,
+            BlocklessConfigVersion::Version1 => {
+                inst.get_typed_func::<(), ()>(&mut store, &entry)?
+            }
         };
         // if thread multi thread use sync model.
         // The multi-thread model is used for the cpu intensive program.
@@ -335,10 +335,7 @@ impl BlocklessRunner {
                     entry = ENTRY.to_string();
                 }
                 let mut module_linker = ModuleLinker::new(linker, store);
-                let module = module_linker
-                    .link_modules()
-                    .await
-                    .context("")?;
+                let module = module_linker.link_modules().await.context("")?;
                 Ok((module, entry))
             }
         }

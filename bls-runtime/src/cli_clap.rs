@@ -1,8 +1,10 @@
 #![allow(unused)]
-use std::{collections::HashMap, str::FromStr};
-use anyhow::{Result, bail};
-use blockless::{BlocklessConfig, OptimizeOpts, BlsOptions, BlocklessModule, ModuleType, Permission};
+use anyhow::{bail, Result};
+use blockless::{
+    BlocklessConfig, BlocklessModule, BlsOptions, ModuleType, OptimizeOpts, Permission,
+};
 use clap::{Arg, ArgMatches, Command, Parser};
+use std::{collections::HashMap, str::FromStr};
 use url::Url;
 
 use crate::config::CliConfig;
@@ -71,7 +73,6 @@ fn parse_opts(opt: &str) -> Result<OptimizeOpts> {
             }
             std::process::exit(0);
         }
-        
     }
     let mut parsed = vec![];
     for kv in kvs.iter() {
@@ -221,7 +222,6 @@ impl CliCommandOpts {
         }
     }
 }
-
 
 #[cfg(test)]
 mod test {

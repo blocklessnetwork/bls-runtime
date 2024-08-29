@@ -406,24 +406,22 @@ impl<'a> ModuleLinker<'a> {
         };
         modules.sort_by(|a, b| a.module_type.partial_cmp(&b.module_type).unwrap());
         let mut entry = None;
-        self.linker
-            .func_wrap_async(
-                "blockless",
-                "mcall",
-                |caller: Caller<'_, BSContext>,
-                 (addr, addr_len, buf, buf_len): (u32, u32, u32, u32)| {
-                    Self::mcall_fn(caller, addr, addr_len, buf, buf_len)
-                },
-            )?;
-        self.linker
-            .func_wrap_async(
-                "blockless",
-                "register",
-                |caller: Caller<'_, BSContext>,
-                 (addr, addr_len, buf, buf_len): (u32, u32, u32, u32)| {
-                    Self::register_fn(caller, addr, addr_len, buf, buf_len)
-                },
-            )?;
+        self.linker.func_wrap_async(
+            "blockless",
+            "mcall",
+            |caller: Caller<'_, BSContext>,
+             (addr, addr_len, buf, buf_len): (u32, u32, u32, u32)| {
+                Self::mcall_fn(caller, addr, addr_len, buf, buf_len)
+            },
+        )?;
+        self.linker.func_wrap_async(
+            "blockless",
+            "register",
+            |caller: Caller<'_, BSContext>,
+             (addr, addr_len, buf, buf_len): (u32, u32, u32, u32)| {
+                Self::register_fn(caller, addr, addr_len, buf, buf_len)
+            },
+        )?;
         for m in modules {
             let (m_name, is_entry) = match m.module_type {
                 ModuleType::Module => (m.name.as_str(), false),
