@@ -68,7 +68,7 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
     fn preview1_set_stdio(&self, builder: &mut WasiCtxBuilder) {
         let b_conf = self;
         macro_rules! process_output {
-            ($out_ref: expr, $out_expr: tt, $stdout: tt, $inherit_stdout: tt) => {
+            ($out_ref: expr, $out_expr: ident, $stdout: ident, $inherit_stdout: ident) => {
                 //$out_ref is b_conf.stdout_ref() or b_conf.stderr_ref()
                 match $out_ref {
                     &$out_expr::FileName(ref file_name) => {
