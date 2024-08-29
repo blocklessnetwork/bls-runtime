@@ -1,4 +1,5 @@
 use crate::Permission;
+use anyhow::bail;
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
@@ -138,101 +139,192 @@ pub struct StoreLimited {
     pub trap_on_grow_failure: Option<bool>,
 }
 
-#[derive(PartialEq, Clone, Default)]
-pub struct OptimizeOpts {
-    /// Optimization level of generated code (0-2, s; default: 2)
-    pub opt_level: Option<wasmtime::OptLevel>,
-
-    /// Byte size of the guard region after dynamic memories are allocated
-    pub dynamic_memory_guard_size: Option<u64>,
-
-    /// Force using a "static" style for all wasm memories
-    pub static_memory_forced: Option<bool>,
-
-    /// Maximum size in bytes of wasm memory before it becomes dynamically
-    /// relocatable instead of up-front-reserved.
-    pub static_memory_maximum_size: Option<u64>,
-
-    /// Byte size of the guard region after static memories are allocated
-    pub static_memory_guard_size: Option<u64>,
-
-    /// Bytes to reserve at the end of linear memory for growth for dynamic
-    /// memories.
-    pub dynamic_memory_reserved_for_growth: Option<u64>,
-
-    /// Indicates whether an unmapped region of memory is placed before all
-    /// linear memories.
-    pub guard_before_linear_memory: Option<bool>,
-
-    /// Whether to initialize tables lazily, so that instantiation is
-    /// fast but indirect calls are a little slower. If no, tables are
-    /// initialized eagerly from any active element segments that apply to
-    /// them during instantiation. (default: yes)
-    pub table_lazy_init: Option<bool>,
-
-    /// Enable the pooling allocator, in place of the on-demand allocator.
-    pub pooling_allocator: Option<bool>,
-
-    /// The number of decommits to do per batch. A batch size of 1
-    /// effectively disables decommit batching. (default: 1)
-    pub pooling_decommit_batch_size: Option<u32>,
-
-    /// How many bytes to keep resident between instantiations for the
-    /// pooling allocator in linear memories.
-    pub pooling_memory_keep_resident: Option<usize>,
-
-    /// How many bytes to keep resident between instantiations for the
-    /// pooling allocator in tables.
-    pub pooling_table_keep_resident: Option<usize>,
-
-    /// Enable memory protection keys for the pooling allocator; this can
-    /// optimize the size of memory slots.
-    pub memory_protection_keys: Option<bool>,
-
-    /// Configure attempting to initialize linear memory via a
-    /// copy-on-write mapping (default: yes)
-    pub memory_init_cow: Option<bool>,
-
-    /// The maximum number of WebAssembly instances which can be created
-    /// with the pooling allocator.
-    pub pooling_total_core_instances: Option<u32>,
-
-    /// The maximum number of WebAssembly components which can be created
-    /// with the pooling allocator.
-    pub pooling_total_component_instances: Option<u32>,
-
-    /// The maximum number of WebAssembly memories which can be created with
-    /// the pooling allocator.
-    pub pooling_total_memories: Option<u32>,
-
-    /// The maximum number of WebAssembly tables which can be created with
-    /// the pooling allocator.
-    pub pooling_total_tables: Option<u32>,
-
-    /// The maximum number of WebAssembly stacks which can be created with
-    /// the pooling allocator.
-    pub pooling_total_stacks: Option<u32>,
-
-    /// The maximum runtime size of each linear memory in the pooling
-    /// allocator, in bytes.
-    pub pooling_max_memory_size: Option<usize>,
-
-    /// The maximum table elements for any table defined in a module when
-    /// using the pooling allocator.
-    pub pooling_table_elements: Option<u32>,
-
-    /// The maximum size, in bytes, allocated for a core instance's metadata
-    /// when using the pooling allocator.
-    pub pooling_max_core_instance_size: Option<usize>,
+pub trait BlsOptions {
+    const OPTIONS: &'static [OptionDesc];
 }
 
-impl OptimizeOpts {
-    pub fn is_empty(&self) -> bool {
-        if *self == Default::default() {
-            true
-        } else {
-            false
+pub struct OptionDesc {
+    pub opt_name: &'static str,
+    pub opt_docs: &'static str,
+}
+
+macro_rules! bls_options {
+    (
+        $(#[$attr:meta])*
+        pub struct $opts:ident {
+            $(
+                $(#[doc = $doc:tt])*
+                pub $opt:ident: $container:ident<$payload:ty>,
+            )+
         }
+    ) => {
+        #[derive(Default, Debug)]
+        $(#[$attr])*
+        pub struct $opts {
+            $(
+                pub $opt: $container<$payload>,
+            )+
+        }
+
+        impl $opts {
+            pub fn config(&mut self, items: Vec<(String, String)>) -> anyhow::Result<()> {
+                for item in items.iter() {
+                    match item.0.as_str()  {
+                        $(
+                        stringify!($opt) => self.$opt = Some(OptionParser::parse(&item.1)?),
+                        )+
+                        _ => bail!("there is no optimize argument: {}", item.0),
+                    }
+                }
+                Ok(())
+            }
+
+            pub fn is_empty(&self) -> bool {
+                *self == Default::default()
+            }
+        }
+
+        impl BlsOptions for $opts {
+            const OPTIONS: &'static [OptionDesc] = &[
+                $(
+                    OptionDesc {
+                        opt_name: stringify!($opt),
+                        opt_docs: concat!($($doc, "\n", )*),
+                    },
+                )+
+            ];
+        }
+    }
+}
+
+trait OptionParser: Sized {
+    fn parse(v: &str) -> anyhow::Result<Self>;
+}
+
+impl OptionParser for u32 {
+    fn parse(val: &str) -> anyhow::Result<Self> {
+        match val.strip_prefix("0x") {
+            Some(hex) => Ok(u32::from_str_radix(hex, 16)?),
+            None => Ok(val.parse()?),
+        }
+    }
+}
+
+impl OptionParser for usize {
+    fn parse(val: &str) -> anyhow::Result<Self> {
+        match val.strip_prefix("0x") {
+            Some(hex) => Ok(usize::from_str_radix(hex, 16)?),
+            None => Ok(val.parse()?),
+        }
+    }
+}
+
+impl OptionParser for u64 {
+    fn parse(val: &str) -> anyhow::Result<Self> {
+        match val.strip_prefix("0x") {
+            Some(hex) => Ok(u64::from_str_radix(hex, 16)?),
+            None => Ok(val.parse()?),
+        }
+    }
+}
+
+impl OptionParser for bool {
+    fn parse(val: &str) -> anyhow::Result<Self> {
+        match val {
+            "y" | "yes" | "true" => Ok(true),
+            "n" | "no" | "false" => Ok(false),
+            s@_ => bail!("unknown boolean flag `{s}`, only yes,no,<nothing> accepted"),
+        }
+    }
+}
+
+bls_options!{
+    #[derive(PartialEq, Clone)]
+    pub struct OptimizeOpts {
+        /// Optimization level of generated code (0-2, s; default: 2)
+        pub opt_level: Option<u32>,
+
+        /// Byte size of the guard region after dynamic memories are allocated
+        pub dynamic_memory_guard_size: Option<u64>,
+
+        /// Force using a "static" style for all wasm memories
+        pub static_memory_forced: Option<bool>,
+
+        /// Maximum size in bytes of wasm memory before it becomes dynamically
+        /// relocatable instead of up-front-reserved.
+        pub static_memory_maximum_size: Option<u64>,
+
+        /// Byte size of the guard region after static memories are allocated
+        pub static_memory_guard_size: Option<u64>,
+
+        /// Bytes to reserve at the end of linear memory for growth for dynamic
+        /// memories.
+        pub dynamic_memory_reserved_for_growth: Option<u64>,
+
+        /// Indicates whether an unmapped region of memory is placed before all
+        /// linear memories.
+        pub guard_before_linear_memory: Option<bool>,
+
+        /// Whether to initialize tables lazily, so that instantiation is
+        /// fast but indirect calls are a little slower. If no, tables are
+        /// initialized eagerly from any active element segments that apply to
+        /// them during instantiation. (default: yes)
+        pub table_lazy_init: Option<bool>,
+
+        /// Enable the pooling allocator, in place of the on-demand allocator.
+        pub pooling_allocator: Option<bool>,
+
+        /// The number of decommits to do per batch. A batch size of 1
+        /// effectively disables decommit batching. (default: 1)
+        pub pooling_decommit_batch_size: Option<u32>,
+
+        /// How many bytes to keep resident between instantiations for the
+        /// pooling allocator in linear memories.
+        pub pooling_memory_keep_resident: Option<usize>,
+
+        /// How many bytes to keep resident between instantiations for the
+        /// pooling allocator in tables.
+        pub pooling_table_keep_resident: Option<usize>,
+
+        /// Enable memory protection keys for the pooling allocator; this can
+        /// optimize the size of memory slots.
+        pub memory_protection_keys: Option<bool>,
+
+        /// Configure attempting to initialize linear memory via a
+        /// copy-on-write mapping (default: yes)
+        pub memory_init_cow: Option<bool>,
+
+        /// The maximum number of WebAssembly instances which can be created
+        /// with the pooling allocator.
+        pub pooling_total_core_instances: Option<u32>,
+
+        /// The maximum number of WebAssembly components which can be created
+        /// with the pooling allocator.
+        pub pooling_total_component_instances: Option<u32>,
+
+        /// The maximum number of WebAssembly memories which can be created with
+        /// the pooling allocator.
+        pub pooling_total_memories: Option<u32>,
+
+        /// The maximum number of WebAssembly tables which can be created with
+        /// the pooling allocator.
+        pub pooling_total_tables: Option<u32>,
+
+        /// The maximum number of WebAssembly stacks which can be created with
+        /// the pooling allocator.
+        pub pooling_total_stacks: Option<u32>,
+
+        /// The maximum runtime size of each linear memory in the pooling
+        /// allocator, in bytes.
+        pub pooling_max_memory_size: Option<usize>,
+
+        /// The maximum table elements for any table defined in a module when
+        /// using the pooling allocator.
+        pub pooling_table_elements: Option<u32>,
+
+        /// The maximum size, in bytes, allocated for a core instance's metadata
+        /// when using the pooling allocator.
+        pub pooling_max_core_instance_size: Option<usize>,
     }
 }
 

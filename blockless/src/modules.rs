@@ -1,4 +1,4 @@
-use anyhow::{anyhow, bail, Context};
+use anyhow::{anyhow, Context};
 use json::JsonValue;
 use lazy_static::lazy_static;
 use std::future::Future;
