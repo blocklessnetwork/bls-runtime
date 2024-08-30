@@ -1,11 +1,11 @@
 use crate::Permission;
 use anyhow::{bail, Ok};
-use wasmtime::OptLevel;
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
     str::FromStr,
 };
+use wasmtime::OptLevel;
 
 const ENTRY: &str = "_start";
 
@@ -235,7 +235,9 @@ impl OptionParser for OptLevel {
             "n" => Ok(OptLevel::None),
             "s" => Ok(OptLevel::Speed),
             "ss" => Ok(OptLevel::SpeedAndSize),
-            _ => bail!("unknown optimization level {v}, level must be n(None),s(Speed),ss(SpeedAndSize)"),
+            _ => bail!(
+                "unknown optimization level {v}, level must be n(None),s(Speed),ss(SpeedAndSize)"
+            ),
         }
     }
 }
