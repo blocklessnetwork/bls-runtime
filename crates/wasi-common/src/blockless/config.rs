@@ -1,9 +1,11 @@
 use crate::Permission;
+use anyhow::{bail, Ok};
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
     str::FromStr,
 };
+use wasmtime::OptLevel;
 
 const ENTRY: &str = "_start";
 
@@ -128,31 +130,258 @@ impl From<usize> for BlocklessConfigVersion {
     }
 }
 
+#[derive(Default)]
+pub struct StoreLimited {
+    pub max_memory_size: Option<usize>,
+    pub max_table_elements: Option<u32>,
+    pub max_instances: Option<usize>,
+    pub max_tables: Option<u32>,
+    pub max_memories: Option<usize>,
+    pub trap_on_grow_failure: Option<bool>,
+}
+
+pub trait BlsOptions {
+    const OPTIONS: &'static [OptionDesc];
+}
+
+pub struct OptionDesc {
+    pub opt_name: &'static str,
+    pub opt_docs: &'static str,
+}
+
+macro_rules! bls_options {
+    (
+        $(#[$attr:meta])*
+        pub struct $opts:ident {
+            $(
+                $(#[doc = $doc:tt])*
+                pub $opt:ident: $container:ident<$payload:ty>,
+            )+
+        }
+    ) => {
+        #[derive(Default, Debug)]
+        $(#[$attr])*
+        pub struct $opts {
+            $(
+                pub $opt: $container<$payload>,
+            )+
+        }
+
+        impl $opts {
+            pub fn config(&mut self, items: Vec<(String, String)>) -> anyhow::Result<()> {
+                for item in items.iter() {
+                    match item.0.as_str()  {
+                        $(
+                        stringify!($opt) => self.$opt = Some(OptionParser::parse(&item.1)?),
+                        )+
+                        _ => bail!("there is no optimize argument: {}", item.0),
+                    }
+                }
+                Ok(())
+            }
+
+            pub fn is_empty(&self) -> bool {
+                *self == Default::default()
+            }
+        }
+
+        impl BlsOptions for $opts {
+            const OPTIONS: &'static [OptionDesc] = &[
+                $(
+                    OptionDesc {
+                        opt_name: stringify!($opt),
+                        opt_docs: concat!($($doc, "\n", )*),
+                    },
+                )+
+            ];
+        }
+    }
+}
+
+trait OptionParser: Sized {
+    fn parse(v: &str) -> anyhow::Result<Self>;
+}
+
+impl OptionParser for u32 {
+    fn parse(val: &str) -> anyhow::Result<Self> {
+        match val.strip_prefix("0x") {
+            Some(hex) => Ok(u32::from_str_radix(hex, 16)?),
+            None => Ok(val.parse()?),
+        }
+    }
+}
+
+impl OptionParser for usize {
+    fn parse(val: &str) -> anyhow::Result<Self> {
+        match val.strip_prefix("0x") {
+            Some(hex) => Ok(usize::from_str_radix(hex, 16)?),
+            None => Ok(val.parse()?),
+        }
+    }
+}
+
+impl OptionParser for u64 {
+    fn parse(val: &str) -> anyhow::Result<Self> {
+        match val.strip_prefix("0x") {
+            Some(hex) => Ok(u64::from_str_radix(hex, 16)?),
+            None => Ok(val.parse()?),
+        }
+    }
+}
+
+impl OptionParser for OptLevel {
+    fn parse(v: &str) -> anyhow::Result<Self> {
+        match v {
+            "n" => Ok(OptLevel::None),
+            "s" => Ok(OptLevel::Speed),
+            "ss" => Ok(OptLevel::SpeedAndSize),
+            _ => bail!(
+                "unknown optimization level {v}, level must be n(None),s(Speed),ss(SpeedAndSize)"
+            ),
+        }
+    }
+}
+
+impl OptionParser for bool {
+    fn parse(val: &str) -> anyhow::Result<Self> {
+        match val {
+            "y" | "yes" | "true" => Ok(true),
+            "n" | "no" | "false" => Ok(false),
+            s @ _ => bail!("unknown boolean flag `{s}`, only yes,no,<nothing> accepted"),
+        }
+    }
+}
+
+bls_options! {
+    #[derive(PartialEq, Clone)]
+    pub struct OptimizeOpts {
+        /// Optimization level of generated code (0-2, s; default: 2)
+        pub opt_level: Option<OptLevel>,
+
+        /// Byte size of the guard region after dynamic memories are allocated
+        pub dynamic_memory_guard_size: Option<u64>,
+
+        /// Force using a "static" style for all wasm memories
+        pub static_memory_forced: Option<bool>,
+
+        /// Maximum size in bytes of wasm memory before it becomes dynamically
+        /// relocatable instead of up-front-reserved.
+        pub static_memory_maximum_size: Option<u64>,
+
+        /// Byte size of the guard region after static memories are allocated
+        pub static_memory_guard_size: Option<u64>,
+
+        /// Bytes to reserve at the end of linear memory for growth for dynamic
+        /// memories.
+        pub dynamic_memory_reserved_for_growth: Option<u64>,
+
+        /// Indicates whether an unmapped region of memory is placed before all
+        /// linear memories.
+        pub guard_before_linear_memory: Option<bool>,
+
+        /// Whether to initialize tables lazily, so that instantiation is
+        /// fast but indirect calls are a little slower. If no, tables are
+        /// initialized eagerly from any active element segments that apply to
+        /// them during instantiation. (default: yes)
+        pub table_lazy_init: Option<bool>,
+
+        /// Enable the pooling allocator, in place of the on-demand allocator.
+        pub pooling_allocator: Option<bool>,
+
+        /// The number of decommits to do per batch. A batch size of 1
+        /// effectively disables decommit batching. (default: 1)
+        pub pooling_decommit_batch_size: Option<u32>,
+
+        /// How many bytes to keep resident between instantiations for the
+        /// pooling allocator in linear memories.
+        pub pooling_memory_keep_resident: Option<usize>,
+
+        /// How many bytes to keep resident between instantiations for the
+        /// pooling allocator in tables.
+        pub pooling_table_keep_resident: Option<usize>,
+
+        /// Enable memory protection keys for the pooling allocator; this can
+        /// optimize the size of memory slots.
+        pub memory_protection_keys: Option<bool>,
+
+        /// Configure attempting to initialize linear memory via a
+        /// copy-on-write mapping (default: yes)
+        pub memory_init_cow: Option<bool>,
+
+        /// The maximum number of WebAssembly instances which can be created
+        /// with the pooling allocator.
+        pub pooling_total_core_instances: Option<u32>,
+
+        /// The maximum number of WebAssembly components which can be created
+        /// with the pooling allocator.
+        pub pooling_total_component_instances: Option<u32>,
+
+        /// The maximum number of WebAssembly memories which can be created with
+        /// the pooling allocator.
+        pub pooling_total_memories: Option<u32>,
+
+        /// The maximum number of WebAssembly tables which can be created with
+        /// the pooling allocator.
+        pub pooling_total_tables: Option<u32>,
+
+        /// The maximum number of WebAssembly stacks which can be created with
+        /// the pooling allocator.
+        pub pooling_total_stacks: Option<u32>,
+
+        /// The maximum runtime size of each linear memory in the pooling
+        /// allocator, in bytes.
+        pub pooling_max_memory_size: Option<usize>,
+
+        /// The maximum table elements for any table defined in a module when
+        /// using the pooling allocator.
+        pub pooling_table_elements: Option<u32>,
+
+        /// The maximum size, in bytes, allocated for a core instance's metadata
+        /// when using the pooling allocator.
+        pub pooling_max_core_instance_size: Option<usize>,
+    }
+}
+
+pub struct Stdio {
+    pub stdin: String,
+    pub stdout: Stdout,
+    pub stderr: Stderr,
+}
+
+impl Default for Stdio {
+    fn default() -> Self {
+        Stdio {
+            stdin: String::new(),
+            stdout: Stdout::Inherit,
+            stderr: Stderr::Inherit,
+        }
+    }
+}
+
 pub struct BlocklessConfig {
-    entry: String,
-    stdin: String,
-    stdout: Stdout,
-    stderr: Stderr,
-    debug_info: bool,
-    is_carfile: bool,
-    feature_thread: bool,
-    run_time: Option<u64>,
-    stdin_args: Vec<String>,
-    limited_fuel: Option<u64>,
-    limited_time: Option<u64>,
-    drivers: Vec<DriverConfig>,
-    limited_memory: Option<u64>,
-    envs: Vec<(String, String)>,
-    permisions: Vec<Permission>,
-    fs_root_path: Option<String>,
-    modules: Vec<BlocklessModule>,
-    runtime_logger: Option<String>,
-    extensions_path: Option<String>,
+    pub entry: String,
+    pub stdio: Stdio,
+    pub debug_info: bool,
+    pub is_carfile: bool,
+    pub opts: OptimizeOpts,
+    pub feature_thread: bool,
+    pub run_time: Option<u64>,
+    pub stdin_args: Vec<String>,
+    pub limited_fuel: Option<u64>,
+    pub limited_time: Option<u64>,
+    pub drivers: Vec<DriverConfig>,
+    pub store_limited: StoreLimited,
+    pub envs: Vec<(String, String)>,
+    pub permisions: Vec<Permission>,
+    pub fs_root_path: Option<String>,
+    pub modules: Vec<BlocklessModule>,
+    pub runtime_logger: Option<String>,
+    pub extensions_path: Option<String>,
     // the config version
-    version: BlocklessConfigVersion,
-    drivers_root_path: Option<String>,
-    runtime_logger_level: LoggerLevel,
-    group_permisions: HashMap<String, Vec<Permission>>,
+    pub version: BlocklessConfigVersion,
+    pub drivers_root_path: Option<String>,
+    pub runtime_logger_level: LoggerLevel,
+    pub group_permisions: HashMap<String, Vec<Permission>>,
 }
 
 impl BlocklessConfig {
@@ -165,7 +394,7 @@ impl BlocklessConfig {
             fs_root_path: None,
             drivers: Vec::new(),
             modules: Vec::new(),
-            stdin: String::new(),
+            stdio: Default::default(),
             runtime_logger: None,
             feature_thread: false,
             //vm instruction limit.
@@ -173,14 +402,13 @@ impl BlocklessConfig {
             limited_time: None,
             stdin_args: Vec::new(),
             //memory limit, 1 page = 64k.
-            limited_memory: None,
+            store_limited: Default::default(),
             extensions_path: None,
-            stderr: Stderr::Inherit,
             drivers_root_path: None,
-            stdout: Stdout::Inherit,
             entry: String::from(entry),
             permisions: Default::default(),
             group_permisions: HashMap::new(),
+            opts: Default::default(),
             runtime_logger_level: LoggerLevel::WARN,
             version: BlocklessConfigVersion::Version0,
         }
@@ -351,7 +579,7 @@ impl BlocklessConfig {
     /// if root_path is not setting, the stdout file will use Inherit
     #[inline(always)]
     pub fn stdout(&mut self, stdout: Stdout) {
-        self.stdout = stdout
+        self.stdio.stdout = stdout
     }
 
     /// the runtime log file name, if the value is None
@@ -388,7 +616,7 @@ impl BlocklessConfig {
 
     #[inline(always)]
     pub fn stdin(&mut self, stdin: String) {
-        self.stdin = stdin
+        self.stdio.stdin = stdin
     }
 
     #[inline(always)]
@@ -403,17 +631,17 @@ impl BlocklessConfig {
 
     #[inline(always)]
     pub fn stdout_ref(&self) -> &Stdout {
-        &self.stdout
+        &self.stdio.stdout
     }
 
     #[inline(always)]
     pub fn stderr_ref(&self) -> &Stderr {
-        &self.stderr
+        &self.stdio.stderr
     }
 
     #[inline(always)]
     pub fn stdin_ref(&self) -> &String {
-        &self.stdin
+        &self.stdio.stdin
     }
 
     #[inline(always)]
@@ -438,16 +666,21 @@ impl BlocklessConfig {
 
     #[inline(always)]
     pub fn limited_memory(&mut self, m: Option<u64>) {
-        self.limited_memory = m
+        self.store_limited.max_memories = m.map(|s| s as _);
     }
 
     #[inline(always)]
     pub fn get_limited_memory(&self) -> Option<u64> {
-        self.limited_memory
+        self.store_limited.max_memories.map(|m| m as u64)
     }
 
     pub fn resource_permission(&self, url: &str) -> bool {
         self.permisions.iter().any(|p| p.is_permision(url))
+    }
+
+    #[inline(always)]
+    pub fn store_limited(&self) -> &StoreLimited {
+        &self.store_limited
     }
 }
 

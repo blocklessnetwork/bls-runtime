@@ -2,7 +2,7 @@ use core::ffi;
 use dlopen::raw::Library;
 use std::path::Path;
 
-use crate::error::CLIExitCode;
+use crate::error::CliExitCode;
 
 pub(crate) struct V86Lib {
     _lib: Library,
@@ -13,11 +13,11 @@ type V86WasiRunFuncType =
     unsafe extern "C" fn(conf: *const ffi::c_char, len: ffi::c_int) -> ffi::c_int;
 
 impl V86Lib {
-    pub fn load<T: AsRef<Path>>(path: T) -> Result<V86Lib, CLIExitCode> {
-        let lib = Library::open(path.as_ref()).map_err(|_| CLIExitCode::ConfigureError)?;
+    pub fn load<T: AsRef<Path>>(path: T) -> Result<V86Lib, CliExitCode> {
+        let lib = Library::open(path.as_ref()).map_err(|_| CliExitCode::ConfigureError)?;
         let v86_wasi_run_func = unsafe {
             lib.symbol("run_v86_wasi")
-                .map_err(|_| CLIExitCode::UnknownError("failed to load v86 wasi".to_string()))?
+                .map_err(|_| CliExitCode::UnknownError("failed to load v86 wasi".to_string()))?
         };
         Ok(Self {
             _lib: lib,

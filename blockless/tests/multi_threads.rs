@@ -19,5 +19,5 @@ fn multi_threads() {
     let entry = file_path.to_str().unwrap();
     let mut cfg = BlocklessConfig::new(&entry);
     cfg.set_feature_thread(true);
-    common::multi_threads_run_blockless(cfg);
+    common::multi_threads_run_blockless(cfg).unwrap();
 }

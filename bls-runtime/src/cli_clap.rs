@@ -1,9 +1,10 @@
 #![allow(unused)]
-use std::str::FromStr;
-
 use anyhow::{bail, Result};
-use blockless::{BlocklessConfig, BlocklessModule, ModuleType, Permission};
+use blockless::{
+    BlocklessConfig, BlocklessModule, BlsOptions, ModuleType, OptimizeOpts, Permission,
+};
 use clap::{Arg, ArgMatches, Command, Parser};
+use std::{collections::HashMap, str::FromStr};
 use url::Url;
 
 use crate::config::CliConfig;
@@ -30,6 +31,8 @@ const LIMITED_FUEL_HELP: &str = "the limited fuel for runtime, default is infine
 
 const ENVS_HELP: &str = "the app envs will pass into the app";
 
+const OPTS_HELP: &str = "Optimization and tuning related options for wasm performance";
+
 const PERMISSION_HELP: &str = "the permissions for app";
 
 const MODULES_HELP: &str = "the modules used by app";
@@ -46,6 +49,42 @@ fn parse_envs(envs: &str) -> Result<(String, String)> {
         bail!("must be of the form `key=value`")
     }
     Ok((parts[0].to_string(), parts[1].to_string()))
+}
+
+fn parse_opts(opt: &str) -> Result<OptimizeOpts> {
+    let kvs: Vec<_> = opt.splitn(2, ",").collect();
+    if kvs.len() == 1 {
+        if kvs[0] == "help" {
+            let mut max = 0;
+            let options = OptimizeOpts::OPTIONS;
+            for d in options {
+                max = max.max(d.opt_name.len() + d.opt_docs.len());
+            }
+            for d in options {
+                print!("{}", d.opt_name);
+                print!(" --");
+                for line in d.opt_docs.lines().map(|s| s.trim()) {
+                    if line.is_empty() {
+                        break;
+                    }
+                    print!(" {line}");
+                }
+                println!();
+            }
+            std::process::exit(0);
+        }
+    }
+    let mut parsed = vec![];
+    for kv in kvs.iter() {
+        let parts: Vec<_> = kv.splitn(2, "=").collect();
+        if parts.len() == 1 {
+            bail!("must be of the form `key=value,`");
+        }
+        parsed.push((parts[0].to_string(), parts[1].to_string()));
+    }
+    let mut opt = OptimizeOpts::default();
+    opt.config(parsed)?;
+    Ok(opt)
 }
 
 fn parse_permission(permsion: &str) -> Result<Permission> {
@@ -113,6 +152,9 @@ pub(crate) struct CliCommandOpts {
 
     #[clap(long = "env", value_name = "ENV=VAL", help = ENVS_HELP, number_of_values = 1, value_parser = parse_envs)]
     envs: Vec<(String, String)>,
+
+    #[clap(long = "opt", short = 'O', value_name = "OPT=VAL,", help = OPTS_HELP,  value_parser = parse_opts)]
+    opts: Option<OptimizeOpts>,
 
     #[clap(long = "permission", value_name = "PERMISSION", help = PERMISSION_HELP, value_parser = parse_permission)]
     permissions: Vec<Permission>,

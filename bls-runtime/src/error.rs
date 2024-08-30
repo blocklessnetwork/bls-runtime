@@ -4,7 +4,7 @@ use std::{
 };
 
 #[derive(Debug, PartialEq)]
-pub enum CLIExitCode {
+pub enum CliExitCode {
     Success,
     FlueUsedOut,
     CallStackExhausted,
@@ -24,102 +24,102 @@ pub enum CLIExitCode {
     UnknownError(String),
 }
 
-impl fmt::Display for CLIExitCode {
+impl fmt::Display for CliExitCode {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         match self {
-            CLIExitCode::Success => write!(f, "Success"),
-            CLIExitCode::FlueUsedOut => write!(f, "The flue used out"),
-            CLIExitCode::CallStackExhausted => write!(f, "Call stack exhausted"),
-            CLIExitCode::OutOfBoundsMemoryAccess => write!(f, "Out of bounds memory access"),
-            CLIExitCode::MisalignedMemoryAccess => write!(f, "Misaligned memory access"),
-            CLIExitCode::UndefinedElement => {
+            CliExitCode::Success => write!(f, "Success"),
+            CliExitCode::FlueUsedOut => write!(f, "The flue used out"),
+            CliExitCode::CallStackExhausted => write!(f, "Call stack exhausted"),
+            CliExitCode::OutOfBoundsMemoryAccess => write!(f, "Out of bounds memory access"),
+            CliExitCode::MisalignedMemoryAccess => write!(f, "Misaligned memory access"),
+            CliExitCode::UndefinedElement => {
                 write!(f, "Undefined element: out of bounds table access")
             }
-            CLIExitCode::UninitializedElement => write!(f, "Uninitialized element"),
-            CLIExitCode::IndirectCallTypeMismatch => write!(f, "Indirect call type mismatch"),
-            CLIExitCode::IntegerOverflow => write!(f, "Integer overflow"),
-            CLIExitCode::IntegerDivideByZero => write!(f, "Integer divide by zero"),
-            CLIExitCode::InvalidConversionToInteger => write!(f, "Invalid conversion to integer"),
-            CLIExitCode::UnreachableInstructionExecuted => {
+            CliExitCode::UninitializedElement => write!(f, "Uninitialized element"),
+            CliExitCode::IndirectCallTypeMismatch => write!(f, "Indirect call type mismatch"),
+            CliExitCode::IntegerOverflow => write!(f, "Integer overflow"),
+            CliExitCode::IntegerDivideByZero => write!(f, "Integer divide by zero"),
+            CliExitCode::InvalidConversionToInteger => write!(f, "Invalid conversion to integer"),
+            CliExitCode::UnreachableInstructionExecuted => {
                 write!(f, "wasm 'unreachable' instruction executed")
             }
-            CLIExitCode::Interrupt => write!(f, "Interrupt"),
-            CLIExitCode::DegenerateComponentAdapterCalled => {
+            CliExitCode::Interrupt => write!(f, "Interrupt"),
+            CliExitCode::DegenerateComponentAdapterCalled => {
                 write!(f, "Degenerate component adapter called")
             }
-            CLIExitCode::AppTimeout => write!(f, "The app timeout"),
-            CLIExitCode::ConfigureError => write!(f, "The configure error"),
-            CLIExitCode::UnknownError(err_str) => write!(f, "Unknown error: {}", err_str),
+            CliExitCode::AppTimeout => write!(f, "The app timeout"),
+            CliExitCode::ConfigureError => write!(f, "The configure error"),
+            CliExitCode::UnknownError(err_str) => write!(f, "Unknown error: {}", err_str),
         }
     }
 }
 
 // derived from README
-impl From<i32> for CLIExitCode {
+impl From<i32> for CliExitCode {
     fn from(exitcode: i32) -> Self {
         match exitcode {
-            0 => CLIExitCode::Success,
-            1 => CLIExitCode::FlueUsedOut,
-            2 => CLIExitCode::CallStackExhausted,
-            3 => CLIExitCode::OutOfBoundsMemoryAccess,
-            4 => CLIExitCode::MisalignedMemoryAccess,
-            5 => CLIExitCode::UndefinedElement,
-            6 => CLIExitCode::UninitializedElement,
-            7 => CLIExitCode::IndirectCallTypeMismatch,
-            8 => CLIExitCode::IntegerOverflow,
-            9 => CLIExitCode::IntegerDivideByZero,
-            10 => CLIExitCode::InvalidConversionToInteger,
-            11 => CLIExitCode::UnreachableInstructionExecuted,
-            12 => CLIExitCode::Interrupt,
-            13 => CLIExitCode::DegenerateComponentAdapterCalled,
+            0 => CliExitCode::Success,
+            1 => CliExitCode::FlueUsedOut,
+            2 => CliExitCode::CallStackExhausted,
+            3 => CliExitCode::OutOfBoundsMemoryAccess,
+            4 => CliExitCode::MisalignedMemoryAccess,
+            5 => CliExitCode::UndefinedElement,
+            6 => CliExitCode::UninitializedElement,
+            7 => CliExitCode::IndirectCallTypeMismatch,
+            8 => CliExitCode::IntegerOverflow,
+            9 => CliExitCode::IntegerDivideByZero,
+            10 => CliExitCode::InvalidConversionToInteger,
+            11 => CliExitCode::UnreachableInstructionExecuted,
+            12 => CliExitCode::Interrupt,
+            13 => CliExitCode::DegenerateComponentAdapterCalled,
             // NOTE: where is 14?
-            15 => CLIExitCode::AppTimeout,
-            128 => CLIExitCode::ConfigureError,
-            _ => CLIExitCode::UnknownError(format!("exit code: {}", exitcode)),
+            15 => CliExitCode::AppTimeout,
+            128 => CliExitCode::ConfigureError,
+            _ => CliExitCode::UnknownError(format!("exit code: {}", exitcode)),
         }
     }
 }
 
-impl From<u8> for CLIExitCode {
+impl From<u8> for CliExitCode {
     fn from(exitcode: u8) -> Self {
         Into::<i32>::into(exitcode).into()
     }
 }
 
-impl Into<u8> for CLIExitCode {
+impl Into<u8> for CliExitCode {
     fn into(self) -> u8 {
         match self {
-            CLIExitCode::Success => 0,
-            CLIExitCode::FlueUsedOut => 1,
-            CLIExitCode::CallStackExhausted => 2,
-            CLIExitCode::OutOfBoundsMemoryAccess => 3,
-            CLIExitCode::MisalignedMemoryAccess => 4,
-            CLIExitCode::UndefinedElement => 5,
-            CLIExitCode::UninitializedElement => 6,
-            CLIExitCode::IndirectCallTypeMismatch => 7,
-            CLIExitCode::IntegerOverflow => 8,
-            CLIExitCode::IntegerDivideByZero => 9,
-            CLIExitCode::InvalidConversionToInteger => 10,
-            CLIExitCode::UnreachableInstructionExecuted => 11,
-            CLIExitCode::Interrupt => 12,
-            CLIExitCode::DegenerateComponentAdapterCalled => 13,
+            CliExitCode::Success => 0,
+            CliExitCode::FlueUsedOut => 1,
+            CliExitCode::CallStackExhausted => 2,
+            CliExitCode::OutOfBoundsMemoryAccess => 3,
+            CliExitCode::MisalignedMemoryAccess => 4,
+            CliExitCode::UndefinedElement => 5,
+            CliExitCode::UninitializedElement => 6,
+            CliExitCode::IndirectCallTypeMismatch => 7,
+            CliExitCode::IntegerOverflow => 8,
+            CliExitCode::IntegerDivideByZero => 9,
+            CliExitCode::InvalidConversionToInteger => 10,
+            CliExitCode::UnreachableInstructionExecuted => 11,
+            CliExitCode::Interrupt => 12,
+            CliExitCode::DegenerateComponentAdapterCalled => 13,
             // NOTE: where is 14?
-            CLIExitCode::AppTimeout => 15,
-            CLIExitCode::ConfigureError => 128,
-            CLIExitCode::UnknownError(_) => 255,
+            CliExitCode::AppTimeout => 15,
+            CliExitCode::ConfigureError => 128,
+            CliExitCode::UnknownError(_) => 255,
         }
     }
 }
 
-impl Into<i32> for CLIExitCode {
+impl Into<i32> for CliExitCode {
     fn into(self) -> i32 {
         Into::<u8>::into(self) as i32
     }
 }
 
-impl std::error::Error for CLIExitCode {}
+impl std::error::Error for CliExitCode {}
 
-impl Termination for CLIExitCode {
+impl Termination for CliExitCode {
     #[inline]
     fn report(self) -> ExitCode {
         ExitCode::from(Into::<u8>::into(self))
@@ -128,24 +128,24 @@ impl Termination for CLIExitCode {
 
 #[cfg(test)]
 mod tests {
-    use super::CLIExitCode;
+    use super::CliExitCode;
 
     #[test]
     fn test_cli_exit_code_success() {
         // testing conversion from i32
-        let from_i32: CLIExitCode = 0.into();
-        assert_eq!(from_i32, CLIExitCode::Success);
+        let from_i32: CliExitCode = 0.into();
+        assert_eq!(from_i32, CliExitCode::Success);
 
         // testing conversion from u8
-        let from_u8: CLIExitCode = 0u8.into();
-        assert_eq!(from_u8, CLIExitCode::Success);
+        let from_u8: CliExitCode = 0u8.into();
+        assert_eq!(from_u8, CliExitCode::Success);
 
         // testing conversion into u8
-        let into_u8: u8 = CLIExitCode::Success.into();
+        let into_u8: u8 = CliExitCode::Success.into();
         assert_eq!(into_u8, 0u8);
 
         // testing conversion into i32
-        let into_i32: i32 = CLIExitCode::Success.into();
+        let into_i32: i32 = CliExitCode::Success.into();
         assert_eq!(into_i32, 0i32);
     }
 }

@@ -2,6 +2,7 @@ mod context;
 pub mod error;
 mod modules;
 
+use anyhow::Context;
 use blockless_drivers::{CdylibDriver, DriverConetxt};
 use blockless_env;
 pub use blockless_multiaddr::MultiAddr;
@@ -13,10 +14,7 @@ use modules::ModuleLinker;
 use std::{env, path::Path, sync::Arc};
 use wasi_common::sync::WasiCtxBuilder;
 pub use wasi_common::*;
-use wasmtime::{
-    Config, Engine, InstanceAllocationStrategy, Linker, Module, PoolingAllocationConfig, Store,
-    Trap,
-};
+use wasmtime::{Config, Engine, Linker, Module, Store, StoreLimits, StoreLimitsBuilder, Trap};
 use wasmtime_wasi_threads::WasiThreadsCtx;
 
 // the default wasm entry name.
@@ -27,46 +25,87 @@ pub struct ExitStatus {
     pub code: i32,
 }
 
+pub enum RunTarget {
+    Module(Module),
+}
+
 trait BlocklessConfig2Preview1WasiBuilder {
     fn preview1_builder(&self) -> WasiCtxBuilder;
     fn preview1_set_stdio(&self, builder: &mut WasiCtxBuilder);
     fn preview1_engine_config(&self) -> Config;
+    fn store_limits(&self) -> StoreLimits;
 }
 
 impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
+    /// config to store limit.
+    fn store_limits(&self) -> StoreLimits {
+        let mut builder = StoreLimitsBuilder::new();
+        let store_limited = self.store_limited();
+        if let Some(m) = store_limited.max_memory_size {
+            builder = builder.memory_size(m);
+        }
+        if let Some(m) = store_limited.max_instances {
+            builder = builder.instances(m);
+        }
+        if let Some(m) = store_limited.max_table_elements {
+            builder = builder.table_elements(m);
+        }
+        if let Some(m) = store_limited.max_tables {
+            builder = builder.table_elements(m);
+        }
+
+        if let Some(m) = store_limited.max_memories {
+            builder = builder.memories(m);
+        }
+        if let Some(m) = store_limited.trap_on_grow_failure {
+            builder = builder.trap_on_grow_failure(m);
+        }
+
+        builder.build()
+    }
     /// set the stdout and stderr for the wasm.
     /// the stdout adn stderr can be setting to file or inherit the stdout and stderr.
     fn preview1_set_stdio(&self, builder: &mut WasiCtxBuilder) {
         let b_conf = self;
-        match b_conf.stdout_ref() {
-            &Stdout::FileName(ref file_name) => {
-                let mut is_set_fileout = false;
-                if let Some(r) = b_conf.fs_root_path_ref() {
-                    let root = Path::new(r);
-                    let file_name = root.join(file_name);
-                    let mut file_opts = std::fs::File::options();
-                    file_opts.create(true);
-                    file_opts.append(true);
-                    file_opts.write(true);
-
-                    if let Some(f) = file_opts.open(file_name).ok().map(|file| {
-                        let file = cap_std::fs::File::from_std(file);
-                        let f = wasi_common::sync::file::File::from_cap_std(file);
-                        Box::new(f)
-                    }) {
-                        is_set_fileout = true;
-                        builder.stdout(f);
+        macro_rules! process_output {
+            ($out_ref: expr, $out_expr: ident, $stdout: ident, $inherit_stdout: ident) => {
+                //$out_ref is b_conf.stdout_ref() or b_conf.stderr_ref()
+                match $out_ref {
+                    &$out_expr::FileName(ref file_name) => {
+                        let mut is_set_fileout = false;
+                        if let Some(r) = b_conf.fs_root_path_ref() {
+                            let root = Path::new(r);
+                            let file_name = root.join(file_name);
+                            if let Some(f) = {
+                                let mut file_opts = std::fs::File::options();
+                                file_opts.create(true);
+                                file_opts.append(true);
+                                file_opts.write(true);
+                                file_opts.open(file_name).ok().map(|file| {
+                                    let file = cap_std::fs::File::from_std(file);
+                                    let f = wasi_common::sync::file::File::from_cap_std(file);
+                                    Box::new(f)
+                                })
+                            } {
+                                is_set_fileout = true;
+                                //builder.stdout() or builder.stderr()
+                                builder.$stdout(f);
+                            }
+                        }
+                        if !is_set_fileout {
+                            //$inherit_stdout is inherit_stdout() or inherit_stderr()
+                            builder.$inherit_stdout();
+                        }
                     }
+                    &$out_expr::Inherit => {
+                        builder.$inherit_stdout();
+                    }
+                    &$out_expr::Null => {}
                 }
-                if !is_set_fileout {
-                    builder.inherit_stdio();
-                }
-            }
-            &Stdout::Inherit => {
-                builder.inherit_stdio();
-            }
-            &Stdout::Null => {}
+            };
         }
+        process_output!(b_conf.stdout_ref(), Stdout, stdout, inherit_stdout);
+        process_output!(b_conf.stderr_ref(), Stderr, stderr, inherit_stderr);
     }
 
     /// create the preview1_builder by the configure.
@@ -78,6 +117,7 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
         let mut builder = WasiCtxBuilder::new();
         //stdout file process for setting.
         b_conf.preview1_set_stdio(&mut builder);
+        // configure to storeLimit
         let entry_module = b_conf.entry_module().unwrap();
         let mut args = vec![entry_module];
         args.extend_from_slice(&b_conf.stdin_args_ref()[..]);
@@ -92,18 +132,70 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
     /// convert the blockless configure  to wasmtime configure.
     fn preview1_engine_config(&self) -> Config {
         let mut conf = Config::new();
+        if let Some(max) = self.opts.static_memory_maximum_size {
+            conf.static_memory_maximum_size(max);
+        }
 
+        if let Some(enable) = self.opts.static_memory_forced {
+            conf.static_memory_forced(enable);
+        }
+
+        if let Some(size) = self.opts.static_memory_guard_size {
+            conf.static_memory_guard_size(size);
+        }
+
+        if let Some(size) = self.opts.dynamic_memory_guard_size {
+            conf.dynamic_memory_guard_size(size);
+        }
+        if let Some(size) = self.opts.dynamic_memory_reserved_for_growth {
+            conf.dynamic_memory_reserved_for_growth(size);
+        }
+        if let Some(enable) = self.opts.guard_before_linear_memory {
+            conf.guard_before_linear_memory(enable);
+        }
+        if let Some(enable) = self.opts.table_lazy_init {
+            conf.table_lazy_init(enable);
+        }
+
+        if !self.opts.is_empty() {
+            if let Some(s) = self.opts.opt_level {
+                conf.cranelift_opt_level(s);
+            }
+            let mut cfg = wasmtime::PoolingAllocationConfig::default();
+            if let Some(size) = self.opts.pooling_memory_keep_resident {
+                cfg.linear_memory_keep_resident(size);
+            }
+            if let Some(size) = self.opts.pooling_table_keep_resident {
+                cfg.table_keep_resident(size);
+            }
+            if let Some(limit) = self.opts.pooling_total_core_instances {
+                cfg.total_core_instances(limit);
+            }
+            if let Some(limit) = self.opts.pooling_total_component_instances {
+                cfg.total_component_instances(limit);
+            }
+            if let Some(limit) = self.opts.pooling_total_memories {
+                cfg.total_memories(limit);
+            }
+            if let Some(limit) = self.opts.pooling_total_tables {
+                cfg.total_tables(limit);
+            }
+            if let Some(limit) = self.opts.pooling_table_elements {
+                cfg.table_elements(limit);
+            }
+            if let Some(limit) = self.opts.pooling_max_core_instance_size {
+                cfg.max_core_instance_size(limit);
+            }
+            if let Some(limit) = self.opts.pooling_max_memory_size {
+                cfg.max_memory_size(limit);
+            }
+            conf.allocation_strategy(wasmtime::InstanceAllocationStrategy::Pooling(cfg));
+        }
         conf.debug_info(self.get_debug_info());
 
         if let Some(_) = self.get_limited_fuel() {
             //fuel is enable.
             conf.consume_fuel(true);
-        }
-
-        if let Some(m) = self.get_limited_memory() {
-            let mut allocation_config = PoolingAllocationConfig::default();
-            allocation_config.max_memory_size(m as _);
-            conf.allocation_strategy(InstanceAllocationStrategy::Pooling(allocation_config));
         }
 
         if self.feature_thread() {
@@ -119,7 +211,7 @@ struct BlocklessRunner(BlocklessConfig);
 
 impl BlocklessRunner {
     /// blockless run method, it execute the wasm program with configure file.
-    async fn run(self) -> ExitStatus {
+    async fn run(self) -> anyhow::Result<ExitStatus> {
         let b_conf = self.0;
         let max_fuel = b_conf.get_limited_fuel();
         // set the drivers root path, if not setting use exe file path.
@@ -132,9 +224,8 @@ impl BlocklessRunner {
                 String::from(current_exe_path.to_str().unwrap())
             });
         DriverConetxt::init_built_in_drivers(drivers_root_path);
-
         let conf = b_conf.preview1_engine_config();
-        let engine = Engine::new(&conf).unwrap();
+        let engine = Engine::new(&conf)?;
         let mut linker = wasmtime::Linker::new(&engine);
         let support_thread = b_conf.feature_thread();
         let mut builder = b_conf.preview1_builder();
@@ -143,22 +234,39 @@ impl BlocklessRunner {
         Self::load_driver(drivers);
         let entry: String = b_conf.entry_ref().into();
         let version = b_conf.version();
+        let store_limits = b_conf.store_limits();
+        let fule = b_conf.get_limited_fuel();
         preview1_ctx.set_blockless_config(Some(b_conf));
         let mut ctx = BlocklessContext::default();
+        ctx.store_limits = store_limits;
         ctx.preview1_ctx = Some(preview1_ctx);
         let mut store = Store::new(&engine, ctx);
+        store.limiter(|ctx| &mut ctx.store_limits);
+        // set the fule in store.
+        if let Some(f) = fule {
+            store.set_fuel(f).unwrap();
+        }
         Self::preview1_setup_linker(&mut linker, support_thread);
-        let (module, entry) = Self::module_linker(version, entry, &mut store, &mut linker).await;
+        let (module, entry) = Self::module_linker(version, entry, &mut store, &mut linker).await?;
         // support thread.
         if support_thread {
             Self::preview1_setup_thread_support(&mut linker, &mut store, &module);
         }
         let inst = if support_thread {
-            linker.instantiate(&mut store, &module).unwrap()
+            linker.instantiate(&mut store, &module)?
         } else {
-            linker.instantiate_async(&mut store, &module).await.unwrap()
+            linker.instantiate_async(&mut store, &module).await?
         };
-        let func = inst.get_typed_func::<(), ()>(&mut store, &entry).unwrap();
+
+        let func = match version {
+            BlocklessConfigVersion::Version0 => inst
+                .get_typed_func(&mut store, &entry)
+                .or_else(|_| inst.get_typed_func::<(), ()>(&mut store, ""))
+                .or_else(|_| inst.get_typed_func::<(), ()>(&mut store, ENTRY))?,
+            BlocklessConfigVersion::Version1 => {
+                inst.get_typed_func::<(), ()>(&mut store, &entry)?
+            }
+        };
         // if thread multi thread use sync model.
         // The multi-thread model is used for the cpu intensive program.
         let result = if support_thread {
@@ -173,10 +281,10 @@ impl BlocklessRunner {
                 0
             }
         };
-        ExitStatus {
+        Ok(ExitStatus {
             fuel: store.get_fuel().ok(),
             code: exit_code,
-        }
+        })
     }
 
     fn preview1_setup_linker(linker: &mut Linker<BlocklessContext>, support_thread: bool) {
@@ -219,20 +327,20 @@ impl BlocklessRunner {
         mut entry: String,
         store: &'a mut Store<BlocklessContext>,
         linker: &'a mut Linker<BlocklessContext>,
-    ) -> (Module, String) {
+    ) -> anyhow::Result<(Module, String)> {
         match version {
             // this is older configure for bls-runtime, this only run single wasm.
             BlocklessConfigVersion::Version0 => {
-                let module = Module::from_file(store.engine(), &entry).unwrap();
-                (module, ENTRY.to_string())
+                let module = Module::from_file(store.engine(), &entry)?;
+                Ok((module, ENTRY.to_string()))
             }
             BlocklessConfigVersion::Version1 => {
                 if entry.is_empty() {
                     entry = ENTRY.to_string();
                 }
                 let mut module_linker = ModuleLinker::new(linker, store);
-                let module = module_linker.link_modules().await.unwrap();
-                (module, entry)
+                let module = module_linker.link_modules().await.context("")?;
+                Ok((module, entry))
             }
         }
     }
@@ -287,7 +395,7 @@ impl BlocklessRunner {
     }
 }
 
-pub async fn blockless_run(b_conf: BlocklessConfig) -> ExitStatus {
+pub async fn blockless_run(b_conf: BlocklessConfig) -> anyhow::Result<ExitStatus> {
     BlocklessRunner(b_conf).run().await
 }
 
