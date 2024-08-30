@@ -156,7 +156,11 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
         if let Some(enable) = self.opts.table_lazy_init {
             conf.table_lazy_init(enable);
         }
+
         if !self.opts.is_empty() {
+            if let Some(s) = self.opts.opt_level {
+                conf.cranelift_opt_level(s);
+            }
             let mut cfg = wasmtime::PoolingAllocationConfig::default();
             if let Some(size) = self.opts.pooling_memory_keep_resident {
                 cfg.linear_memory_keep_resident(size);

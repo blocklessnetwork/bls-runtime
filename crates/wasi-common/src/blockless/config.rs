@@ -1,5 +1,6 @@
 use crate::Permission;
-use anyhow::bail;
+use anyhow::{bail, Ok};
+use wasmtime::OptLevel;
 use std::{
     collections::HashMap,
     path::{Path, PathBuf},
@@ -228,6 +229,17 @@ impl OptionParser for u64 {
     }
 }
 
+impl OptionParser for OptLevel {
+    fn parse(v: &str) -> anyhow::Result<Self> {
+        match v {
+            "n" => Ok(OptLevel::None),
+            "s" => Ok(OptLevel::Speed),
+            "ss" => Ok(OptLevel::SpeedAndSize),
+            _ => bail!("unknown optimization level {v}, level must be n(None),s(Speed),ss(SpeedAndSize)"),
+        }
+    }
+}
+
 impl OptionParser for bool {
     fn parse(val: &str) -> anyhow::Result<Self> {
         match val {
@@ -242,7 +254,7 @@ bls_options! {
     #[derive(PartialEq, Clone)]
     pub struct OptimizeOpts {
         /// Optimization level of generated code (0-2, s; default: 2)
-        pub opt_level: Option<u32>,
+        pub opt_level: Option<OptLevel>,
 
         /// Byte size of the guard region after dynamic memories are allocated
         pub dynamic_memory_guard_size: Option<u64>,
