@@ -25,6 +25,7 @@ bitflags = { workspace = true }
 log = { workspace = true }
 
 # Optional, enabled by wasmtime feature:
+syn = { workspace = true }
 wasmtime = { workspace = true, optional = true, features = ['runtime'] }
 # Optional, enabled by sync feature:
 cap-fs-ext = { workspace = true, optional = true }
@@ -78,7 +79,6 @@ wasmtime = [
 # This feature enables an implementation of the Wasi traits for a
 # synchronous wasmtime embedding.
 sync = [
-    "wasmtime",
     "dep:cap-fs-ext",
     "dep:cap-time-ext",
     "dep:fs-set-times",
