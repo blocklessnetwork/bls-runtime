@@ -1,5 +1,5 @@
 use anyhow::Result;
-use blockless::{self, BlocklessModule, LoggerLevel, ModuleType};
+use blockless::{self, BlocklessModule, LoggerLevel, ModuleType, OptimizeOpts};
 use blockless::{BlocklessConfig, DriverConfig, MultiAddr, Permission};
 use json::{self, JsonValue};
 use rust_car::reader::{self, CarReader};
@@ -55,6 +55,15 @@ impl CliConfig {
             bconf.set_runtime_logger(Some(format!("{log_file}.log")));
         });
         CliConfig(bconf)
+    }
+
+    fn optimize_options(opt_json: &JsonValue) -> Result<OptimizeOpts> {
+        let mut opts: OptimizeOpts = OptimizeOpts::default();
+        let opt_items = opt_json.entries().map(|item| {
+            (item.0.to_string(), json::stringify(item.0))
+        }).collect::<Vec<_>>(); 
+        opts.config(opt_items)?;
+        Ok(opts)
     }
 
     fn permissions(permission_json: &JsonValue) -> Vec<Permission> {
@@ -158,6 +167,10 @@ impl CliConfig {
         let entry: &str = json_obj["entry"].as_str().unwrap();
         let version = json_obj["version"].as_usize();
         let mut bc = BlocklessConfig::new(entry);
+        //if has the optimize item.
+        if json_obj["optimize"].is_object() {
+            bc.opts = Self::optimize_options(&json_obj["optimize"])?;
+        }
         bc.set_modules(modules);
         bc.extensions_path(extensions_path);
         bc.set_fs_root_path(fs_root_path);

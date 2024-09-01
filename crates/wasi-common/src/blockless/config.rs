@@ -198,8 +198,8 @@ macro_rules! bls_options {
     }
 }
 
-trait OptionParser: Sized {
-    fn parse(v: &str) -> anyhow::Result<Self>;
+pub trait OptionParser {
+    fn parse(v: &str) -> anyhow::Result<Self> where Self: Sized;
 }
 
 impl OptionParser for u32 {
@@ -236,7 +236,7 @@ impl OptionParser for OptLevel {
             "s" => Ok(OptLevel::Speed),
             "ss" => Ok(OptLevel::SpeedAndSize),
             _ => bail!(
-                "unknown optimization level {v}, level must be n(None),s(Speed),ss(SpeedAndSize)"
+                "unknown optimization level {v}, level must be n:None, s:Speed, ss:SpeedAndSize"
             ),
         }
     }
@@ -255,7 +255,7 @@ impl OptionParser for bool {
 bls_options! {
     #[derive(PartialEq, Clone)]
     pub struct OptimizeOpts {
-        /// Optimization level of generated code (0-2, s; default: 2)
+        /// Optimization level of generated code (n:None, s:Speed, ss:SpeedAndSize; default: ss)
         pub opt_level: Option<OptLevel>,
 
         /// Byte size of the guard region after dynamic memories are allocated
