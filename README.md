@@ -55,7 +55,15 @@ Blockless supports a variety of programming languages including:
     "permissions": [
         "http://httpbin.org/anything",
         "file://a.go"
-    ]
+    ],
+    "optimize": {
+        "opt_level": "ss", //Optimization level of generated code (n:None, s:Speed, ss:SpeedAndSize; default: ss)
+        "pooling_total_memories": 1024000, //The maximum number of WebAssembly memories which can be created with the pooling allocator.
+        "pooling_total_tables": 20, //The maximum number of WebAssembly tables which can be created with the pooling allocator.
+        "table_lazy_init": false, // Whether to initialize tables lazily, so that instantiation is fast but indirect calls are a little slower. If no, tables are initialized eagerly from any active element segments that apply to them during instantiation. (default: yes)
+        "pooling_allocator": true, // Enable the pooling allocator, in place of the on-demand allocator.
+        ...
+    }
 }
 
 
