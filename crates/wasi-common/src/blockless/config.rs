@@ -172,7 +172,7 @@ macro_rules! bls_options {
                 for item in items.iter() {
                     match item.0.as_str()  {
                         $(
-                        stringify!($opt) => self.$opt = Some(OptionParser::parse(&item.1)?),
+                        stringify!($opt) => self.$opt = Some(OptionParser::<String>::parse(&item.1)?),
                         )+
                         _ => bail!("there is no optimize argument: {}", item.0),
                     }
@@ -198,12 +198,14 @@ macro_rules! bls_options {
     }
 }
 
-pub trait OptionParser {
-    fn parse(v: &str) -> anyhow::Result<Self> where Self: Sized;
+pub trait OptionParser<T>: Sized {
+    fn parse(v: &T) -> anyhow::Result<Self>
+    where
+        T: Sized;
 }
 
-impl OptionParser for u32 {
-    fn parse(val: &str) -> anyhow::Result<Self> {
+impl OptionParser<String> for u32 {
+    fn parse(val: &String) -> anyhow::Result<Self> {
         match val.strip_prefix("0x") {
             Some(hex) => Ok(u32::from_str_radix(hex, 16)?),
             None => Ok(val.parse()?),
@@ -211,8 +213,8 @@ impl OptionParser for u32 {
     }
 }
 
-impl OptionParser for usize {
-    fn parse(val: &str) -> anyhow::Result<Self> {
+impl OptionParser<String> for usize {
+    fn parse(val: &String) -> anyhow::Result<Self> {
         match val.strip_prefix("0x") {
             Some(hex) => Ok(usize::from_str_radix(hex, 16)?),
             None => Ok(val.parse()?),
@@ -220,8 +222,8 @@ impl OptionParser for usize {
     }
 }
 
-impl OptionParser for u64 {
-    fn parse(val: &str) -> anyhow::Result<Self> {
+impl OptionParser<String> for u64 {
+    fn parse(val: &String) -> anyhow::Result<Self> {
         match val.strip_prefix("0x") {
             Some(hex) => Ok(u64::from_str_radix(hex, 16)?),
             None => Ok(val.parse()?),
@@ -229,9 +231,9 @@ impl OptionParser for u64 {
     }
 }
 
-impl OptionParser for OptLevel {
-    fn parse(v: &str) -> anyhow::Result<Self> {
-        match v {
+impl OptionParser<String> for OptLevel {
+    fn parse(v: &String) -> anyhow::Result<Self> {
+        match v.as_str() {
             "n" => Ok(OptLevel::None),
             "s" => Ok(OptLevel::Speed),
             "ss" => Ok(OptLevel::SpeedAndSize),
@@ -242,9 +244,9 @@ impl OptionParser for OptLevel {
     }
 }
 
-impl OptionParser for bool {
-    fn parse(val: &str) -> anyhow::Result<Self> {
-        match val {
+impl OptionParser<String> for bool {
+    fn parse(val: &String) -> anyhow::Result<Self> {
+        match val.as_str() {
             "y" | "yes" | "true" => Ok(true),
             "n" | "no" | "false" => Ok(false),
             s @ _ => bail!("unknown boolean flag `{s}`, only yes,no,<nothing> accepted"),
