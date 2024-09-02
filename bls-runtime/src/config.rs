@@ -59,9 +59,10 @@ impl CliConfig {
 
     fn optimize_options(opt_json: &JsonValue) -> Result<OptimizeOpts> {
         let mut opts: OptimizeOpts = OptimizeOpts::default();
-        let opt_items = opt_json.entries().map(|item| {
-            (item.0.to_string(), json::stringify(item.0))
-        }).collect::<Vec<_>>(); 
+        let opt_items = opt_json
+            .entries()
+            .map(|item| (item.0.to_string(), json::stringify(item.0)))
+            .collect::<Vec<_>>();
         opts.config(opt_items)?;
         Ok(opts)
     }
