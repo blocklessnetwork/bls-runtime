@@ -68,7 +68,7 @@ impl WasiCtx {
     pub fn config_stdin_ref(&mut self) -> Option<String> {
         let lock = self.0.blockless_config.lock().unwrap();
         lock.as_ref()
-            .and_then(|l| Some(String::from(l.stdin_ref().as_str())))
+            .and_then(|l| l.fix_stdin_ref().map(String::from))
     }
 
     pub fn resource_permission(&self, resource: &str) -> bool {

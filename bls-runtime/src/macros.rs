@@ -28,3 +28,14 @@ macro_rules! pinfo {
         crate::plog!(Level::Info, "\n")
     }};
 }
+
+macro_rules! stdio_cfg {
+    ($p:ident, $stdio:ident, $e: ident) => {
+        match $p {
+            Some(s) if s == "inherit" => $stdio::Inherit,
+            Some(s) if s == "null" => $stdio::Null,
+            Some(s) => $stdio::$e(s.to_string()), 
+            _ => $stdio::Inherit,
+        }
+    };
+}

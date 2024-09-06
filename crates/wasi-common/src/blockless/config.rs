@@ -31,7 +31,13 @@ impl From<&str> for LoggerLevel {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Clone)]
+pub enum Stdin {
+    Inherit,
+    Fix(String),
+}
+
+#[derive(Debug, Clone)]
 pub enum Stdout {
     //no stdout.
     Null,
@@ -41,6 +47,7 @@ pub enum Stdout {
     FileName(String),
 }
 
+#[derive(Debug, Clone)]
 pub enum Stderr {
     //no stderr.
     Null,
@@ -345,7 +352,7 @@ bls_options! {
 }
 
 pub struct Stdio {
-    pub stdin: String,
+    pub stdin: Stdin,
     pub stdout: Stdout,
     pub stderr: Stderr,
 }
@@ -353,7 +360,7 @@ pub struct Stdio {
 impl Default for Stdio {
     fn default() -> Self {
         Stdio {
-            stdin: String::new(),
+            stdin: Stdin::Fix(String::new()),
             stdout: Stdout::Inherit,
             stderr: Stderr::Inherit,
         }
@@ -617,8 +624,8 @@ impl BlocklessConfig {
     }
 
     #[inline(always)]
-    pub fn stdin(&mut self, stdin: String) {
-        self.stdio.stdin = stdin
+    pub fn fix_stdin(&mut self, stdin: String) {
+        self.stdio.stdin = Stdin::Fix(stdin);
     }
 
     #[inline(always)]
@@ -632,6 +639,14 @@ impl BlocklessConfig {
     }
 
     #[inline(always)]
+    pub fn is_fix_stdin(&self) -> bool {
+        match self.stdio.stdin {
+            Stdin::Fix(_) => true,
+            _ => false,    
+        }
+    }
+
+    #[inline(always)]
     pub fn stdout_ref(&self) -> &Stdout {
         &self.stdio.stdout
     }
@@ -642,8 +657,11 @@ impl BlocklessConfig {
     }
 
     #[inline(always)]
-    pub fn stdin_ref(&self) -> &String {
-        &self.stdio.stdin
+    pub fn fix_stdin_ref(&self) -> Option<&str> {
+        match self.stdio.stdin {
+            Stdin::Fix(ref s) => Some(s.as_str()),
+            _ => None,
+        }
     }
 
     #[inline(always)]

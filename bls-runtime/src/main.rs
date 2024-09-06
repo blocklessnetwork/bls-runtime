@@ -1,12 +1,12 @@
+#[macro_use]
+mod macros;
 mod cli_clap;
 mod config;
 mod error;
-#[macro_use]
-mod macros;
 mod plog;
 mod v86;
 mod v86config;
-use blockless::{blockless_run, LoggerLevel};
+use blockless::{blockless_run, LoggerLevel, Stdin};
 use clap::Parser;
 use cli_clap::{CliCommandOpts, RuntimeType};
 use config::load_cli_config_extract_from_car;
@@ -159,13 +159,14 @@ async fn wasm_runtime(mut cfg: CliConfig, cli_command_opts: CliCommandOpts) -> C
         return err;
     }
 
-    if cfg.0.stdin_ref().is_empty() {
-        if let Some(stdin_buffer) = non_blocking_read(std::io::stdin()).await {
-            cfg.0.stdin(stdin_buffer);
-        }
-    }
+    
     let run_time = cfg.0.run_time();
     cli_command_opts.into_config(&mut cfg);
+    if cfg.0.is_fix_stdin() {
+        if let Some(stdin_buffer) = non_blocking_read(std::io::stdin()).await {
+            cfg.0.stdio.stdin = Stdin::Fix(stdin_buffer);
+        }
+    }
 
     if let Some(time) = run_time {
         let _ = tokio::spawn(async move {
