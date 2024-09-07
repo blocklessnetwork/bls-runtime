@@ -433,7 +433,7 @@ mod test {
         )
         .unwrap()
         .0;
-        assert_eq!(bls_config.fix_stdin_ref(), None);
+        assert_eq!(bls_config.fix_stdin_ref(), Some(""));
 
         let bls_config = CliConfig::from_json_string(
             r#"{
