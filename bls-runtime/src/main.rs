@@ -159,7 +159,6 @@ async fn wasm_runtime(mut cfg: CliConfig, cli_command_opts: CliCommandOpts) -> C
         return err;
     }
 
-    
     let run_time = cfg.0.run_time();
     cli_command_opts.into_config(&mut cfg);
     if cfg.0.is_fix_stdin() {

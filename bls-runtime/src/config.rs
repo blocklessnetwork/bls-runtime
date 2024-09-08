@@ -1,10 +1,8 @@
 use anyhow::Result;
 use blockless::{
-    self, BlocklessModule, LoggerLevel, ModuleType, OptimizeOpts, Stderr, Stdin, Stdio, Stdout
+    self, BlocklessModule, LoggerLevel, ModuleType, OptimizeOpts, Stderr, Stdin, Stdio, Stdout,
 };
-use blockless::{
-    BlocklessConfig, DriverConfig, MultiAddr, Permission
-};
+use blockless::{BlocklessConfig, DriverConfig, MultiAddr, Permission};
 use json::{self, JsonValue};
 use rust_car::reader::{self, CarReader};
 use rust_car::utils::{extract_ipld, ipld_write};
@@ -192,11 +190,13 @@ impl CliConfig {
         bc.set_run_time(run_time);
         version.map(|v| bc.set_version(v.into()));
         let stdin = match stdin {
-            Some(s) => if s == "inherit" {
-                Stdin::Inherit
-            } else {
-                Stdin::Fix(s.to_string())
-            },
+            Some(s) => {
+                if s == "inherit" {
+                    Stdin::Inherit
+                } else {
+                    Stdin::Fix(s.to_string())
+                }
+            }
             _ => Stdin::Fix(String::new()),
         };
         bc.stdio = Stdio {

@@ -642,7 +642,7 @@ impl BlocklessConfig {
     pub fn is_fix_stdin(&self) -> bool {
         match self.stdio.stdin {
             Stdin::Fix(_) => true,
-            _ => false,    
+            _ => false,
         }
     }
 

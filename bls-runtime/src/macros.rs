@@ -34,7 +34,7 @@ macro_rules! stdio_cfg {
         match $p {
             Some(s) if s == "inherit" => $stdio::Inherit,
             Some(s) if s == "null" => $stdio::Null,
-            Some(s) => $stdio::$e(s.to_string()), 
+            Some(s) => $stdio::$e(s.to_string()),
             _ => $stdio::Inherit,
         }
     };

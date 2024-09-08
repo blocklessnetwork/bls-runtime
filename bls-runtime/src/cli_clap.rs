@@ -1,9 +1,13 @@
 #![allow(unused)]
 use anyhow::{bail, Result};
 use blockless::{
-    BlocklessConfig, BlocklessModule, BlsOptions, ModuleType, OptimizeOpts, Permission, Stderr, Stdin, Stdout
+    BlocklessConfig, BlocklessModule, BlsOptions, ModuleType, OptimizeOpts, Permission, Stderr,
+    Stdin, Stdout,
 };
-use clap::{builder::{TypedValueParser, ValueParser}, Arg, ArgMatches, Command, Parser};
+use clap::{
+    builder::{TypedValueParser, ValueParser},
+    Arg, ArgMatches, Command, Parser,
+};
 use std::{collections::HashMap, str::FromStr};
 use url::Url;
 
@@ -111,7 +115,6 @@ fn parse_module(module: &str) -> Result<BlocklessModule> {
     })
 }
 
-
 fn parse_stdout(stdout: &str) -> Result<Stdout> {
     let stdout = Some(stdout);
     Ok(stdio_cfg!(stdout, Stdout, FileName))
@@ -198,7 +201,6 @@ pub(crate) struct CliCommandOpts {
 
     #[clap(value_name = "ARGS", help = APP_ARGS_HELP)]
     args: Vec<String>,
-
 }
 
 impl CliCommandOpts {
