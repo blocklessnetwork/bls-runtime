@@ -41,11 +41,11 @@ const PERMISSION_HELP: &str = "the permissions for app";
 
 const MODULES_HELP: &str = "the modules used by app";
 
-const STDOUT_HELP: &str = "the stdout setting by app, the value is inherit/null/the name of file";
+const STDOUT_HELP: &str = "the app's stdout setting can be configured with one of the following values: inherit, null, or a specific file name";
 
-const STDERR_HELP: &str = "the stderr setting by app, the value is inherit/null/the name of file";
+const STDERR_HELP: &str = "the app's stderr setting can be configured with one of the following values: inherit, null, or a specific file name";
 
-const STDIN_HELP: &str = "the stdin setting by app, is inherit/null/string for input";
+const STDIN_HELP: &str = "the app's stdin setting can be configured with one of the following values: inherit or fixed input string";
 
 const V86_HELP: &str =
     "the v86 model flag when the v86 flag the car file must be v86 configure and image.";
@@ -129,7 +129,7 @@ fn parse_stdin(stdin: &str) -> Result<Stdin> {
     if stdin == "inherit" {
         Ok(Stdin::Inherit)
     } else {
-        Ok(Stdin::Fix(stdin.to_string()))
+        Ok(Stdin::Fixed(stdin.to_string()))
     }
 }
 
