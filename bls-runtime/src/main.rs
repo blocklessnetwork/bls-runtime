@@ -161,9 +161,9 @@ async fn wasm_runtime(mut cfg: CliConfig, cli_command_opts: CliCommandOpts) -> C
 
     let run_time = cfg.0.run_time();
     cli_command_opts.into_config(&mut cfg);
-    if cfg.0.is_fix_stdin() {
+    if cfg.0.is_fixed_stdin() {
         if let Some(stdin_buffer) = non_blocking_read(std::io::stdin()).await {
-            cfg.0.stdio.stdin = Stdin::Fix(stdin_buffer);
+            cfg.0.stdio.stdin = Stdin::Fixed(stdin_buffer);
         }
     }
 

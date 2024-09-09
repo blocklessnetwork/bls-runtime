@@ -194,10 +194,10 @@ impl CliConfig {
                 if s == "inherit" {
                     Stdin::Inherit
                 } else {
-                    Stdin::Fix(s.to_string())
+                    Stdin::Fixed(s.to_string())
                 }
             }
-            _ => Stdin::Fix(String::new()),
+            _ => Stdin::Fixed(String::new()),
         };
         bc.stdio = Stdio {
             stdin,

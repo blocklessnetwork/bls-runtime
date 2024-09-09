@@ -360,7 +360,7 @@ pub struct Stdio {
 impl Default for Stdio {
     fn default() -> Self {
         Stdio {
-            stdin: Stdin::Fix(String::new()),
+            stdin: Stdin::Fixed(String::new()),
             stdout: Stdout::Inherit,
             stderr: Stderr::Inherit,
         }
@@ -624,8 +624,8 @@ impl BlocklessConfig {
     }
 
     #[inline(always)]
-    pub fn fix_stdin(&mut self, stdin: String) {
-        self.stdio.stdin = Stdin::Fix(stdin);
+    pub fn fixed_stdin(&mut self, stdin: String) {
+        self.stdio.stdin = Stdin::Fixed(stdin);
     }
 
     #[inline(always)]
@@ -639,9 +639,9 @@ impl BlocklessConfig {
     }
 
     #[inline(always)]
-    pub fn is_fix_stdin(&self) -> bool {
+    pub fn is_fixed_stdin(&self) -> bool {
         match self.stdio.stdin {
-            Stdin::Fix(_) => true,
+            Stdin::Fixed(_) => true,
             _ => false,
         }
     }
@@ -659,7 +659,7 @@ impl BlocklessConfig {
     #[inline(always)]
     pub fn fix_stdin_ref(&self) -> Option<&str> {
         match self.stdio.stdin {
-            Stdin::Fix(ref s) => Some(s.as_str()),
+            Stdin::Fixed(ref s) => Some(s.as_str()),
             _ => None,
         }
     }
