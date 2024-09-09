@@ -34,7 +34,7 @@ impl From<&str> for LoggerLevel {
 #[derive(Debug, Clone)]
 pub enum Stdin {
     Inherit,
-    Fix(String),
+    Fixed(String),
 }
 
 #[derive(Debug, Clone)]
