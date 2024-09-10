@@ -1,9 +1,7 @@
 use crate::Permission;
 use anyhow::{bail, Ok};
 use std::{
-    collections::HashMap,
-    path::{Path, PathBuf},
-    str::FromStr,
+    collections::HashMap, net::TcpListener, path::{Path, PathBuf}, str::FromStr
 };
 use wasmtime::OptLevel;
 
@@ -381,6 +379,7 @@ pub struct BlocklessConfig {
     pub drivers: Vec<DriverConfig>,
     pub store_limited: StoreLimited,
     pub envs: Vec<(String, String)>,
+    pub tcp_listens: Vec<String>,
     pub permisions: Vec<Permission>,
     pub fs_root_path: Option<String>,
     pub modules: Vec<BlocklessModule>,
@@ -409,6 +408,7 @@ impl BlocklessConfig {
             //vm instruction limit.
             limited_fuel: None,
             limited_time: None,
+            tcp_listens: Vec::new(),
             stdin_args: Vec::new(),
             //memory limit, 1 page = 64k.
             store_limited: Default::default(),
@@ -702,6 +702,7 @@ impl BlocklessConfig {
     pub fn store_limited(&self) -> &StoreLimited {
         &self.store_limited
     }
+
 }
 
 #[cfg(test)]

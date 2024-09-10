@@ -8,7 +8,7 @@ use clap::{
     builder::{TypedValueParser, ValueParser},
     Arg, ArgMatches, Command, Parser,
 };
-use std::{collections::HashMap, str::FromStr};
+use std::{collections::HashMap, net::TcpListener, str::FromStr};
 use url::Url;
 
 use crate::config::CliConfig;
@@ -52,6 +52,9 @@ const V86_HELP: &str =
 
 const THREAD_SUPPORT_HELP: &str =
     "the thread support flag when the flag setting the runtime will support multi-threads.";
+
+const TCP_LISTEN_HELP: &str =
+    "grant access to the given TCP listen socket";
 
 fn parse_envs(envs: &str) -> Result<(String, String)> {
     let parts: Vec<_> = envs.splitn(2, "=").collect();
@@ -201,6 +204,9 @@ pub(crate) struct CliCommandOpts {
 
     #[clap(value_name = "ARGS", help = APP_ARGS_HELP)]
     args: Vec<String>,
+
+    #[clap(value_name = "tcplisten", help = TCP_LISTEN_HELP)]
+    tcp_listens: Vec<String>,
 }
 
 impl CliCommandOpts {
@@ -223,7 +229,7 @@ impl CliCommandOpts {
         &self.input
     }
 
-    pub fn into_config(self, conf: &mut CliConfig) {
+    pub fn into_config(self, conf: &mut CliConfig) -> Result<()> {
         conf.0.set_debug_info(self.debug_info);
         conf.0.set_fs_root_path(self.fs_root_path);
         conf.0.set_runtime_logger(self.runtime_logger);
@@ -266,6 +272,8 @@ impl CliCommandOpts {
             conf.0
                 .set_version(blockless::BlocklessConfigVersion::Version1);
         }
+        conf.0.tcp_listens = self.tcp_listens;
+        Ok(())
     }
 }
 
