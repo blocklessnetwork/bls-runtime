@@ -3,6 +3,7 @@
     "fs_root_path": ".", 
     "drivers_root_path": ".", 
     "runtime_logger": "runtime.log", 
+	"stdin": "inherit",
     "limited_memory": 30,
     "debug_info": true,
     "entry": "run",

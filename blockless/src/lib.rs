@@ -106,6 +106,10 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
         }
         process_output!(b_conf.stdout_ref(), Stdout, stdout, inherit_stdout);
         process_output!(b_conf.stderr_ref(), Stderr, stderr, inherit_stderr);
+
+        if let Stdin::Inherit = b_conf.stdio.stdin {
+            builder.inherit_stdin();
+        }
     }
 
     /// create the preview1_builder by the configure.

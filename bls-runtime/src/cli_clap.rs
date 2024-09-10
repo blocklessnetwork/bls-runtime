@@ -1,9 +1,13 @@
 #![allow(unused)]
 use anyhow::{bail, Result};
 use blockless::{
-    BlocklessConfig, BlocklessModule, BlsOptions, ModuleType, OptimizeOpts, Permission,
+    BlocklessConfig, BlocklessModule, BlsOptions, ModuleType, OptimizeOpts, Permission, Stderr,
+    Stdin, Stdout,
 };
-use clap::{Arg, ArgMatches, Command, Parser};
+use clap::{
+    builder::{TypedValueParser, ValueParser},
+    Arg, ArgMatches, Command, Parser,
+};
 use std::{collections::HashMap, str::FromStr};
 use url::Url;
 
@@ -36,6 +40,12 @@ const OPTS_HELP: &str = "Optimization and tuning related options for wasm perfor
 const PERMISSION_HELP: &str = "the permissions for app";
 
 const MODULES_HELP: &str = "the modules used by app";
+
+const STDOUT_HELP: &str = "the app's stdout setting can be configured with one of the following values: inherit, null, or a specific file name";
+
+const STDERR_HELP: &str = "the app's stderr setting can be configured with one of the following values: inherit, null, or a specific file name";
+
+const STDIN_HELP: &str = "the app's stdin setting can be configured with one of the following values: inherit or fixed input string";
 
 const V86_HELP: &str =
     "the v86 model flag when the v86 flag the car file must be v86 configure and image.";
@@ -105,6 +115,24 @@ fn parse_module(module: &str) -> Result<BlocklessModule> {
     })
 }
 
+fn parse_stdout(stdout: &str) -> Result<Stdout> {
+    let stdout = Some(stdout);
+    Ok(stdio_cfg!(stdout, Stdout, FileName))
+}
+
+fn parse_stderr(stderr: &str) -> Result<Stderr> {
+    let stderr = Some(stderr);
+    Ok(stdio_cfg!(stderr, Stderr, FileName))
+}
+
+fn parse_stdin(stdin: &str) -> Result<Stdin> {
+    if stdin == "inherit" {
+        Ok(Stdin::Inherit)
+    } else {
+        Ok(Stdin::Fixed(stdin.to_string()))
+    }
+}
+
 #[derive(Debug)]
 pub enum RuntimeType {
     V86,
@@ -146,6 +174,15 @@ pub(crate) struct CliCommandOpts {
 
     #[clap(long = "entry", value_name = "ENTERY", help = ENTRY_HELP)]
     entry: Option<String>,
+
+    #[clap(long = "stdout", value_name = "STDOUT", help = STDOUT_HELP, value_parser = parse_stdout)]
+    stdout: Option<Stdout>,
+
+    #[clap(long = "stdin", value_name = "STDIN", help = STDIN_HELP, value_parser = parse_stdin)]
+    stdin: Option<Stdin>,
+
+    #[clap(long = "stderr", value_name = "STDERR", help = STDERR_HELP, value_parser = parse_stderr)]
+    stderr: Option<Stderr>,
 
     #[clap(long = "limited-fuel", value_name = "LIMITED-FUEL", help = LIMITED_FUEL_HELP)]
     limited_fuel: Option<u64>,
@@ -195,6 +232,15 @@ impl CliCommandOpts {
         conf.0.set_run_time(self.run_time);
         conf.0.set_stdin_args(self.args);
         conf.0.set_feature_thread(self.feature_thread);
+        if let Some(stderr) = self.stderr {
+            conf.0.stdio.stderr = stderr;
+        }
+        if let Some(stdout) = self.stdout {
+            conf.0.stdio.stdout = stdout;
+        }
+        if let Some(stdin) = self.stdin {
+            conf.0.stdio.stdin = stdin;
+        }
         if self.permissions.len() > 0 {
             conf.0.set_permisions(self.permissions);
         }

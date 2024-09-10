@@ -1,5 +1,7 @@
 use anyhow::Result;
-use blockless::{self, BlocklessModule, LoggerLevel, ModuleType, OptimizeOpts};
+use blockless::{
+    self, BlocklessModule, LoggerLevel, ModuleType, OptimizeOpts, Stderr, Stdin, Stdio, Stdout,
+};
 use blockless::{BlocklessConfig, DriverConfig, MultiAddr, Permission};
 use json::{self, JsonValue};
 use rust_car::reader::{self, CarReader};
@@ -157,8 +159,9 @@ impl CliConfig {
         let limited_memory: Option<u64> = json_obj["limited_memory"].as_u64();
         let extensions_path: Option<String> =
             json_obj["extensions_path"].as_str().map(String::from);
-        let stdin: Option<&str> = Some(json_obj["stdin"].as_str()).unwrap_or(None);
-        let stdout: Option<String> = json_obj["stdout"].as_str().map(String::from);
+        let stdin: Option<&str> = json_obj["stdin"].as_str();
+        let stdout: Option<&str> = json_obj["stdout"].as_str();
+        let stderr: Option<&str> = json_obj["stderr"].as_str();
         let debug_info: Option<bool> = json_obj["debug_info"].as_bool();
         let run_time: Option<u64> = json_obj["run_time"].as_u64();
 
@@ -176,9 +179,6 @@ impl CliConfig {
         bc.extensions_path(extensions_path);
         bc.set_fs_root_path(fs_root_path);
         bc.drivers(drvs);
-        stdout.map(|filename: String| {
-            bc.stdout(blockless::Stdout::FileName(filename));
-        });
         // the set debug mode
         debug_info.map(|b| bc.set_debug_info(b));
         runtime_logger_level.map(|l| bc.set_runtime_logger_level(l));
@@ -189,10 +189,21 @@ impl CliConfig {
         bc.limited_memory(limited_memory);
         bc.set_run_time(run_time);
         version.map(|v| bc.set_version(v.into()));
-
-        if let Some(stdin) = stdin {
-            bc.stdin(stdin.to_string());
-        }
+        let stdin = match stdin {
+            Some(s) => {
+                if s == "inherit" {
+                    Stdin::Inherit
+                } else {
+                    Stdin::Fixed(s.to_string())
+                }
+            }
+            _ => Stdin::Fixed(String::new()),
+        };
+        bc.stdio = Stdio {
+            stdin,
+            stdout: stdio_cfg!(stdout, Stdout, FileName),
+            stderr: stdio_cfg!(stderr, Stderr, FileName),
+        };
         Ok(CliConfig(bc))
     }
 
@@ -422,7 +433,7 @@ mod test {
         )
         .unwrap()
         .0;
-        assert_eq!(bls_config.stdin_ref(), "");
+        assert_eq!(bls_config.fix_stdin_ref(), Some(""));
 
         let bls_config = CliConfig::from_json_string(
             r#"{
@@ -440,6 +451,6 @@ mod test {
         )
         .unwrap()
         .0;
-        assert_eq!(bls_config.stdin_ref(), "test");
+        assert_eq!(bls_config.fix_stdin_ref(), Some("test"));
     }
 }
