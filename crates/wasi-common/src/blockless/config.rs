@@ -2,6 +2,7 @@ use crate::Permission;
 use anyhow::{bail, Ok};
 use std::{
     collections::HashMap,
+    net::SocketAddr,
     path::{Path, PathBuf},
     str::FromStr,
 };
@@ -381,7 +382,7 @@ pub struct BlocklessConfig {
     pub drivers: Vec<DriverConfig>,
     pub store_limited: StoreLimited,
     pub envs: Vec<(String, String)>,
-    pub tcp_listens: Vec<String>,
+    pub tcp_listens: Vec<SocketAddr>,
     pub permisions: Vec<Permission>,
     pub fs_root_path: Option<String>,
     pub modules: Vec<BlocklessModule>,

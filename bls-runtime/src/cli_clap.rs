@@ -8,7 +8,11 @@ use clap::{
     builder::{TypedValueParser, ValueParser},
     Arg, ArgMatches, Command, Parser,
 };
-use std::{collections::HashMap, net::TcpListener, str::FromStr};
+use std::{
+    collections::HashMap,
+    net::{IpAddr, SocketAddr, TcpListener, ToSocketAddrs},
+    str::FromStr,
+};
 use url::Url;
 
 use crate::config::CliConfig;
@@ -135,6 +139,14 @@ fn parse_stdin(stdin: &str) -> Result<Stdin> {
     }
 }
 
+fn parse_listen(s: &str) -> Result<SocketAddr> {
+    let addrs = s.to_socket_addrs()?;
+    for addr in addrs {
+        return Ok(addr);
+    }
+    bail!("could not resolve to any addresses")
+}
+
 #[derive(Debug)]
 pub enum RuntimeType {
     V86,
@@ -201,8 +213,8 @@ pub(crate) struct CliCommandOpts {
     #[clap(long = "module", value_name = "MODULE-NAME=MODULE-PATH", help = MODULES_HELP, value_parser = parse_module)]
     modules: Vec<BlocklessModule>,
 
-    #[clap(long = "tcplisten", help = TCP_LISTEN_HELP)]
-    tcp_listens: Vec<String>,
+    #[clap(long = "tcplisten", help = TCP_LISTEN_HELP, value_parser = parse_listen)]
+    tcp_listens: Vec<SocketAddr>,
 
     #[clap(value_name = "ARGS", help = APP_ARGS_HELP)]
     args: Vec<String>,
