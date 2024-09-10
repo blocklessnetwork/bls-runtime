@@ -14,9 +14,7 @@ use modules::ModuleLinker;
 use std::{env, path::Path, sync::Arc};
 use wasi_common::sync::WasiCtxBuilder;
 pub use wasi_common::*;
-use wasmtime::{
-    Config, Engine, Linker, Module, Store, StoreLimits, StoreLimitsBuilder, Trap
-};
+use wasmtime::{Config, Engine, Linker, Module, Store, StoreLimits, StoreLimitsBuilder, Trap};
 use wasmtime_wasi_threads::WasiThreadsCtx;
 
 // the default wasm entry name.
@@ -125,7 +123,9 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
         b_conf.preview1_set_stdio(&mut builder);
 
         // configure to storeLimit
-        let entry_module = b_conf.entry_module().context("not found the entry module.")?;
+        let entry_module = b_conf
+            .entry_module()
+            .context("not found the entry module.")?;
         let mut args = vec![entry_module];
         args.extend_from_slice(&b_conf.stdin_args_ref()[..]);
         builder.args(&args[..])?;
@@ -133,7 +133,7 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
         if let Some(d) = root_dir {
             builder.preopened_dir(d, "/")?;
         }
-        //set the tcp listener. 
+        //set the tcp listener.
         let mut max_fd: u32 = 3;
         for l in b_conf.tcp_listens.iter() {
             let l = std::net::TcpListener::bind(l)?;

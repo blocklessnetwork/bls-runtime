@@ -1,7 +1,9 @@
 use crate::Permission;
 use anyhow::{bail, Ok};
 use std::{
-    collections::HashMap, path::{Path, PathBuf}, str::FromStr
+    collections::HashMap,
+    path::{Path, PathBuf},
+    str::FromStr,
 };
 use wasmtime::OptLevel;
 
@@ -702,7 +704,6 @@ impl BlocklessConfig {
     pub fn store_limited(&self) -> &StoreLimited {
         &self.store_limited
     }
-
 }
 
 #[cfg(test)]
