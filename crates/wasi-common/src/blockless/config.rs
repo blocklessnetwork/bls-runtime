@@ -1,7 +1,7 @@
 use crate::Permission;
 use anyhow::{bail, Ok};
 use std::{
-    collections::HashMap, net::TcpListener, path::{Path, PathBuf}, str::FromStr
+    collections::HashMap, path::{Path, PathBuf}, str::FromStr
 };
 use wasmtime::OptLevel;
 

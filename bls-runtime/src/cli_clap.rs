@@ -202,11 +202,12 @@ pub(crate) struct CliCommandOpts {
     #[clap(long = "module", value_name = "MODULE-NAME=MODULE-PATH", help = MODULES_HELP, value_parser = parse_module)]
     modules: Vec<BlocklessModule>,
 
+
+    #[clap(long = "tcplisten", help = TCP_LISTEN_HELP)]
+    tcp_listens: Vec<String>,
+
     #[clap(value_name = "ARGS", help = APP_ARGS_HELP)]
     args: Vec<String>,
-
-    #[clap(value_name = "tcplisten", help = TCP_LISTEN_HELP)]
-    tcp_listens: Vec<String>,
 }
 
 impl CliCommandOpts {
