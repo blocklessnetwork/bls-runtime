@@ -30,7 +30,7 @@ pub enum RunTarget {
 }
 
 trait BlocklessConfig2Preview1WasiBuilder {
-    fn preview1_builder(&self) -> WasiCtxBuilder;
+    fn preview1_builder(&self) -> anyhow::Result<WasiCtxBuilder>;
     fn preview1_set_stdio(&self, builder: &mut WasiCtxBuilder);
     fn preview1_engine_config(&self) -> Config;
     fn store_limits(&self) -> StoreLimits;
@@ -113,7 +113,7 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
     }
 
     /// create the preview1_builder by the configure.
-    fn preview1_builder(&self) -> WasiCtxBuilder {
+    fn preview1_builder(&self) -> anyhow::Result<WasiCtxBuilder> {
         let b_conf = self;
         let root_dir = b_conf.fs_root_path_ref().and_then(|path| {
             wasi_common::sync::Dir::open_ambient_dir(path, ambient_authority()).ok()
@@ -121,16 +121,27 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
         let mut builder = WasiCtxBuilder::new();
         //stdout file process for setting.
         b_conf.preview1_set_stdio(&mut builder);
+
         // configure to storeLimit
-        let entry_module = b_conf.entry_module().unwrap();
+        let entry_module = b_conf
+            .entry_module()
+            .context("not found the entry module.")?;
         let mut args = vec![entry_module];
         args.extend_from_slice(&b_conf.stdin_args_ref()[..]);
-        builder.args(&args[..]).unwrap();
-        builder.envs(&b_conf.envs_ref()[..]).unwrap();
+        builder.args(&args[..])?;
+        builder.envs(&b_conf.envs_ref()[..])?;
         if let Some(d) = root_dir {
-            builder.preopened_dir(d, "/").unwrap();
+            builder.preopened_dir(d, "/")?;
         }
-        builder
+        //set the tcp listener.
+        let mut max_fd: u32 = 3;
+        for l in b_conf.tcp_listens.iter() {
+            let l = std::net::TcpListener::bind(l)?;
+            let l = wasi_common::sync::TcpListener::from_std(l);
+            builder.preopened_socket(max_fd, l)?;
+            max_fd += 1;
+        }
+        anyhow::Ok(builder)
     }
 
     /// convert the blockless configure  to wasmtime configure.
@@ -232,7 +243,7 @@ impl BlocklessRunner {
         let engine = Engine::new(&conf)?;
         let mut linker = wasmtime::Linker::new(&engine);
         let support_thread = b_conf.feature_thread();
-        let mut builder = b_conf.preview1_builder();
+        let mut builder = b_conf.preview1_builder()?;
         let mut preview1_ctx = builder.build();
         let drivers = b_conf.drivers_ref();
         Self::load_driver(drivers);

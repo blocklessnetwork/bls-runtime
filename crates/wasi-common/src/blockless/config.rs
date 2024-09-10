@@ -2,6 +2,7 @@ use crate::Permission;
 use anyhow::{bail, Ok};
 use std::{
     collections::HashMap,
+    net::SocketAddr,
     path::{Path, PathBuf},
     str::FromStr,
 };
@@ -381,6 +382,7 @@ pub struct BlocklessConfig {
     pub drivers: Vec<DriverConfig>,
     pub store_limited: StoreLimited,
     pub envs: Vec<(String, String)>,
+    pub tcp_listens: Vec<SocketAddr>,
     pub permisions: Vec<Permission>,
     pub fs_root_path: Option<String>,
     pub modules: Vec<BlocklessModule>,
@@ -409,6 +411,7 @@ impl BlocklessConfig {
             //vm instruction limit.
             limited_fuel: None,
             limited_time: None,
+            tcp_listens: Vec::new(),
             stdin_args: Vec::new(),
             //memory limit, 1 page = 64k.
             store_limited: Default::default(),

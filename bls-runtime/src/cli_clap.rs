@@ -8,7 +8,11 @@ use clap::{
     builder::{TypedValueParser, ValueParser},
     Arg, ArgMatches, Command, Parser,
 };
-use std::{collections::HashMap, str::FromStr};
+use std::{
+    collections::HashMap,
+    net::{IpAddr, SocketAddr, TcpListener, ToSocketAddrs},
+    str::FromStr,
+};
 use url::Url;
 
 use crate::config::CliConfig;
@@ -52,6 +56,8 @@ const V86_HELP: &str =
 
 const THREAD_SUPPORT_HELP: &str =
     "the thread support flag when the flag setting the runtime will support multi-threads.";
+
+const TCP_LISTEN_HELP: &str = "grant access to the given TCP listen socket";
 
 fn parse_envs(envs: &str) -> Result<(String, String)> {
     let parts: Vec<_> = envs.splitn(2, "=").collect();
@@ -133,6 +139,14 @@ fn parse_stdin(stdin: &str) -> Result<Stdin> {
     }
 }
 
+fn parse_listen(s: &str) -> Result<SocketAddr> {
+    let addrs = s.to_socket_addrs()?;
+    for addr in addrs {
+        return Ok(addr);
+    }
+    bail!("could not resolve to any addresses")
+}
+
 #[derive(Debug)]
 pub enum RuntimeType {
     V86,
@@ -199,6 +213,9 @@ pub(crate) struct CliCommandOpts {
     #[clap(long = "module", value_name = "MODULE-NAME=MODULE-PATH", help = MODULES_HELP, value_parser = parse_module)]
     modules: Vec<BlocklessModule>,
 
+    #[clap(long = "tcplisten", help = TCP_LISTEN_HELP, value_parser = parse_listen)]
+    tcp_listens: Vec<SocketAddr>,
+
     #[clap(value_name = "ARGS", help = APP_ARGS_HELP)]
     args: Vec<String>,
 }
@@ -223,7 +240,7 @@ impl CliCommandOpts {
         &self.input
     }
 
-    pub fn into_config(self, conf: &mut CliConfig) {
+    pub fn into_config(self, conf: &mut CliConfig) -> Result<()> {
         conf.0.set_debug_info(self.debug_info);
         conf.0.set_fs_root_path(self.fs_root_path);
         conf.0.set_runtime_logger(self.runtime_logger);
@@ -266,6 +283,8 @@ impl CliCommandOpts {
             conf.0
                 .set_version(blockless::BlocklessConfigVersion::Version1);
         }
+        conf.0.tcp_listens = self.tcp_listens;
+        Ok(())
     }
 }
 
