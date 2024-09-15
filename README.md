@@ -36,7 +36,7 @@ Blockless supports a variety of programming languages including:
 
 ## The example of configure file 
 
-```json
+```jsonc
 {
     "fs_root_path": "/Users/join/Downloads", 
     "drivers_root_path": "/Users/join/Downloads", 
@@ -57,11 +57,16 @@ Blockless supports a variety of programming languages including:
         "file://a.go"
     ],
     "optimize": {
-        "opt_level": "ss", //Optimization level of generated code (n:None, s:Speed, ss:SpeedAndSize; default: ss)
-        "pooling_total_memories": 1024000, //The maximum number of WebAssembly memories which can be created with the pooling allocator.
-        "pooling_total_tables": 20, //The maximum number of WebAssembly tables which can be created with the pooling allocator.
-        "table_lazy_init": false, // Whether to initialize tables lazily, so that instantiation is fast but indirect calls are a little slower. If no, tables are initialized eagerly from any active element segments that apply to them during instantiation. (default: yes)
-        "pooling_allocator": true, // Enable the pooling allocator, in place of the on-demand allocator.
+        //Optimization level of generated code (n:None, s:Speed, ss:SpeedAndSize; default: ss)
+        "opt_level": "ss",
+        //The maximum number of WebAssembly memories which can be created with the pooling allocator.
+        "pooling_total_memories": 1024000,
+        //The maximum number of WebAssembly tables which can be created with the pooling allocator.
+        "pooling_total_tables": 20,
+        // Whether to initialize tables lazily, so that instantiation is fast but indirect calls are a little slower. If no, tables are initialized eagerly from any active element segments that apply to them during instantiation. (default: yes)
+        "table_lazy_init": false,
+        // Enable the pooling allocator, in place of the on-demand allocator.
+        "pooling_allocator": true, 
         ...
     }
 }
