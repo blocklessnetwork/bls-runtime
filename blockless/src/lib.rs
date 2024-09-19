@@ -3,9 +3,7 @@ pub mod error;
 mod modules;
 
 use anyhow::Context;
-use blockless_drivers::{
-    CdylibDriver, DriverConetxt
-};
+use blockless_drivers::{CdylibDriver, DriverConetxt};
 use blockless_env;
 pub use blockless_multiaddr::MultiAddr;
 use cap_std::ambient_authority;
@@ -16,9 +14,7 @@ use modules::ModuleLinker;
 use std::{env, path::Path, sync::Arc};
 use wasi_common::sync::WasiCtxBuilder;
 pub use wasi_common::*;
-use wasmtime::{
-    Config, Engine, Linker, Module, Store, StoreLimits, StoreLimitsBuilder, Trap
-};
+use wasmtime::{Config, Engine, Linker, Module, Store, StoreLimits, StoreLimitsBuilder, Trap};
 use wasmtime_wasi_threads::WasiThreadsCtx;
 
 // the default wasm entry name.
@@ -126,12 +122,9 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
         //stdout file process for setting.
         b_conf.preview1_set_stdio(&mut builder);
         //map host to guest dir in runtime.
-        for (host,guest) in b_conf.dirs.iter() {
+        for (host, guest) in b_conf.dirs.iter() {
             let host = wasi_common::sync::Dir::open_ambient_dir(host, ambient_authority())?;
-            builder.preopened_dir(
-                host,
-                guest,
-            )?;
+            builder.preopened_dir(host, guest)?;
         }
         // configure to storeLimit
         let entry_module = b_conf

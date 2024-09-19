@@ -76,8 +76,14 @@ impl CliConfig {
                 bail!("the map dir item should be array.");
             }
             for obj in map_dir.members() {
-                let host = obj["host"].as_str().context("host item is not define.")?.to_string();
-                let guest = obj["guest"].as_str().context("guest item is not define.")?.to_string();
+                let host = obj["host"]
+                    .as_str()
+                    .context("host item is not define.")?
+                    .to_string();
+                let guest = obj["guest"]
+                    .as_str()
+                    .context("guest item is not define.")?
+                    .to_string();
                 ret.push((host, guest));
             }
         }

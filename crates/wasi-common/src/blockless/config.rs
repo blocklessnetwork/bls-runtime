@@ -468,7 +468,6 @@ impl BlocklessConfig {
         self.dirs = dirs;
     }
 
-
     #[inline(always)]
     pub fn set_entry(&mut self, entry: String) {
         self.entry = entry;
