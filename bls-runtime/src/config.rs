@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{bail, Context, Result};
 use blockless::{
     self, BlocklessModule, LoggerLevel, ModuleType, OptimizeOpts, Stderr, Stdin, Stdio, Stdout,
 };
@@ -67,6 +67,19 @@ impl CliConfig {
             .collect::<Vec<_>>();
         opts.config(opt_items)?;
         Ok(opts)
+    }
+
+    fn map_dirs(map_dir: &JsonValue) -> anyhow::Result<Vec<(String, String)>> {
+        if !map_dir.is_array() {
+            bail!("the map dir item should be array.");
+        }
+        let mut ret = Vec::new();
+        for obj in map_dir.members() {
+            let host = obj["host"].as_str().context("host item is not define.")?.to_string();
+            let guest = obj["guest"].as_str().context("guest item is not define.")?.to_string();
+            ret.push((host, guest));
+        }
+        Ok(ret)
     }
 
     fn permissions(permission_json: &JsonValue) -> Vec<Permission> {
@@ -170,11 +183,13 @@ impl CliConfig {
         let perms: Vec<Permission> = Self::permissions(&json_obj["permissions"]);
         let entry: &str = json_obj["entry"].as_str().unwrap();
         let version = json_obj["version"].as_usize();
+        let dirs = Self::map_dirs(&json_obj["map_dirs"])?;
         let mut bc = BlocklessConfig::new(entry);
         //if has the optimize item.
         if json_obj["optimize"].is_object() {
             bc.opts = Self::optimize_options(&json_obj["optimize"])?;
         }
+        bc.set_map_dirs(dirs);
         bc.set_modules(modules);
         bc.extensions_path(extensions_path);
         bc.set_fs_root_path(fs_root_path);
