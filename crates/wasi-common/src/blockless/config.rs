@@ -384,6 +384,7 @@ pub struct BlocklessConfig {
     pub envs: Vec<(String, String)>,
     pub tcp_listens: Vec<SocketAddr>,
     pub permisions: Vec<Permission>,
+    pub dirs: Vec<(String, String)>,
     pub fs_root_path: Option<String>,
     pub modules: Vec<BlocklessModule>,
     pub runtime_logger: Option<String>,
@@ -400,6 +401,7 @@ impl BlocklessConfig {
         Self {
             run_time: None,
             envs: Vec::new(),
+            dirs: Vec::new(),
             debug_info: false,
             is_carfile: false,
             fs_root_path: None,
@@ -460,6 +462,12 @@ impl BlocklessConfig {
     pub fn set_stdin_args(&mut self, args: Vec<String>) {
         self.stdin_args = args;
     }
+
+    #[inline(always)]
+    pub fn set_map_dirs(&mut self, dirs: Vec<(String, String)>) {
+        self.dirs = dirs;
+    }
+
 
     #[inline(always)]
     pub fn set_entry(&mut self, entry: String) {

@@ -51,6 +51,8 @@ const STDERR_HELP: &str = "the app's stderr setting can be configured with one o
 
 const STDIN_HELP: &str = "the app's stdin setting can be configured with one of the following values: inherit or fixed input string";
 
+const MAP_DIR_HELP: &str = "grant access of a host directory to a guest. If specified as just `HOST_DIR` then the same directory name on the host is made available within the guest.";
+
 const V86_HELP: &str =
     "the v86 model flag when the v86 flag the car file must be v86 configure and image.";
 
@@ -147,6 +149,16 @@ fn parse_listen(s: &str) -> Result<SocketAddr> {
     bail!("could not resolve to any addresses")
 }
 
+fn parse_dirs(s: &str) -> Result<(String, String)> {
+    let mut parts = s.split("::");
+    let host = parts.next().unwrap();
+    let guest = match parts.next() {
+        Some(guest) => guest,
+        None => host,
+    };
+    Ok((host.into(), guest.into()))
+}
+
 #[derive(Debug)]
 pub enum RuntimeType {
     V86,
@@ -173,6 +185,12 @@ pub(crate) struct CliCommandOpts {
 
     #[clap(long = "fs-root-path", value_name = "FS-ROOT-PATH", help = FS_ROOT_PATH_HELP)]
     fs_root_path: Option<String>,
+
+    /// Grant access of a host directory to a guest.
+    /// If specified as just `HOST_DIR` then the same directory name on the
+    /// host is made available within the guest.
+    #[arg(long = "map-dir", value_name = "HOST_DIR[::GUEST_DIR]", help = MAP_DIR_HELP,value_parser = parse_dirs)]
+    dirs: Vec<(String, String)>,
 
     #[clap(long = "drivers-root-path", value_name = "DRIVERS-ROOT-PATH", help = DRIVERS_ROOT_PATH_HELP)]
     drivers_root_path: Option<String>,
@@ -248,6 +266,7 @@ impl CliCommandOpts {
         conf.0.limited_fuel(self.limited_fuel);
         conf.0.set_run_time(self.run_time);
         conf.0.set_stdin_args(self.args);
+        conf.0.set_map_dirs(self.dirs);
         conf.0.set_feature_thread(self.feature_thread);
         if let Some(stderr) = self.stderr {
             conf.0.stdio.stderr = stderr;
