@@ -121,7 +121,11 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
         let mut builder = WasiCtxBuilder::new();
         //stdout file process for setting.
         b_conf.preview1_set_stdio(&mut builder);
-
+        //map host to guest dir in runtime.
+        for (host, guest) in b_conf.dirs.iter() {
+            let host = wasi_common::sync::Dir::open_ambient_dir(host, ambient_authority())?;
+            builder.preopened_dir(host, guest)?;
+        }
         // configure to storeLimit
         let entry_module = b_conf
             .entry_module()
