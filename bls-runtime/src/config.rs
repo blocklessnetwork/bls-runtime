@@ -70,14 +70,16 @@ impl CliConfig {
     }
 
     fn map_dirs(map_dir: &JsonValue) -> anyhow::Result<Vec<(String, String)>> {
-        if !map_dir.is_array() {
-            bail!("the map dir item should be array.");
-        }
         let mut ret = Vec::new();
-        for obj in map_dir.members() {
-            let host = obj["host"].as_str().context("host item is not define.")?.to_string();
-            let guest = obj["guest"].as_str().context("guest item is not define.")?.to_string();
-            ret.push((host, guest));
+        if !map_dir.is_null() {
+            if !map_dir.is_array() {
+                bail!("the map dir item should be array.");
+            }
+            for obj in map_dir.members() {
+                let host = obj["host"].as_str().context("host item is not define.")?.to_string();
+                let guest = obj["guest"].as_str().context("guest item is not define.")?.to_string();
+                ret.push((host, guest));
+            }
         }
         Ok(ret)
     }
