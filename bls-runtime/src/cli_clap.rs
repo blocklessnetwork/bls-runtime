@@ -11,6 +11,7 @@ use clap::{
 use std::{
     collections::HashMap,
     net::{IpAddr, SocketAddr, TcpListener, ToSocketAddrs},
+    path::{Path, PathBuf},
     str::FromStr,
 };
 use url::Url;
@@ -38,6 +39,8 @@ const ENTRY_HELP: &str = "the entry for wasm, default is _start";
 const LIMITED_FUEL_HELP: &str = "the limited fuel for runtime, default is infine";
 
 const ENVS_HELP: &str = "the app envs will pass into the app";
+
+const ENV_FILE_HELP: &str = "path to an environment file (.env) to load variables from";
 
 const OPTS_HELP: &str = "Optimization and tuning related options for wasm performance";
 
@@ -222,6 +225,9 @@ pub(crate) struct CliCommandOpts {
     #[clap(long = "env", value_name = "ENV=VAL", help = ENVS_HELP, number_of_values = 1, value_parser = parse_envs)]
     envs: Vec<(String, String)>,
 
+    #[clap(long = "env-file", value_name = "ENV_FILE", help = ENV_FILE_HELP)]
+    env_file: Option<PathBuf>,
+
     #[clap(long = "opt", short = 'O', value_name = "OPT=VAL,", help = OPTS_HELP,  value_parser = parse_opts)]
     opts: Option<OptimizeOpts>,
 
@@ -259,6 +265,8 @@ impl CliCommandOpts {
     }
 
     pub fn into_config(self, conf: &mut CliConfig) -> Result<()> {
+        let envs = self.load_environment_vars()?;
+
         conf.0.set_debug_info(self.debug_info);
         conf.0.set_fs_root_path(self.fs_root_path);
         conf.0.set_runtime_logger(self.runtime_logger);
@@ -268,6 +276,8 @@ impl CliCommandOpts {
         conf.0.set_stdin_args(self.args);
         conf.0.set_map_dirs(self.dirs);
         conf.0.set_feature_thread(self.feature_thread);
+
+        // Handle IO settings
         if let Some(stderr) = self.stderr {
             conf.0.stdio.stderr = stderr;
         }
@@ -280,7 +290,10 @@ impl CliCommandOpts {
         if self.permissions.len() > 0 {
             conf.0.set_permisions(self.permissions);
         }
-        conf.0.set_envs(self.envs);
+
+        // Handle environment variables
+        conf.0.set_envs(envs);
+
         conf.0.set_drivers_root_path(self.drivers_root_path);
         let mut modules = self.modules;
         let mut has_entry = false;
@@ -304,6 +317,40 @@ impl CliCommandOpts {
         }
         conf.0.tcp_listens = self.tcp_listens;
         Ok(())
+    }
+
+    /// Load and merge environment variables from both the environment file and explicit --env arguments.
+    /// Explicit environment variables take precedence over those from the file.
+    /// The environment variables are sorted by key.
+    fn load_environment_vars(&self) -> Result<Vec<(String, String)>> {
+        let mut final_envs = Vec::new();
+
+        // Load vars from env file if specified
+        if let Some(env_file) = &self.env_file {
+            let env_path = Path::new(env_file);
+            if env_path.exists() {
+                // Read variables from the env file
+                let file_vars = dotenvy::from_path_iter(env_path)?
+                    .filter_map(Result::ok)
+                    .collect::<Vec<(String, String)>>();
+                // Add all variables from the file
+                final_envs.extend(file_vars);
+            }
+        }
+
+        // Add explicit environment variables, overwriting any duplicates from the file
+        for env_var in &self.envs {
+            // Remove any existing variable with the same name
+            if let Some(index) = final_envs.iter().position(|(key, _)| key == &env_var.0) {
+                final_envs.remove(index);
+            }
+            final_envs.push(env_var.clone());
+        }
+
+        // Sort environment variables by key
+        final_envs.sort_by(|(a_key, _), (b_key, _)| a_key.cmp(b_key));
+
+        Ok(final_envs)
     }
 }
 

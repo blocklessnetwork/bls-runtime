@@ -12,3 +12,6 @@ Cargo.lock
 **/*.rs.bk
 ._target
 *.log
+
+# Env files
+.env
