@@ -356,11 +356,11 @@ impl CliCommandOpts {
 
 #[cfg(test)]
 mod test {
-
-    use blockless::BlocklessConfigVersion;
-
     #[allow(unused)]
     use super::*;
+    use blockless::BlocklessConfigVersion;
+    use std::io::Write;
+    use tempfile::NamedTempFile;
 
     #[test]
     fn test_cli_command_v86() {
@@ -384,6 +384,52 @@ mod test {
         assert_eq!(cli.envs.len(), 2);
         assert_eq!(cli.envs[0], ("a".to_string(), "1".to_string()));
         assert_eq!(cli.envs[1], ("b".to_string(), "2".to_string()));
+    }
+
+    #[test]
+    fn test_cli_command_env_file_loading_and_sorting() -> Result<()> {
+        // Create temp env file with variables including interpolation
+        let mut env_file = NamedTempFile::new()?;
+        writeln!(
+            env_file,
+            r#"COMMON_VAR=from_file
+ZOO_VAR=zebra
+BASE_URL=https://api.example.com
+SERVICE_URL=${{BASE_URL}}/v1"#
+        )?;
+
+        let cli = CliCommandOpts::try_parse_from([
+            "cli",
+            "test.wasm", // required input argument
+            "--env-file",
+            env_file.path().to_str().unwrap(),
+            "--env",
+            "COMMON_VAR=from_cli",
+            "--env",
+            "APP_VAR=test",
+        ])
+        .unwrap();
+
+        let envs = cli.load_environment_vars()?;
+
+        assert_eq!(
+            envs,
+            vec![
+                ("APP_VAR".to_string(), "test".to_string()),
+                (
+                    "BASE_URL".to_string(),
+                    "https://api.example.com".to_string()
+                ),
+                ("COMMON_VAR".to_string(), "from_cli".to_string()), // CLI value takes precedence
+                (
+                    "SERVICE_URL".to_string(),
+                    "https://api.example.com/v1".to_string()
+                ), // interpolated value
+                ("ZOO_VAR".to_string(), "zebra".to_string()),
+            ]
+        );
+
+        Ok(())
     }
 
     #[test]
