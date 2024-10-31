@@ -55,12 +55,12 @@
 //! get with WasiFile/WasiDir:
 //!
 //! * Timekeeping: `WasiSystemClock` and `WasiMonotonicClock` provide the two
-//! interfaces for a clock. `WasiSystemClock` represents time as a
-//! `cap_std::time::SystemTime`, and `WasiMonotonicClock` represents time as
-//! `cap_std::time::Instant`.  * Randomness: we re-use the `cap_rand::RngCore`
-//! trait to represent a randomness source. A trivial `Deterministic` impl is
-//! provided.  * Scheduling: The `WasiSched` trait abstracts over the
-//! `sched_yield` and `poll_oneoff` functions.
+//!   interfaces for a clock. `WasiSystemClock` represents time as a
+//!   `cap_std::time::SystemTime`, and `WasiMonotonicClock` represents time as
+//!   `cap_std::time::Instant`.  * Randomness: we re-use the `cap_rand::RngCore`
+//!   trait to represent a randomness source. A trivial `Deterministic` impl is
+//!   provided.  * Scheduling: The `WasiSched` trait abstracts over the
+//!   `sched_yield` and `poll_oneoff` functions.
 //!
 //! Users can provide implementations of each of these interfaces to the
 //! `WasiCtx::builder(...)` function. The
@@ -97,9 +97,6 @@ pub use file::WasiFile;
 pub use sched::{Poll, WasiSched};
 pub use string_array::{StringArray, StringArrayError};
 pub use table::Table;
-
-mod blockless;
-pub use blockless::*;
 
 // The only difference between these definitions for sync vs async is whether
 // the wasmtime::Funcs generated are async (& therefore need an async Store and an executor to run)
@@ -180,7 +177,7 @@ pub fn maybe_exit_on_error(e: anyhow::Error) -> anyhow::Error {
     // to the outside environment indicating a more severe problem
     // than a simple failure.
     if e.is::<Trap>() {
-        eprintln!("Error: {:?}", e);
+        eprintln!("Error: {e:?}");
 
         if cfg!(unix) {
             // On Unix, return the error code of an abort.

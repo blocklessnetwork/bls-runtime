@@ -120,7 +120,7 @@ impl WasiCtx {
         let s = Arc::get_mut(&mut self.0).expect(
             "`push_env` should only be used during initialization before the context is cloned",
         );
-        s.env.push(format!("{}={}", var, value))?;
+        s.env.push(format!("{var}={value}"))?;
         Ok(())
     }
 
