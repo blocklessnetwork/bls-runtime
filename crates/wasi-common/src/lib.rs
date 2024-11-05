@@ -98,6 +98,9 @@ pub use sched::{Poll, WasiSched};
 pub use string_array::{StringArray, StringArrayError};
 pub use table::Table;
 
+mod blockless;
+pub use blockless::*;
+
 // The only difference between these definitions for sync vs async is whether
 // the wasmtime::Funcs generated are async (& therefore need an async Store and an executor to run)
 // or whether they have an internal "dummy executor" that expects the implementation of all
