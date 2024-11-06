@@ -36,7 +36,7 @@ Blockless supports a variety of programming languages including:
 
 ## The example of configure file 
 
-```jsonc
+```json
 {
     "fs_root_path": "/Users/join/Downloads", 
     "drivers_root_path": "/Users/join/Downloads", 
@@ -70,8 +70,6 @@ Blockless supports a variety of programming languages including:
         ...
     }
 }
-
-
 ```
 
 - `fs_root_path`: The root file system path of the app. When the app is opened, it will use this file system as its "/".
@@ -113,7 +111,7 @@ The runtime requires an input from stdin and also accepts environment variables 
 $ "echo "FOO" | env THIS_IS_MY_VAR=FOO BLS_LIST_VARS=THIS_IS_MY_VAR ~/.bls/runtime/blockless-cli ./build/manifest.json"
 ```
 
-## Exit code
+## Exit codes
 
 |code|description|
 |----|-------------------|
