@@ -117,7 +117,7 @@ pub(crate) async fn list(cfg: &str) -> Result<String, S3ErrorKind> {
     Ok(json::stringify(rs))
 }
 
-fn new_bucket(json: &json::JsonValue) -> Result<Bucket, S3ErrorKind> {
+fn new_bucket(json: &json::JsonValue) -> Result<Box<Bucket>, S3ErrorKind> {
     let bucket_name = match json["bucket_name"].as_str() {
         Some(s) => String::from(s),
         None => return Err(S3ErrorKind::InvalidParameter),
@@ -180,7 +180,7 @@ pub(crate) async fn get_object(cfg: &str) -> Result<Vec<u8>, S3ErrorKind> {
     if resp.status_code() != 200 {
         return Err(S3ErrorKind::RequestError);
     }
-    Ok(Vec::from(resp.bytes()))
+    Ok(resp.bytes().to_vec())
 }
 
 pub(crate) async fn delete_object(cfg: &str) -> Result<(), S3ErrorKind> {

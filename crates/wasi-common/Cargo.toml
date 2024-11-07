@@ -9,6 +9,7 @@ keywords = ["webassembly", "wasm"]
 repository = "https://github.com/bytecodealliance/wasmtime"
 readme = "README.md"
 edition.workspace = true
+
 include = ["src/**/*", "tests/**/*", "witx", "README.md", "LICENSE", "build.rs"]
 
 [lints]
@@ -25,7 +26,6 @@ bitflags = { workspace = true }
 log = { workspace = true }
 
 # Optional, enabled by wasmtime feature:
-syn = { workspace = true }
 wasmtime = { workspace = true, optional = true, features = ['runtime'] }
 # Optional, enabled by sync feature:
 cap-fs-ext = { workspace = true, optional = true }

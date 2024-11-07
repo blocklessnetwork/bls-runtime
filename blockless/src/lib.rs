@@ -48,10 +48,10 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
             builder = builder.instances(m);
         }
         if let Some(m) = store_limited.max_table_elements {
-            builder = builder.table_elements(m);
+            builder = builder.table_elements(m as _);
         }
         if let Some(m) = store_limited.max_tables {
-            builder = builder.table_elements(m);
+            builder = builder.table_elements(m as _);
         }
 
         if let Some(m) = store_limited.max_memories {
@@ -200,7 +200,7 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
                 cfg.total_tables(limit);
             }
             if let Some(limit) = self.opts.pooling_table_elements {
-                cfg.table_elements(limit);
+                cfg.table_elements(limit as _);
             }
             if let Some(limit) = self.opts.pooling_max_core_instance_size {
                 cfg.max_core_instance_size(limit);
