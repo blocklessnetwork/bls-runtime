@@ -36,7 +36,7 @@ Blockless supports a variety of programming languages including:
 
 ## The example of configure file 
 
-```json
+```jsonp
 {
     "fs_root_path": "/Users/join/Downloads", 
     "drivers_root_path": "/Users/join/Downloads", 

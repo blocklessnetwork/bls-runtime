@@ -37,6 +37,10 @@ jobs:
         with:
           toolchain: stable
           target: ${{ matrix.target }}
+      - name: Add rust Target
+        run: |
+          rustup target add ${{ matrix.target }}
+          rustup target list
       - name: Build runtime
         uses: actions-rs/cargo@v1
         with:
