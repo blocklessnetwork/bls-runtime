@@ -3,7 +3,9 @@ pub mod error;
 mod modules;
 
 use anyhow::Context;
-use blockless_drivers::{CdylibDriver, DriverConetxt};
+use blockless_drivers::{
+    CdylibDriver, DriverConetxt
+};
 use blockless_env;
 pub use blockless_multiaddr::MultiAddr;
 use cap_std::ambient_authority;
@@ -14,7 +16,9 @@ use modules::ModuleLinker;
 use std::{env, path::Path, sync::Arc};
 use wasi_common::sync::WasiCtxBuilder;
 pub use wasi_common::*;
-use wasmtime::{Config, Engine, Linker, Module, Store, StoreLimits, StoreLimitsBuilder, Trap};
+use wasmtime::{
+    Config, Engine, Linker, Module, Store, StoreLimits, StoreLimitsBuilder, Trap
+};
 use wasmtime_wasi_threads::WasiThreadsCtx;
 
 // the default wasm entry name.
