@@ -16,8 +16,11 @@ use modules::ModuleLinker;
 use std::{env, path::Path, sync::Arc};
 use wasi_common::sync::WasiCtxBuilder;
 pub use wasi_common::*;
+pub use anyhow::Result as AnyResult;
 use wasmtime::{
-    Config, Engine, Linker, Module, Store, StoreLimits, StoreLimitsBuilder, Trap
+    component::Component, 
+    Config, Engine, Linker, Module, Precompiled, 
+    Store, StoreLimits, StoreLimitsBuilder, Trap
 };
 use wasmtime_wasi_threads::WasiThreadsCtx;
 
@@ -230,11 +233,22 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
     }
 }
 
+enum BlsLinker {
+    Core(wasmtime::Linker<BlocklessContext>),
+    Component(wasmtime::component::Linker<BlocklessContext>),
+}
+
+pub enum BlsRunTarget {
+    Core(Module),
+    Component(Component),
+}
+
+
 struct BlocklessRunner(BlocklessConfig);
 
 impl BlocklessRunner {
     /// blockless run method, it execute the wasm program with configure file.
-    async fn run(self) -> anyhow::Result<ExitStatus> {
+    async fn run(self) -> AnyResult<ExitStatus> {
         let b_conf = self.0;
         let max_fuel = b_conf.get_limited_fuel();
         // set the drivers root path, if not setting use exe file path.
@@ -263,7 +277,7 @@ impl BlocklessRunner {
         let mut ctx = BlocklessContext::default();
         ctx.store_limits = store_limits;
         ctx.preview1_ctx = Some(preview1_ctx);
-        let mut store = Store::new(&engine, ctx);
+        let mut store: Store<BlocklessContext> = Store::new(&engine, ctx);
         store.limiter(|ctx| &mut ctx.store_limits);
         // set the fule in store.
         if let Some(f) = fule {
@@ -307,6 +321,66 @@ impl BlocklessRunner {
         Ok(ExitStatus {
             fuel: store.get_fuel().ok(),
             code: exit_code,
+        })
+    }
+
+    pub fn load_module(&self, engine: &Engine, path: &Path) -> AnyResult<BlsRunTarget> {
+        let path: &Path = match path.to_str() {
+            #[cfg(unix)]
+            Some("-") => "/dev/stdin".as_ref(),
+            _ => path,
+        };
+
+        match wasmtime::_internal::MmapVec::from_file(path) {
+            Ok(map) => self.load_module_contents(
+                engine,
+                path,
+                &map,
+                || unsafe { Module::deserialize_file(engine, path) },
+                || unsafe { Component::deserialize_file(engine, path) },
+            ),
+            Err(_) => {
+                let bytes = std::fs::read(path)
+                    .with_context(|| format!("failed to read file: {}", path.display()))?;
+                self.load_module_contents(
+                    engine,
+                    path,
+                    &bytes,
+                    || unsafe { Module::deserialize(engine, &bytes) },
+                    || unsafe { Component::deserialize(engine, &bytes) },
+                )
+            }
+        }
+    }
+
+    pub fn load_module_contents(
+        &self,
+        engine: &Engine,
+        path: &Path,
+        bytes: &[u8],
+        deserialize_module: impl FnOnce() -> AnyResult<Module>,
+        deserialize_component: impl FnOnce() -> AnyResult<Component>,
+    ) -> AnyResult<BlsRunTarget> {
+        Ok(match engine.detect_precompiled(bytes) {
+            Some(Precompiled::Module) => {
+                BlsRunTarget::Core(deserialize_module()?)
+            }
+            Some(Precompiled::Component) => {
+                BlsRunTarget::Component(deserialize_component()?)
+            }
+            None => {
+                let mut code = wasmtime::CodeBuilder::new(engine);
+                code.wasm_binary_or_text(bytes, Some(path))?;
+                match code.hint() {
+                    Some(wasmtime::CodeHint::Component) => {
+                        BlsRunTarget::Component(code.compile_component()?)
+                    }
+                    Some(wasmtime::CodeHint::Module) | None => {
+                        BlsRunTarget::Core(code.compile_module()?)
+                    }
+                }
+            }
+            
         })
     }
 
