@@ -3,9 +3,7 @@ pub mod error;
 mod modules;
 
 use anyhow::Context;
-use blockless_drivers::{
-    CdylibDriver, DriverConetxt
-};
+use blockless_drivers::{CdylibDriver, DriverConetxt};
 use blockless_env;
 pub use blockless_multiaddr::MultiAddr;
 use cap_std::ambient_authority;
@@ -13,15 +11,11 @@ use context::BlocklessContext;
 pub use error::*;
 use log::{debug, error};
 use modules::ModuleLinker;
-use std::{
-    env, path::Path, sync::Arc
-};
+use std::{env, path::Path, sync::Arc};
 use wasi_common::sync::WasiCtxBuilder;
-pub use wasi_common::*;
-use wasmtime::{
-    Config, Engine, Linker, Module, Store, StoreLimits, StoreLimitsBuilder, Trap
-};
 use wasi_common::sync::{Dir, TcpListener};
+pub use wasi_common::*;
+use wasmtime::{Config, Engine, Linker, Module, Store, StoreLimits, StoreLimitsBuilder, Trap};
 use wasmtime_wasi_threads::WasiThreadsCtx;
 
 // the default wasm entry name.
@@ -128,7 +122,6 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
         let mut builder = WasiCtxBuilder::new();
         //stdout file process for setting.
         b_conf.preview1_set_stdio(&mut builder);
-        
         // configure to storeLimit
         let entry_module = b_conf
             .entry_module()
@@ -137,7 +130,6 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
         args.extend_from_slice(&b_conf.stdin_args_ref()[..]);
         builder.args(&args[..])?;
         builder.envs(&b_conf.envs_ref()[..])?;
-
         // map host to guest dir in runtime.
         for (host, guest) in b_conf.dirs.iter() {
             let host = Dir::open_ambient_dir(host, ambient_authority())?;
@@ -147,7 +139,6 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
         if let Some(d) = root_dir {
             builder.preopened_dir(d, "/")?;
         }
-        
         //set the tcp listener.
         for l in b_conf.tcp_listens.iter() {
             let l = std::net::TcpListener::bind(l)?;
@@ -155,7 +146,6 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
             builder.push_prepush_socket(l)?;
         }
 
-        
         anyhow::Ok(builder)
     }
 
