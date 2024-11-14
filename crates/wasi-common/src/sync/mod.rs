@@ -110,6 +110,18 @@ impl WasiCtxBuilder {
         self.ctx.push_preopened_dir(dir, guest_path)?;
         Ok(self)
     }
+
+    pub fn push_prepush_socket(
+        &mut self,
+        socket: impl Into<Socket>,
+    ) -> Result<&mut Self, Error> {
+        let socket: Socket = socket.into();
+        let file: Box<dyn WasiFile> = socket.into();
+        self.ctx
+            .push_file(file, FileAccessMode::READ | FileAccessMode::WRITE)?;
+        Ok(self)
+    }
+
     pub fn preopened_socket(
         &mut self,
         fd: u32,
