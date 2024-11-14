@@ -192,7 +192,7 @@ pub(crate) struct CliCommandOpts {
     /// Grant access of a host directory to a guest.
     /// If specified as just `HOST_DIR` then the same directory name on the
     /// host is made available within the guest.
-    #[arg(long = "map-dir", value_name = "HOST_DIR[::GUEST_DIR]", help = MAP_DIR_HELP,value_parser = parse_dirs)]
+    #[arg(long = "dir", value_name = "HOST_DIR[::GUEST_DIR]", help = MAP_DIR_HELP,value_parser = parse_dirs)]
     dirs: Vec<(String, String)>,
 
     #[clap(long = "drivers-root-path", value_name = "DRIVERS-ROOT-PATH", help = DRIVERS_ROOT_PATH_HELP)]
