@@ -111,10 +111,7 @@ impl WasiCtxBuilder {
         Ok(self)
     }
 
-    pub fn push_prepush_socket(
-        &mut self,
-        socket: impl Into<Socket>,
-    ) -> Result<&mut Self, Error> {
+    pub fn push_prepush_socket(&mut self, socket: impl Into<Socket>) -> Result<&mut Self, Error> {
         let socket: Socket = socket.into();
         let file: Box<dyn WasiFile> = socket.into();
         self.ctx
