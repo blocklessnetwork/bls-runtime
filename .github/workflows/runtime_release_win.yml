@@ -33,10 +33,6 @@ jobs:
           file: "bls-runtime/Cargo.toml"
           key: "version"
           value: "${{ steps.get_release.outputs.tag_name }}"
-      - name: Update Version
-        run: |
-          sed  -i  's/version = \".*\"/version = \"${{ steps.get_release.outputs.tag_name }}\"/g' bls-runtime/Cargo.toml
-          grep version bls-runtime/Cargo.toml
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
