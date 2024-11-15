@@ -389,6 +389,7 @@ pub struct BlocklessConfig {
     pub modules: Vec<BlocklessModule>,
     pub runtime_logger: Option<String>,
     pub extensions_path: Option<String>,
+    pub sock_base: Option<u32>,
     // the config version
     pub version: BlocklessConfigVersion,
     pub drivers_root_path: Option<String>,
@@ -413,6 +414,8 @@ impl BlocklessConfig {
             //vm instruction limit.
             limited_fuel: None,
             limited_time: None,
+            // define the base fd
+            sock_base: None,
             tcp_listens: Vec::new(),
             stdin_args: Vec::new(),
             //memory limit, 1 page = 64k.

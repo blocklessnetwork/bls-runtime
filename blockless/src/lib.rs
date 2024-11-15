@@ -2,7 +2,7 @@ mod context;
 pub mod error;
 mod modules;
 
-use anyhow::Context;
+use anyhow::{bail, Context};
 use blockless_drivers::{CdylibDriver, DriverConetxt};
 use blockless_env;
 pub use blockless_multiaddr::MultiAddr;
@@ -130,20 +130,30 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
         args.extend_from_slice(&b_conf.stdin_args_ref()[..]);
         builder.args(&args[..])?;
         builder.envs(&b_conf.envs_ref()[..])?;
+        let mut max_fd = 3;
         // map host to guest dir in runtime.
         for (host, guest) in b_conf.dirs.iter() {
             let host = Dir::open_ambient_dir(host, ambient_authority())?;
             builder.preopened_dir(host, guest)?;
+            max_fd += 1;
         }
         // map root fs
         if let Some(d) = root_dir {
             builder.preopened_dir(d, "/")?;
+            max_fd += 1;
+        }
+        // if the sock base is setting, use the sock base as the base fd.
+        if let Some(base) = b_conf.sock_base {
+            if base < max_fd {
+                bail!("the sock base is slow than the map dir.");
+            }
+            max_fd = base;
         }
         //set the tcp listener.
         for l in b_conf.tcp_listens.iter() {
             let l = std::net::TcpListener::bind(l)?;
             let l = TcpListener::from_std(l);
-            builder.push_prepush_socket(l)?;
+            builder.preopened_socket(max_fd, l)?;
         }
 
         anyhow::Ok(builder)

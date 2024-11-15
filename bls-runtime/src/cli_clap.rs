@@ -9,10 +9,7 @@ use clap::{
     Arg, ArgMatches, Command, Parser,
 };
 use std::{
-    collections::HashMap,
-    net::{IpAddr, SocketAddr, TcpListener, ToSocketAddrs},
-    path::{Path, PathBuf},
-    str::FromStr,
+    collections::HashMap, net::{IpAddr, SocketAddr, TcpListener, ToSocketAddrs}, option, path::{Path, PathBuf}, str::FromStr
 };
 use url::Url;
 
@@ -61,6 +58,9 @@ const V86_HELP: &str =
 
 const THREAD_SUPPORT_HELP: &str =
     "the thread support flag when the flag setting the runtime will support multi-threads.";
+
+const SOCK_BASE_HELP: &str = 
+    "The socket base defines the base file descriptor (fd) for sockets, which WASI uses as the socket fd.";
 
 const TCP_LISTEN_HELP: &str = "grant access to the given TCP listen socket";
 
@@ -240,6 +240,9 @@ pub(crate) struct CliCommandOpts {
     #[clap(long = "tcplisten", help = TCP_LISTEN_HELP, value_parser = parse_listen)]
     tcp_listens: Vec<SocketAddr>,
 
+    #[clap(long = "sockbase", help = SOCK_BASE_HELP)]
+    sock_base: Option<u32>,
+
     #[clap(value_name = "ARGS", help = APP_ARGS_HELP)]
     args: Vec<String>,
 }
@@ -316,6 +319,7 @@ impl CliCommandOpts {
                 .set_version(blockless::BlocklessConfigVersion::Version1);
         }
         conf.0.tcp_listens = self.tcp_listens;
+        conf.0.sock_base = self.sock_base;
         Ok(())
     }
 
