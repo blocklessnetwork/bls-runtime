@@ -382,14 +382,13 @@ pub struct BlocklessConfig {
     pub drivers: Vec<DriverConfig>,
     pub store_limited: StoreLimited,
     pub envs: Vec<(String, String)>,
-    pub tcp_listens: Vec<SocketAddr>,
+    pub tcp_listens: Vec<(SocketAddr, Option<u32>)>,
     pub permisions: Vec<Permission>,
     pub dirs: Vec<(String, String)>,
     pub fs_root_path: Option<String>,
     pub modules: Vec<BlocklessModule>,
     pub runtime_logger: Option<String>,
     pub extensions_path: Option<String>,
-    pub sock_base: Option<u32>,
     // the config version
     pub version: BlocklessConfigVersion,
     pub drivers_root_path: Option<String>,
@@ -415,7 +414,6 @@ impl BlocklessConfig {
             limited_fuel: None,
             limited_time: None,
             // define the base fd
-            sock_base: None,
             tcp_listens: Vec::new(),
             stdin_args: Vec::new(),
             //memory limit, 1 page = 64k.

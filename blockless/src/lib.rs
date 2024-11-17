@@ -142,18 +142,21 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
             builder.preopened_dir(d, "/")?;
             max_fd += 1;
         }
-        // if the sock base is setting, use the sock base as the base fd.
-        if let Some(base) = b_conf.sock_base {
-            if base < max_fd {
-                bail!("the sock base is slow than the map dir.");
-            }
-            max_fd = base;
-        }
         //set the tcp listener.
-        for l in b_conf.tcp_listens.iter() {
+        for (l, fd) in b_conf.tcp_listens.iter() {
+            let fd = if let Some(fd) = fd  {
+                if *fd < max_fd {
+                    bail!("the invalid fd{fd} for listenfd.");
+                }
+                *fd
+            } else {
+                let fd = max_fd;
+                max_fd += 1;
+                fd
+            };
             let l = std::net::TcpListener::bind(l)?;
             let l = TcpListener::from_std(l);
-            builder.preopened_socket(max_fd, l)?;
+            builder.preopened_socket(fd, l)?;
         }
 
         anyhow::Ok(builder)

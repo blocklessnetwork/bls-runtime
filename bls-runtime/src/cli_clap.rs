@@ -59,10 +59,7 @@ const V86_HELP: &str =
 const THREAD_SUPPORT_HELP: &str =
     "the thread support flag when the flag setting the runtime will support multi-threads.";
 
-const SOCK_BASE_HELP: &str = 
-    "The socket base defines the base file descriptor (fd) for sockets, which WASI uses as the socket fd.";
-
-const TCP_LISTEN_HELP: &str = "grant access to the given TCP listen socket";
+const TCP_LISTEN_HELP: &str = "grant access to the given TCP listen socket. ";
 
 fn parse_envs(envs: &str) -> Result<(String, String)> {
     let parts: Vec<_> = envs.splitn(2, "=").collect();
@@ -144,10 +141,20 @@ fn parse_stdin(stdin: &str) -> Result<Stdin> {
     }
 }
 
-fn parse_listen(s: &str) -> Result<SocketAddr> {
-    let addrs = s.to_socket_addrs()?;
-    for addr in addrs {
-        return Ok(addr);
+fn parse_listen(s: &str) -> Result<(SocketAddr, Option<u32>)> {
+    let splitn = s.splitn(2, "::");
+    let saddrs = splitn.collect::<Vec<_>>();
+    if saddrs.len() < 2 {
+        let addrs = s.to_socket_addrs()?;
+        for addr in addrs {
+            return Ok((addr, None));
+        }
+    } else {
+        let port: u32 = saddrs[1].parse()?;
+        let addrs = saddrs[0].to_socket_addrs()?;
+        for addr in addrs {
+            return Ok((addr, Some(port)));
+        }
     }
     bail!("could not resolve to any addresses")
 }
@@ -237,11 +244,8 @@ pub(crate) struct CliCommandOpts {
     #[clap(long = "module", value_name = "MODULE-NAME=MODULE-PATH", help = MODULES_HELP, value_parser = parse_module)]
     modules: Vec<BlocklessModule>,
 
-    #[clap(long = "tcplisten", help = TCP_LISTEN_HELP, value_parser = parse_listen)]
-    tcp_listens: Vec<SocketAddr>,
-
-    #[clap(long = "sockbase", help = SOCK_BASE_HELP)]
-    sock_base: Option<u32>,
+    #[clap(long = "tcplisten", value_name = "TCPLISTEN[::LISTENFD]", help = TCP_LISTEN_HELP, value_parser = parse_listen)]
+    tcp_listens: Vec<(SocketAddr, Option<u32>)>,
 
     #[clap(value_name = "ARGS", help = APP_ARGS_HELP)]
     args: Vec<String>,
@@ -319,7 +323,6 @@ impl CliCommandOpts {
                 .set_version(blockless::BlocklessConfigVersion::Version1);
         }
         conf.0.tcp_listens = self.tcp_listens;
-        conf.0.sock_base = self.sock_base;
         Ok(())
     }
 
