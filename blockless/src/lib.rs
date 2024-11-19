@@ -144,7 +144,7 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
         }
         //set the tcp listener.
         for (l, fd) in b_conf.tcp_listens.iter() {
-            let fd = if let Some(fd) = fd  {
+            let fd = if let Some(fd) = fd {
                 if *fd < max_fd {
                     bail!("the invalid fd{fd} for listenfd.");
                 }
