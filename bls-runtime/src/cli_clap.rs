@@ -9,7 +9,11 @@ use clap::{
     Arg, ArgMatches, Command, Parser,
 };
 use std::{
-    collections::HashMap, net::{IpAddr, SocketAddr, TcpListener, ToSocketAddrs}, option, path::{Path, PathBuf}, str::FromStr
+    collections::HashMap,
+    net::{IpAddr, SocketAddr, TcpListener, ToSocketAddrs},
+    option,
+    path::{Path, PathBuf},
+    str::FromStr,
 };
 use url::Url;
 
