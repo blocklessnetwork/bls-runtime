@@ -64,6 +64,8 @@ const THREAD_SUPPORT_HELP: &str =
 
 const TCP_LISTEN_HELP: &str = "grant access to the given TCP listen socket";
 
+const UNKNOW_IMPORTS_TRAP_HELP: &str = "Allow the main module to import unknown functions.";
+
 fn parse_envs(envs: &str) -> Result<(String, String)> {
     let parts: Vec<_> = envs.splitn(2, "=").collect();
     if parts.len() != 2 {
@@ -242,6 +244,9 @@ pub(crate) struct CliCommandOpts {
 
     #[clap(value_name = "ARGS", help = APP_ARGS_HELP)]
     args: Vec<String>,
+
+    #[clap(long = "unknown_imports_trap", value_name = "UNKNOWN_IMPORTS_TRAP", help = UNKNOW_IMPORTS_TRAP_HELP)]
+    unknown_imports_trap: bool,
 }
 
 impl CliCommandOpts {

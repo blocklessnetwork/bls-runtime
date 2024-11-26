@@ -23,8 +23,8 @@ impl From<&str> for LoggerLevel {
     fn from(value: &str) -> Self {
         match value {
             "debug" | "DEBUG" => LoggerLevel::DEBUG,
-            "info" | "INFO" => LoggerLevel::INFO,
-            "warn" | "WARN" => LoggerLevel::WARN,
+            "info"  | "INFO"  => LoggerLevel::INFO,
+            "warn"  | "WARN"  => LoggerLevel::WARN,
             "trace" | "TRACE" => LoggerLevel::TRACE,
             "error" | "ERROR" => LoggerLevel::ERROR,
             _ => LoggerLevel::INFO,
@@ -58,6 +58,7 @@ pub enum Stderr {
     FileName(String),
 }
 
+#[derive(Clone)]
 pub struct DriverConfig {
     schema: String,
     path: String,
@@ -138,7 +139,7 @@ impl From<usize> for BlocklessConfigVersion {
     }
 }
 
-#[derive(Default)]
+#[derive(Default, Clone)]
 pub struct StoreLimited {
     pub max_memory_size: Option<usize>,
     pub max_table_elements: Option<u32>,
@@ -352,6 +353,7 @@ bls_options! {
     }
 }
 
+#[derive(Clone)]
 pub struct Stdio {
     pub stdin: Stdin,
     pub stdout: Stdout,
@@ -368,6 +370,7 @@ impl Default for Stdio {
     }
 }
 
+#[derive(Clone)]
 pub struct BlocklessConfig {
     pub entry: String,
     pub stdio: Stdio,
@@ -377,9 +380,11 @@ pub struct BlocklessConfig {
     pub feature_thread: bool,
     pub run_time: Option<u64>,
     pub stdin_args: Vec<String>,
+    pub coredump: Option<String>,
     pub limited_fuel: Option<u64>,
     pub limited_time: Option<u64>,
     pub drivers: Vec<DriverConfig>,
+    pub unknown_imports_trap: bool,
     pub store_limited: StoreLimited,
     pub envs: Vec<(String, String)>,
     pub tcp_listens: Vec<SocketAddr>,
@@ -394,15 +399,17 @@ pub struct BlocklessConfig {
     pub drivers_root_path: Option<String>,
     pub runtime_logger_level: LoggerLevel,
     pub group_permisions: HashMap<String, Vec<Permission>>,
+    
 }
 
 impl BlocklessConfig {
     pub fn new(entry: &str) -> BlocklessConfig {
         Self {
             run_time: None,
+            coredump: None,
             envs: Vec::new(),
-            dirs: Vec::new(),
             debug_info: false,
+            dirs: Vec::new(),
             is_carfile: false,
             fs_root_path: None,
             drivers: Vec::new(),
@@ -419,6 +426,7 @@ impl BlocklessConfig {
             store_limited: Default::default(),
             extensions_path: None,
             drivers_root_path: None,
+            unknown_imports_trap: false,
             entry: String::from(entry),
             permisions: Default::default(),
             group_permisions: HashMap::new(),

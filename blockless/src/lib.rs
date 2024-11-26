@@ -33,8 +33,26 @@ pub struct ExitStatus {
     pub code: i32,
 }
 
-pub enum RunTarget {
+pub enum BlsRunTarget {
     Module(Module),
+    Component(Component),
+}
+
+impl BlsRunTarget {
+    fn unwrap_core(&self) -> &Module {
+        match self {
+            BlsRunTarget::Module(module) => module,
+            BlsRunTarget::Component(_) => panic!("expected a core wasm module, not a component"),
+        }
+    }
+    
+    fn unwrap_component(&self) -> &Component {
+        match self {
+            BlsRunTarget::Module(_) => panic!("expected a core wasm module, not a module"),
+            BlsRunTarget::Component(component) => component,
+        }
+    }
+     
 }
 
 trait BlocklessConfig2Preview1WasiBuilder {
@@ -224,11 +242,9 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
             //fuel is enable.
             conf.consume_fuel(true);
         }
-
+        conf.async_support(true);
         if self.feature_thread() {
             conf.wasm_threads(true);
-        } else {
-            conf.async_support(true);
         }
         conf
     }
@@ -239,11 +255,22 @@ enum BlsLinker {
     Component(wasmtime::component::Linker<BlocklessContext>),
 }
 
-pub enum BlsRunTarget {
-    Core(Module),
-    Component(Component),
-}
+impl BlsLinker {
+    fn unwrap_core(&mut self) -> &mut wasmtime::Linker<BlocklessContext> {
+        match self {
+            BlsLinker::Core(linker) => linker,
+            BlsLinker::Component(_) => panic!("expected a core linker, not a component linker."),
+        }
+    }
 
+    #[allow(dead_code)]
+    fn unwrap_component(&mut self) -> &mut wasmtime::component::Linker<BlocklessContext> {
+        match self {
+            BlsLinker::Core(_) => panic!("expected a component linker, not a component linker."),
+            BlsLinker::Component(linker) => linker,
+        }
+    }
+}
 
 struct BlocklessRunner(BlocklessConfig);
 
@@ -264,7 +291,6 @@ impl BlocklessRunner {
         DriverConetxt::init_built_in_drivers(drivers_root_path);
         let conf = b_conf.preview1_engine_config();
         let engine = Engine::new(&conf)?;
-        let mut linker = wasmtime::Linker::new(&engine);
         let support_thread = b_conf.feature_thread();
         let mut builder = b_conf.preview1_builder()?;
         let mut preview1_ctx = builder.build();
@@ -274,7 +300,7 @@ impl BlocklessRunner {
         let version = b_conf.version();
         let store_limits = b_conf.store_limits();
         let fule = b_conf.get_limited_fuel();
-        preview1_ctx.set_blockless_config(Some(b_conf));
+        preview1_ctx.set_blockless_config(Some(b_conf.clone()));
         let mut ctx = BlocklessContext::default();
         ctx.store_limits = store_limits;
         ctx.preview1_ctx = Some(preview1_ctx);
@@ -284,34 +310,18 @@ impl BlocklessRunner {
         if let Some(f) = fule {
             store.set_fuel(f).unwrap();
         }
-        Self::preview1_setup_linker(&mut linker, support_thread);
-        let (module, entry) = Self::module_linker(version, entry, &mut store, &mut linker).await?;
+        let (mut linker, mut run_target, entry) = 
+            Self::module_linker(version, entry, &engine, &mut store).await?;
+        if let BlsLinker::Core(ref mut linker) = linker {
+            Self::preview1_setup_linker(linker, support_thread);
+        }
         // support thread.
         if support_thread {
-            Self::preview1_setup_thread_support(&mut linker, &mut store, &module);
+            Self::preview1_setup_thread_support(&mut linker.unwrap_core(), &mut store, run_target.unwrap_core());
         }
-        let inst = if support_thread {
-            linker.instantiate(&mut store, &module)?
-        } else {
-            linker.instantiate_async(&mut store, &module).await?
-        };
 
-        let func = match version {
-            BlocklessConfigVersion::Version0 => inst
-                .get_typed_func(&mut store, &entry)
-                .or_else(|_| inst.get_typed_func::<(), ()>(&mut store, ""))
-                .or_else(|_| inst.get_typed_func::<(), ()>(&mut store, ENTRY))?,
-            BlocklessConfigVersion::Version1 => {
-                inst.get_typed_func::<(), ()>(&mut store, &entry)?
-            }
-        };
-        // if thread multi thread use sync model.
-        // The multi-thread model is used for the cpu intensive program.
-        let result = if support_thread {
-            func.call(&mut store, ())
-        } else {
-            func.call_async(&mut store, ()).await
-        };
+        let result = 
+            Self::load_main_module(&b_conf, &mut store, &mut linker, &mut run_target, support_thread, &entry).await;
         let exit_code = match result {
             Err(ref t) => Self::error_process(t, || store.get_fuel().unwrap(), max_fuel),
             Ok(_) => {
@@ -325,15 +335,142 @@ impl BlocklessRunner {
         })
     }
 
-    pub fn load_module(&self, engine: &Engine, path: &Path) -> AnyResult<BlsRunTarget> {
-        let path: &Path = match path.to_str() {
+    fn write_core_dump(
+        store: &mut Store<BlocklessContext>,
+        err: &anyhow::Error,
+        name: &str,
+        path: &str,
+    ) -> AnyResult<()> {
+        use std::fs::File;
+        use std::io::Write;
+    
+        let core_dump = err
+            .downcast_ref::<wasmtime::WasmCoreDump>()
+            .expect("should have been configured to capture core dumps");
+    
+        let core_dump = core_dump.serialize(store, name);
+    
+        let mut core_dump_file =
+            File::create(path).context(format!("failed to create file at `{path}`"))?;
+        core_dump_file
+            .write_all(&core_dump)
+            .with_context(|| format!("failed to write core dump file at `{path}`"))?;
+        Ok(())
+    }
+
+    async fn load_main_module(
+        cfg: &BlocklessConfig,
+        store: &mut Store<BlocklessContext>,
+        linker: &mut BlsLinker,
+        module: &BlsRunTarget,
+        support_thread: bool,
+        entry: &str,
+    ) -> AnyResult<()> {
+        // The main module might be allowed to have unknown imports, which
+        // should be defined as traps:
+        if cfg.unknown_imports_trap == true {
+            match linker {
+                BlsLinker::Core(linker) => {
+                    linker.define_unknown_imports_as_traps(module.unwrap_core())?;
+                }
+                BlsLinker::Component(linker) => {
+                    linker.define_unknown_imports_as_traps(module.unwrap_component())?;
+                }
+            }
+        }
+
+        // let finish_epoch_handler = self.setup_epoch_handler(store, modules)?;
+        
+        let result = match linker {
+            BlsLinker::Core(linker) => {
+                let module = module.unwrap_core();
+                let instance = linker
+                    .instantiate_async(&mut *store, &module)
+                    .await
+                    .context(format!(
+                        "failed to instantiate {:?}",
+                        entry
+                    ))?;
+
+                // If `_initialize` is present, meaning a reactor, then invoke
+                // the function.
+                if let Some(func) = instance.get_func(&mut *store, "_initialize") {
+                    let init = func.typed::<(), ()>(&store)?;
+                    init.call_async(&mut *store, ()).await?;
+                }
+
+                // Look for the specific function provided or otherwise look for
+                // "" or "_start" exports to run as a "main" function.
+                let func = match cfg.version {
+                    BlocklessConfigVersion::Version0 => instance
+                        .get_typed_func(&mut *store, entry)
+                        .or_else(|_| instance.get_typed_func::<(), ()>(&mut *store, ""))
+                        .or_else(|_| instance.get_typed_func::<(), ()>(&mut *store, ENTRY))?,
+                    BlocklessConfigVersion::Version1 => {
+                        instance.get_typed_func::<(), ()>(&mut *store, entry)?
+                    }
+                };
+                // if thread multi thread use sync model.
+                // The multi-thread model is used for the cpu intensive program.
+                let result = func.call_async(&mut *store, ()).await;
+                result
+            }
+            BlsLinker::Component(linker) => {
+                let component = module.unwrap_component();
+                let command = wasmtime_wasi::bindings::Command::instantiate_async(
+                    &mut *store,
+                    component,
+                    linker,
+                )
+                .await?;
+                let result = command
+                    .wasi_cli_run()
+                    .call_run(&mut *store)
+                    .await
+                    .context("failed to invoke `run` function")
+                    .map_err(|e| Self::handle_core_dump(cfg, &mut *store, e));
+
+                // Translate the `Result<(),()>` produced by wasm into a feigned
+                // explicit exit here with status 1 if `Err(())` is returned.
+                result.and_then(|wasm_result| match wasm_result {
+                    Ok(()) => Ok(()),
+                    Err(()) => Err(wasmtime_wasi::I32Exit(1).into()),
+                })
+            }
+        };
+        // finish_epoch_handler(store);
+
+        result
+    }
+
+    fn handle_core_dump(cfg: &BlocklessConfig, store: &mut Store<BlocklessContext>, err: anyhow::Error) -> anyhow::Error {
+        let coredump_path = match &cfg.coredump {
+            Some(path) => path,
+            None => return err,
+        };
+        if !err.is::<wasmtime::Trap>() {
+            return err;
+        }
+        let source_name = cfg.modules[0].file
+            .as_str();
+
+        if let Err(coredump_err) = Self::write_core_dump(store, &err, &source_name, coredump_path) {
+            eprintln!("warning: coredump failed to generate: {coredump_err}");
+            err
+        } else {
+            err.context(format!("core dumped at {coredump_path}"))
+        }
+    }
+
+    pub fn load_module<T: AsRef<Path>>(engine: &Engine, path: T) -> AnyResult<BlsRunTarget> {
+        let path: &Path = match path.as_ref().to_str() {
             #[cfg(unix)]
             Some("-") => "/dev/stdin".as_ref(),
-            _ => path,
+            _ => path.as_ref(),
         };
 
         match wasmtime::_internal::MmapVec::from_file(path) {
-            Ok(map) => self.load_module_contents(
+            Ok(map) => Self::load_module_contents(
                 engine,
                 path,
                 &map,
@@ -343,7 +480,7 @@ impl BlocklessRunner {
             Err(_) => {
                 let bytes = std::fs::read(path)
                     .with_context(|| format!("failed to read file: {}", path.display()))?;
-                self.load_module_contents(
+                Self::load_module_contents(
                     engine,
                     path,
                     &bytes,
@@ -355,7 +492,6 @@ impl BlocklessRunner {
     }
 
     pub fn load_module_contents(
-        &self,
         engine: &Engine,
         path: &Path,
         bytes: &[u8],
@@ -364,7 +500,7 @@ impl BlocklessRunner {
     ) -> AnyResult<BlsRunTarget> {
         Ok(match engine.detect_precompiled(bytes) {
             Some(Precompiled::Module) => {
-                BlsRunTarget::Core(deserialize_module()?)
+                BlsRunTarget::Module(deserialize_module()?)
             }
             Some(Precompiled::Component) => {
                 BlsRunTarget::Component(deserialize_component()?)
@@ -377,7 +513,7 @@ impl BlocklessRunner {
                         BlsRunTarget::Component(code.compile_component()?)
                     }
                     Some(wasmtime::CodeHint::Module) | None => {
-                        BlsRunTarget::Core(code.compile_module()?)
+                        BlsRunTarget::Module(code.compile_module()?)
                     }
                 }
             }
@@ -423,22 +559,27 @@ impl BlocklessRunner {
     async fn module_linker<'a>(
         version: BlocklessConfigVersion,
         mut entry: String,
+        engine: &Engine,
         store: &'a mut Store<BlocklessContext>,
-        linker: &'a mut Linker<BlocklessContext>,
-    ) -> anyhow::Result<(Module, String)> {
+    ) -> anyhow::Result<(BlsLinker, BlsRunTarget, String)> {
         match version {
             // this is older configure for bls-runtime, this only run single wasm.
             BlocklessConfigVersion::Version0 => {
-                let module = Module::from_file(store.engine(), &entry)?;
-                Ok((module, ENTRY.to_string()))
+                let module = Self::load_module(engine, &entry)?;
+                let linker = match module {
+                    BlsRunTarget::Module(_) => BlsLinker::Core(wasmtime::Linker::new(&engine)),
+                    BlsRunTarget::Component(_) => BlsLinker::Component(wasmtime::component::Linker::new(&engine)),
+                };
+                Ok((linker, module, ENTRY.to_string()))
             }
             BlocklessConfigVersion::Version1 => {
                 if entry.is_empty() {
                     entry = ENTRY.to_string();
                 }
-                let mut module_linker = ModuleLinker::new(linker, store);
+                let mut linker = wasmtime::Linker::new(engine);
+                let mut module_linker = ModuleLinker::new(&mut linker, store);
                 let module = module_linker.link_modules().await.context("")?;
-                Ok((module, entry))
+                Ok((BlsLinker::Core(linker), BlsRunTarget::Module(module), entry))
             }
         }
     }
