@@ -391,7 +391,6 @@ impl BlocklessRunner {
                     let init = func.typed::<(), ()>(&store)?;
                     init.call_async(&mut *store, ()).await?;
                 }
-
                 // Look for the specific function provided or otherwise look for
                 // "" or "_start" exports to run as a "main" function.
                 let func = match cfg.version {
@@ -421,7 +420,6 @@ impl BlocklessRunner {
                     .await
                     .context("failed to invoke `run` function")
                     .map_err(|e| Self::handle_core_dump(cfg, &mut *store, e));
-
                 // Translate the `Result<(),()>` produced by wasm into a feigned
                 // explicit exit here with status 1 if `Err(())` is returned.
                 result.and_then(|wasm_result| match wasm_result {
@@ -555,7 +553,9 @@ impl BlocklessRunner {
             BlocklessConfigVersion::Version0 => {
                 let module = Self::load_module(engine, &entry)?;
                 let linker = match module {
-                    BlsRunTarget::Module(_) => BlsLinker::Core(wasmtime::Linker::new(&engine)),
+                    BlsRunTarget::Module(_) => {
+                        BlsLinker::Core(wasmtime::Linker::new(&engine))
+                    },
                     BlsRunTarget::Component(_) => {
                         BlsLinker::Component(wasmtime::component::Linker::new(&engine))
                     }
