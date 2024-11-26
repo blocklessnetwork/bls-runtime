@@ -320,14 +320,8 @@ impl BlocklessRunner {
             );
         }
 
-        let result = Self::load_main_module(
-            &b_conf,
-            &mut store,
-            &mut linker,
-            &mut run_target,
-            &entry,
-        )
-        .await;
+        let result =
+            Self::load_main_module(&b_conf, &mut store, &mut linker, &mut run_target, &entry).await;
         let exit_code = match result {
             Err(ref t) => Self::error_process(t, || store.get_fuel().unwrap(), max_fuel),
             Ok(_) => {
