@@ -1,20 +1,14 @@
-use anyhow::{
-    anyhow, Context
-};
+use anyhow::{anyhow, Context};
 use json::JsonValue;
 use lazy_static::lazy_static;
 use std::future::Future;
 use std::sync::Arc;
-use std::{
-    cmp::min, collections::HashMap
-};
+use std::{cmp::min, collections::HashMap};
 use tokio::sync::Mutex;
-use wasi_common::{
-    BlocklessModule, ModuleType
-};
+use wasi_common::{BlocklessModule, ModuleType};
 use wasmtime::{
-    AsContext, AsContextMut, Caller, Extern, Func, Linker, 
-    Memory, Module, Store, StoreContextMut, TypedFunc,
+    AsContext, AsContextMut, Caller, Extern, Func, Linker, Memory, Module, Store, StoreContextMut,
+    TypedFunc,
 };
 
 use crate::context::BlocklessContext as BSContext;

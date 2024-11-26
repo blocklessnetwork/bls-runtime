@@ -23,8 +23,8 @@ impl From<&str> for LoggerLevel {
     fn from(value: &str) -> Self {
         match value {
             "debug" | "DEBUG" => LoggerLevel::DEBUG,
-            "info"  | "INFO"  => LoggerLevel::INFO,
-            "warn"  | "WARN"  => LoggerLevel::WARN,
+            "info" | "INFO" => LoggerLevel::INFO,
+            "warn" | "WARN" => LoggerLevel::WARN,
             "trace" | "TRACE" => LoggerLevel::TRACE,
             "error" | "ERROR" => LoggerLevel::ERROR,
             _ => LoggerLevel::INFO,
@@ -399,7 +399,6 @@ pub struct BlocklessConfig {
     pub drivers_root_path: Option<String>,
     pub runtime_logger_level: LoggerLevel,
     pub group_permisions: HashMap<String, Vec<Permission>>,
-    
 }
 
 impl BlocklessConfig {

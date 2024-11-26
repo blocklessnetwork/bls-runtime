@@ -3,9 +3,8 @@ pub mod error;
 mod modules;
 
 use anyhow::Context;
-use blockless_drivers::{
-    CdylibDriver, DriverConetxt
-};
+pub use anyhow::Result as AnyResult;
+use blockless_drivers::{CdylibDriver, DriverConetxt};
 use blockless_env;
 pub use blockless_multiaddr::MultiAddr;
 use cap_std::ambient_authority;
@@ -17,11 +16,9 @@ use std::{env, path::Path, sync::Arc};
 use wasi_common::sync::WasiCtxBuilder;
 use wasi_common::sync::{Dir, TcpListener};
 pub use wasi_common::*;
-pub use anyhow::Result as AnyResult;
 use wasmtime::{
-    component::Component, 
-    Config, Engine, Linker, Module, Precompiled, 
-    Store, StoreLimits, StoreLimitsBuilder, Trap
+    component::Component, Config, Engine, Linker, Module, Precompiled, Store, StoreLimits,
+    StoreLimitsBuilder, Trap,
 };
 use wasmtime_wasi_threads::WasiThreadsCtx;
 
@@ -45,14 +42,13 @@ impl BlsRunTarget {
             BlsRunTarget::Component(_) => panic!("expected a core wasm module, not a component"),
         }
     }
-    
+
     fn unwrap_component(&self) -> &Component {
         match self {
             BlsRunTarget::Module(_) => panic!("expected a core wasm module, not a module"),
             BlsRunTarget::Component(component) => component,
         }
     }
-     
 }
 
 trait BlocklessConfig2Preview1WasiBuilder {
@@ -310,18 +306,28 @@ impl BlocklessRunner {
         if let Some(f) = fule {
             store.set_fuel(f).unwrap();
         }
-        let (mut linker, mut run_target, entry) = 
+        let (mut linker, mut run_target, entry) =
             Self::module_linker(version, entry, &engine, &mut store).await?;
         if let BlsLinker::Core(ref mut linker) = linker {
             Self::preview1_setup_linker(linker, support_thread);
         }
         // support thread.
         if support_thread {
-            Self::preview1_setup_thread_support(&mut linker.unwrap_core(), &mut store, run_target.unwrap_core());
+            Self::preview1_setup_thread_support(
+                &mut linker.unwrap_core(),
+                &mut store,
+                run_target.unwrap_core(),
+            );
         }
 
-        let result = 
-            Self::load_main_module(&b_conf, &mut store, &mut linker, &mut run_target, support_thread, &entry).await;
+        let result = Self::load_main_module(
+            &b_conf,
+            &mut store,
+            &mut linker,
+            &mut run_target,
+            &entry,
+        )
+        .await;
         let exit_code = match result {
             Err(ref t) => Self::error_process(t, || store.get_fuel().unwrap(), max_fuel),
             Ok(_) => {
@@ -343,13 +349,13 @@ impl BlocklessRunner {
     ) -> AnyResult<()> {
         use std::fs::File;
         use std::io::Write;
-    
+
         let core_dump = err
             .downcast_ref::<wasmtime::WasmCoreDump>()
             .expect("should have been configured to capture core dumps");
-    
+
         let core_dump = core_dump.serialize(store, name);
-    
+
         let mut core_dump_file =
             File::create(path).context(format!("failed to create file at `{path}`"))?;
         core_dump_file
@@ -363,7 +369,6 @@ impl BlocklessRunner {
         store: &mut Store<BlocklessContext>,
         linker: &mut BlsLinker,
         module: &BlsRunTarget,
-        support_thread: bool,
         entry: &str,
     ) -> AnyResult<()> {
         // The main module might be allowed to have unknown imports, which
@@ -379,21 +384,15 @@ impl BlocklessRunner {
             }
         }
 
-        // let finish_epoch_handler = self.setup_epoch_handler(store, modules)?;
-        
         let result = match linker {
             BlsLinker::Core(linker) => {
                 let module = module.unwrap_core();
                 let instance = linker
                     .instantiate_async(&mut *store, &module)
                     .await
-                    .context(format!(
-                        "failed to instantiate {:?}",
-                        entry
-                    ))?;
+                    .context(format!("failed to instantiate {:?}", entry))?;
 
-                // If `_initialize` is present, meaning a reactor, then invoke
-                // the function.
+                // If `_initialize` is present, meaning a reactor, then invoke the function.
                 if let Some(func) = instance.get_func(&mut *store, "_initialize") {
                     let init = func.typed::<(), ()>(&store)?;
                     init.call_async(&mut *store, ()).await?;
@@ -412,8 +411,7 @@ impl BlocklessRunner {
                 };
                 // if thread multi thread use sync model.
                 // The multi-thread model is used for the cpu intensive program.
-                let result = func.call_async(&mut *store, ()).await;
-                result
+                func.call_async(&mut *store, ()).await
             }
             BlsLinker::Component(linker) => {
                 let component = module.unwrap_component();
@@ -438,12 +436,14 @@ impl BlocklessRunner {
                 })
             }
         };
-        // finish_epoch_handler(store);
-
         result
     }
 
-    fn handle_core_dump(cfg: &BlocklessConfig, store: &mut Store<BlocklessContext>, err: anyhow::Error) -> anyhow::Error {
+    fn handle_core_dump(
+        cfg: &BlocklessConfig,
+        store: &mut Store<BlocklessContext>,
+        err: anyhow::Error,
+    ) -> anyhow::Error {
         let coredump_path = match &cfg.coredump {
             Some(path) => path,
             None => return err,
@@ -451,8 +451,7 @@ impl BlocklessRunner {
         if !err.is::<wasmtime::Trap>() {
             return err;
         }
-        let source_name = cfg.modules[0].file
-            .as_str();
+        let source_name = cfg.modules[0].file.as_str();
 
         if let Err(coredump_err) = Self::write_core_dump(store, &err, &source_name, coredump_path) {
             eprintln!("warning: coredump failed to generate: {coredump_err}");
@@ -499,12 +498,8 @@ impl BlocklessRunner {
         deserialize_component: impl FnOnce() -> AnyResult<Component>,
     ) -> AnyResult<BlsRunTarget> {
         Ok(match engine.detect_precompiled(bytes) {
-            Some(Precompiled::Module) => {
-                BlsRunTarget::Module(deserialize_module()?)
-            }
-            Some(Precompiled::Component) => {
-                BlsRunTarget::Component(deserialize_component()?)
-            }
+            Some(Precompiled::Module) => BlsRunTarget::Module(deserialize_module()?),
+            Some(Precompiled::Component) => BlsRunTarget::Component(deserialize_component()?),
             None => {
                 let mut code = wasmtime::CodeBuilder::new(engine);
                 code.wasm_binary_or_text(bytes, Some(path))?;
@@ -517,7 +512,6 @@ impl BlocklessRunner {
                     }
                 }
             }
-            
         })
     }
 
@@ -568,7 +562,9 @@ impl BlocklessRunner {
                 let module = Self::load_module(engine, &entry)?;
                 let linker = match module {
                     BlsRunTarget::Module(_) => BlsLinker::Core(wasmtime::Linker::new(&engine)),
-                    BlsRunTarget::Component(_) => BlsLinker::Component(wasmtime::component::Linker::new(&engine)),
+                    BlsRunTarget::Component(_) => {
+                        BlsLinker::Component(wasmtime::component::Linker::new(&engine))
+                    }
                 };
                 Ok((linker, module, ENTRY.to_string()))
             }
