@@ -12,14 +12,15 @@ use context::BlocklessContext;
 pub use error::*;
 use log::{debug, error};
 use modules::ModuleLinker;
+use wasmtime_wasi::{DirPerms, FilePerms};
 use std::sync::Mutex;
 use std::{env, path::Path, sync::Arc};
 use wasi_common::sync::WasiCtxBuilder;
 use wasi_common::sync::{Dir, TcpListener};
 pub use wasi_common::*;
 use wasmtime::{
-    component::Component, Config, Engine, Linker, Module, Precompiled, Store, StoreLimits,
-    StoreLimitsBuilder, Trap,
+    component::Component, Config, Engine, Linker, Module, 
+    Precompiled, Store, StoreLimits, StoreLimitsBuilder, Trap,
 };
 use wasmtime_wasi_threads::WasiThreadsCtx;
 
@@ -54,6 +55,7 @@ impl BlsRunTarget {
 
 trait BlocklessConfig2Preview1WasiBuilder {
     fn preview1_builder(&self) -> anyhow::Result<WasiCtxBuilder>;
+    fn preview2_builder(&self) -> anyhow::Result<wasmtime_wasi::WasiCtxBuilder>;
     fn preview1_set_stdio(&self, builder: &mut WasiCtxBuilder);
     fn preview1_engine_config(&self) -> Config;
     fn store_limits(&self) -> StoreLimits;
@@ -254,6 +256,17 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
         }
         conf
     }
+    
+    fn preview2_builder(&self) -> anyhow::Result<wasmtime_wasi::WasiCtxBuilder> {
+        let mut builder = wasmtime_wasi::WasiCtxBuilder::new();
+        for (host_path, guest_path) in self.dirs.iter() {
+            builder.preopened_dir(host_path, guest_path, DirPerms::all(), FilePerms::all())?;
+        }
+        if let Some(root_dir) = self.fs_root_path_ref() {
+            builder.preopened_dir(root_dir, "/", DirPerms::all(), FilePerms::all())?;
+        }
+        Ok(builder)
+    }
 }
 
 enum BlsLinker {
@@ -319,7 +332,7 @@ impl BlocklessRunner {
         // prepare linker.
         match linker {
             BlsLinker::Core(ref mut linker) => {
-                Self::preview1_setup_linker(linker, support_thread);
+                Self::preview1_linker_setup(linker, support_thread);
             }
             BlsLinker::Component(ref mut linker) => {
                 wasmtime_wasi::add_to_linker_async(linker)?;
@@ -359,8 +372,9 @@ impl BlocklessRunner {
     }
 
     fn preview2_setup(&self, ctx: &mut BlocklessContext) -> AnyResult<()> {
-        let mut builder = wasmtime_wasi::WasiCtxBuilder::new();
+        let mut builder = self.0.preview2_builder()?;
         builder.inherit_stdio().args(&self.0.stdin_args);
+        builder.envs(&self.0.envs);
         let preview2_ctx = builder.build_p1();
         ctx.preview2_ctx = Some(Arc::new(Mutex::new(preview2_ctx)));
         Ok(())
@@ -538,7 +552,7 @@ impl BlocklessRunner {
         })
     }
 
-    fn preview1_setup_linker(linker: &mut Linker<BlocklessContext>, support_thread: bool) {
+    fn preview1_linker_setup(linker: &mut Linker<BlocklessContext>, support_thread: bool) {
         if !support_thread {
             // define the macro of extends.
             macro_rules! add_to_linker {
