@@ -12,16 +12,16 @@ use context::BlocklessContext;
 pub use error::*;
 use log::{debug, error};
 use modules::ModuleLinker;
-use wasmtime_wasi::{DirPerms, FilePerms};
 use std::sync::Mutex;
 use std::{env, path::Path, sync::Arc};
 use wasi_common::sync::WasiCtxBuilder;
 use wasi_common::sync::{Dir, TcpListener};
 pub use wasi_common::*;
 use wasmtime::{
-    component::Component, Config, Engine, Linker, Module, 
-    Precompiled, Store, StoreLimits, StoreLimitsBuilder, Trap,
+    component::Component, Config, Engine, Linker, Module, Precompiled, Store, StoreLimits,
+    StoreLimitsBuilder, Trap,
 };
+use wasmtime_wasi::{DirPerms, FilePerms};
 use wasmtime_wasi_threads::WasiThreadsCtx;
 
 // the default wasm entry name.
@@ -256,7 +256,7 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
         }
         conf
     }
-    
+
     fn preview2_builder(&self) -> anyhow::Result<wasmtime_wasi::WasiCtxBuilder> {
         let mut builder = wasmtime_wasi::WasiCtxBuilder::new();
         for (host_path, guest_path) in self.dirs.iter() {
