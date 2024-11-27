@@ -387,7 +387,7 @@ pub struct BlocklessConfig {
     pub unknown_imports_trap: bool,
     pub store_limited: StoreLimited,
     pub envs: Vec<(String, String)>,
-    pub tcp_listens: Vec<SocketAddr>,
+    pub tcp_listens: Vec<(SocketAddr, Option<u32>)>,
     pub permisions: Vec<Permission>,
     pub dirs: Vec<(String, String)>,
     pub fs_root_path: Option<String>,
@@ -421,6 +421,7 @@ impl BlocklessConfig {
             //vm instruction limit.
             limited_fuel: None,
             limited_time: None,
+            // define the base fd
             tcp_listens: Vec::new(),
             stdin_args: Vec::new(),
             cli_exit_with_code: false,

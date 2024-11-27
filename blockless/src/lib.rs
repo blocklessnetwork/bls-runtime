@@ -2,8 +2,8 @@ mod context;
 pub mod error;
 mod modules;
 
-use anyhow::Context;
 pub use anyhow::Result as AnyResult;
+use anyhow::{bail, Context};
 use blockless_drivers::{CdylibDriver, DriverConetxt};
 use blockless_env;
 pub use blockless_multiaddr::MultiAddr;
@@ -53,7 +53,7 @@ impl BlsRunTarget {
 }
 
 trait BlocklessConfig2Preview1WasiBuilder {
-    fn preview_builder(&self) -> anyhow::Result<WasiCtxBuilder>;
+    fn preview1_builder(&self) -> anyhow::Result<WasiCtxBuilder>;
     fn preview1_set_stdio(&self, builder: &mut WasiCtxBuilder);
     fn preview1_engine_config(&self) -> Config;
     fn store_limits(&self) -> StoreLimits;
@@ -135,8 +135,8 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
         }
     }
 
-    /// create the preview_builder by the configure.
-    fn preview_builder(&self) -> anyhow::Result<WasiCtxBuilder> {
+    /// create the preview1_builder by the configure.
+    fn preview1_builder(&self) -> anyhow::Result<WasiCtxBuilder> {
         let b_conf = self;
         let root_dir = b_conf.fs_root_path_ref().and_then(|path| {
             wasi_common::sync::Dir::open_ambient_dir(path, ambient_authority()).ok()
@@ -152,20 +152,33 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
         args.extend_from_slice(&b_conf.stdin_args_ref()[..]);
         builder.args(&args[..])?;
         builder.envs(&b_conf.envs_ref()[..])?;
+        let mut max_fd = 3;
         // map host to guest dir in runtime.
         for (host, guest) in b_conf.dirs.iter() {
             let host = Dir::open_ambient_dir(host, ambient_authority())?;
             builder.preopened_dir(host, guest)?;
+            max_fd += 1;
         }
         // map root fs
         if let Some(d) = root_dir {
             builder.preopened_dir(d, "/")?;
+            max_fd += 1;
         }
         //set the tcp listener.
-        for l in b_conf.tcp_listens.iter() {
+        for (l, fd) in b_conf.tcp_listens.iter() {
+            let fd = if let Some(fd) = fd {
+                if *fd < max_fd {
+                    bail!("the invalid fd{fd} for listenfd.");
+                }
+                *fd
+            } else {
+                let fd = max_fd;
+                max_fd += 1;
+                fd
+            };
             let l = std::net::TcpListener::bind(l)?;
             let l = TcpListener::from_std(l);
-            builder.push_prepush_socket(l)?;
+            builder.preopened_socket(fd, l)?;
         }
         anyhow::Ok(builder)
     }
@@ -341,7 +354,7 @@ impl BlocklessRunner {
     }
 
     fn preview1_setup(&self, ctx: &mut BlocklessContext) -> AnyResult<()> {
-        let mut builder = self.0.preview_builder()?;
+        let mut builder = self.0.preview1_builder()?;
         let mut preview1_ctx = builder.build();
         preview1_ctx.set_blockless_config(Some(self.0.clone()));
         ctx.preview1_ctx = Some(preview1_ctx);
