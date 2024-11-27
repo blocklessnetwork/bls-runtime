@@ -67,9 +67,11 @@ const TCP_LISTEN_HELP: &str = "grant access to the given TCP listen socket. ";
 
 const UNKNOW_IMPORTS_TRAP_HELP: &str = "Allow the main module to import unknown functions.";
 
-const CLI_EXIT_WITH_CODE_HELP: &str = "Enable WASI APIs marked as: @unstable(feature = cli-exit-with-code).";
+const CLI_EXIT_WITH_CODE_HELP: &str =
+    "Enable WASI APIs marked as: @unstable(feature = cli-exit-with-code).";
 
-const NETWORK_ERROR_CODE_HELP: &str = "Enable WASI APIs marked as: @unstable(feature = network-error-code).";
+const NETWORK_ERROR_CODE_HELP: &str =
+    "Enable WASI APIs marked as: @unstable(feature = network-error-code).";
 
 fn parse_envs(envs: &str) -> Result<(String, String)> {
     let parts: Vec<_> = envs.splitn(2, "=").collect();

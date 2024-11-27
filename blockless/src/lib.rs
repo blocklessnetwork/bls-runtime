@@ -12,16 +12,16 @@ use context::BlocklessContext;
 pub use error::*;
 use log::{debug, error};
 use modules::ModuleLinker;
-use wasmtime_wasi_threads::WasiThreadsCtx;
 use std::sync::Mutex;
 use std::{env, path::Path, sync::Arc};
 use wasi_common::sync::WasiCtxBuilder;
 use wasi_common::sync::{Dir, TcpListener};
 pub use wasi_common::*;
 use wasmtime::{
-    component::Component, Config, Engine, Linker, Module, 
-    Precompiled, Store, StoreLimits, StoreLimitsBuilder, Trap,
+    component::Component, Config, Engine, Linker, Module, Precompiled, Store, StoreLimits,
+    StoreLimitsBuilder, Trap,
 };
+use wasmtime_wasi_threads::WasiThreadsCtx;
 
 // the default wasm entry name.
 const ENTRY: &str = "_start";
@@ -298,17 +298,16 @@ impl BlocklessRunner {
         let conf = b_conf.preview1_engine_config();
         let engine = Engine::new(&conf)?;
         let support_thread = b_conf.feature_thread();
-        
-        
+
         let drivers = b_conf.drivers_ref();
         Self::load_driver(drivers);
         let entry: String = b_conf.entry_ref().into();
         let store_limits = b_conf.store_limits();
         let fule = b_conf.get_limited_fuel();
-        
+
         let mut ctx = BlocklessContext::default();
         ctx.store_limits = store_limits;
-        
+
         let mut store: Store<BlocklessContext> = Store::new(&engine, ctx);
         store.limiter(|ctx| &mut ctx.store_limits);
         // set the fule in store.
@@ -589,7 +588,7 @@ impl BlocklessRunner {
                     BlsRunTarget::Module(_) => {
                         self.preview1_setup(store.data_mut())?;
                         BlsLinker::Core(wasmtime::Linker::new(&engine))
-                    },
+                    }
                     BlsRunTarget::Component(_) => {
                         BlsLinker::Component(wasmtime::component::Linker::new(&engine))
                     }
