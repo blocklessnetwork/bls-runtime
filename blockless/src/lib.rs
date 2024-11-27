@@ -303,7 +303,6 @@ impl BlocklessRunner {
         let drivers = b_conf.drivers_ref();
         Self::load_driver(drivers);
         let entry: String = b_conf.entry_ref().into();
-        let version = b_conf.version();
         let store_limits = b_conf.store_limits();
         let fule = b_conf.get_limited_fuel();
         
@@ -317,12 +316,11 @@ impl BlocklessRunner {
             store.set_fuel(f).unwrap();
         }
         let (mut linker, mut run_target, entry) =
-            Self::module_linker(version, entry, &engine, &mut store).await?;
+            self.module_linker(entry, &engine, &mut store).await?;
         // prepare linker.
         match linker {
             BlsLinker::Core(ref mut linker) => {
                 Self::preview1_setup_linker(linker, support_thread);
-                self.preview1_setup(store.data_mut())?;
             }
             BlsLinker::Component(ref mut linker) => {
                 wasmtime_wasi::add_to_linker_async(linker)?;
@@ -577,17 +575,19 @@ impl BlocklessRunner {
     }
 
     async fn module_linker<'a>(
-        version: BlocklessConfigVersion,
+        &self,
         mut entry: String,
         engine: &Engine,
         store: &'a mut Store<BlocklessContext>,
     ) -> anyhow::Result<(BlsLinker, BlsRunTarget, String)> {
+        let version = self.0.version();
         match version {
             // this is older configure for bls-runtime, this only run single wasm.
             BlocklessConfigVersion::Version0 => {
                 let module = Self::load_module(engine, &entry)?;
                 let linker = match module {
                     BlsRunTarget::Module(_) => {
+                        self.preview1_setup(store.data_mut())?;
                         BlsLinker::Core(wasmtime::Linker::new(&engine))
                     },
                     BlsRunTarget::Component(_) => {
@@ -600,6 +600,8 @@ impl BlocklessRunner {
                 if entry.is_empty() {
                     entry = ENTRY.to_string();
                 }
+                // must setup before link_modules.
+                self.preview1_setup(store.data_mut())?;
                 let mut linker = wasmtime::Linker::new(engine);
                 let mut module_linker = ModuleLinker::new(&mut linker, store);
                 let module = module_linker.link_modules().await.context("")?;
