@@ -12,15 +12,16 @@ use context::BlocklessContext;
 pub use error::*;
 use log::{debug, error};
 use modules::ModuleLinker;
+use wasmtime_wasi_threads::WasiThreadsCtx;
+use std::sync::Mutex;
 use std::{env, path::Path, sync::Arc};
 use wasi_common::sync::WasiCtxBuilder;
 use wasi_common::sync::{Dir, TcpListener};
 pub use wasi_common::*;
 use wasmtime::{
-    component::Component, Config, Engine, Linker, Module, Precompiled, Store, StoreLimits,
-    StoreLimitsBuilder, Trap,
+    component::Component, Config, Engine, Linker, Module, 
+    Precompiled, Store, StoreLimits, StoreLimitsBuilder, Trap,
 };
-use wasmtime_wasi_threads::WasiThreadsCtx;
 
 // the default wasm entry name.
 const ENTRY: &str = "_start";
@@ -52,7 +53,7 @@ impl BlsRunTarget {
 }
 
 trait BlocklessConfig2Preview1WasiBuilder {
-    fn preview1_builder(&self) -> anyhow::Result<WasiCtxBuilder>;
+    fn preview_builder(&self) -> anyhow::Result<WasiCtxBuilder>;
     fn preview1_set_stdio(&self, builder: &mut WasiCtxBuilder);
     fn preview1_engine_config(&self) -> Config;
     fn store_limits(&self) -> StoreLimits;
@@ -134,8 +135,8 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
         }
     }
 
-    /// create the preview1_builder by the configure.
-    fn preview1_builder(&self) -> anyhow::Result<WasiCtxBuilder> {
+    /// create the preview_builder by the configure.
+    fn preview_builder(&self) -> anyhow::Result<WasiCtxBuilder> {
         let b_conf = self;
         let root_dir = b_conf.fs_root_path_ref().and_then(|path| {
             wasi_common::sync::Dir::open_ambient_dir(path, ambient_authority()).ok()
@@ -166,7 +167,6 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
             let l = TcpListener::from_std(l);
             builder.push_prepush_socket(l)?;
         }
-
         anyhow::Ok(builder)
     }
 
@@ -176,15 +176,12 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
         if let Some(max) = self.opts.static_memory_maximum_size {
             conf.static_memory_maximum_size(max);
         }
-
         if let Some(enable) = self.opts.static_memory_forced {
             conf.static_memory_forced(enable);
         }
-
         if let Some(size) = self.opts.static_memory_guard_size {
             conf.static_memory_guard_size(size);
         }
-
         if let Some(size) = self.opts.dynamic_memory_guard_size {
             conf.dynamic_memory_guard_size(size);
         }
@@ -273,7 +270,7 @@ struct BlocklessRunner(BlocklessConfig);
 impl BlocklessRunner {
     /// blockless run method, it execute the wasm program with configure file.
     async fn run(self) -> AnyResult<ExitStatus> {
-        let b_conf = self.0;
+        let b_conf = &self.0;
         let max_fuel = b_conf.get_limited_fuel();
         // set the drivers root path, if not setting use exe file path.
         let drivers_root_path = b_conf
@@ -288,18 +285,18 @@ impl BlocklessRunner {
         let conf = b_conf.preview1_engine_config();
         let engine = Engine::new(&conf)?;
         let support_thread = b_conf.feature_thread();
-        let mut builder = b_conf.preview1_builder()?;
-        let mut preview1_ctx = builder.build();
+        
+        
         let drivers = b_conf.drivers_ref();
         Self::load_driver(drivers);
         let entry: String = b_conf.entry_ref().into();
         let version = b_conf.version();
         let store_limits = b_conf.store_limits();
         let fule = b_conf.get_limited_fuel();
-        preview1_ctx.set_blockless_config(Some(b_conf.clone()));
+        
         let mut ctx = BlocklessContext::default();
         ctx.store_limits = store_limits;
-        ctx.preview1_ctx = Some(preview1_ctx);
+        
         let mut store: Store<BlocklessContext> = Store::new(&engine, ctx);
         store.limiter(|ctx| &mut ctx.store_limits);
         // set the fule in store.
@@ -308,8 +305,16 @@ impl BlocklessRunner {
         }
         let (mut linker, mut run_target, entry) =
             Self::module_linker(version, entry, &engine, &mut store).await?;
-        if let BlsLinker::Core(ref mut linker) = linker {
-            Self::preview1_setup_linker(linker, support_thread);
+        // prepare linker.
+        match linker {
+            BlsLinker::Core(ref mut linker) => {
+                Self::preview1_setup_linker(linker, support_thread);
+                self.preview1_setup(store.data_mut())?;
+            }
+            BlsLinker::Component(ref mut linker) => {
+                wasmtime_wasi::add_to_linker_async(linker)?;
+                self.preview2_setup(store.data_mut())?;
+            }
         }
         // support thread.
         if support_thread {
@@ -333,6 +338,22 @@ impl BlocklessRunner {
             fuel: store.get_fuel().ok(),
             code: exit_code,
         })
+    }
+
+    fn preview1_setup(&self, ctx: &mut BlocklessContext) -> AnyResult<()> {
+        let mut builder = self.0.preview_builder()?;
+        let mut preview1_ctx = builder.build();
+        preview1_ctx.set_blockless_config(Some(self.0.clone()));
+        ctx.preview1_ctx = Some(preview1_ctx);
+        Ok(())
+    }
+
+    fn preview2_setup(&self, ctx: &mut BlocklessContext) -> AnyResult<()> {
+        let mut builder = wasmtime_wasi::WasiCtxBuilder::new();
+        builder.inherit_stdio().args(&self.0.stdin_args);
+        let preview2_ctx = builder.build_p1();
+        ctx.preview2_ctx = Some(Arc::new(Mutex::new(preview2_ctx)));
+        Ok(())
     }
 
     fn write_core_dump(

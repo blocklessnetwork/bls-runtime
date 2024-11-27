@@ -66,6 +66,10 @@ const TCP_LISTEN_HELP: &str = "grant access to the given TCP listen socket";
 
 const UNKNOW_IMPORTS_TRAP_HELP: &str = "Allow the main module to import unknown functions.";
 
+const CLI_EXIT_WITH_CODE_HELP: &str = "Enable WASI APIs marked as: @unstable(feature = cli-exit-with-code).";
+
+const NETWORK_ERROR_CODE_HELP: &str = "Enable WASI APIs marked as: @unstable(feature = network-error-code).";
+
 fn parse_envs(envs: &str) -> Result<(String, String)> {
     let parts: Vec<_> = envs.splitn(2, "=").collect();
     if parts.len() != 2 {
@@ -247,6 +251,12 @@ pub(crate) struct CliCommandOpts {
 
     #[clap(long = "unknown_imports_trap", value_name = "UNKNOWN_IMPORTS_TRAP", help = UNKNOW_IMPORTS_TRAP_HELP)]
     unknown_imports_trap: bool,
+
+    #[clap(long = "cli_exit_with_code", value_name = "CLI_EXIT_WITH_CODE", help = CLI_EXIT_WITH_CODE_HELP)]
+    cli_exit_with_code: bool,
+
+    #[clap(long = "network_error_code", value_name = "NETWORK_ERROR_CODE", help = NETWORK_ERROR_CODE_HELP)]
+    network_error_code: bool,
 }
 
 impl CliCommandOpts {
@@ -321,6 +331,8 @@ impl CliCommandOpts {
                 .set_version(blockless::BlocklessConfigVersion::Version1);
         }
         conf.0.tcp_listens = self.tcp_listens;
+        conf.0.network_error_code = self.network_error_code;
+        conf.0.unknown_imports_trap = self.unknown_imports_trap;
         Ok(())
     }
 

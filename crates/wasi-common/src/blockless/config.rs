@@ -398,6 +398,8 @@ pub struct BlocklessConfig {
     pub version: BlocklessConfigVersion,
     pub drivers_root_path: Option<String>,
     pub runtime_logger_level: LoggerLevel,
+    pub cli_exit_with_code: bool,
+    pub network_error_code: bool,
     pub group_permisions: HashMap<String, Vec<Permission>>,
 }
 
@@ -421,6 +423,8 @@ impl BlocklessConfig {
             limited_time: None,
             tcp_listens: Vec::new(),
             stdin_args: Vec::new(),
+            cli_exit_with_code: false,
+            network_error_code: false,
             //memory limit, 1 page = 64k.
             store_limited: Default::default(),
             extensions_path: None,
