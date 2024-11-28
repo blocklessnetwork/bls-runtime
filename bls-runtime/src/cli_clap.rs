@@ -58,10 +58,10 @@ const STDIN_HELP: &str = "the app's stdin setting can be configured with one of 
 const MAP_DIR_HELP: &str = "grant access of a host directory to a guest. If specified as just `HOST_DIR` then the same directory name on the host is made available within the guest.";
 
 const V86_HELP: &str =
-    "the v86 model flag when the v86 flag the car file must be v86 configure and image.";
+    "The v86 model flag when the v86 flag the car file must be v86 configure and image.";
 
 const THREAD_SUPPORT_HELP: &str =
-    "the thread support flag when the flag setting the runtime will support multi-threads.";
+    "The thread support flag when the flag setting the runtime will support multi-threads.";
 
 const TCP_LISTEN_HELP: &str = "grant access to the given TCP listen socket. ";
 
@@ -72,6 +72,9 @@ const CLI_EXIT_WITH_CODE_HELP: &str =
 
 const NETWORK_ERROR_CODE_HELP: &str =
     "Enable WASI APIs marked as: @unstable(feature = network-error-code).";
+
+const MAX_MEMORY_SIZE_HELP: &str =
+    "The max memoery size limited.";    
 
 fn parse_envs(envs: &str) -> Result<(String, String)> {
     let parts: Vec<_> = envs.splitn(2, "=").collect();
@@ -270,6 +273,9 @@ pub(crate) struct CliCommandOpts {
 
     #[clap(long = "network_error_code", value_name = "NETWORK_ERROR_CODE", help = NETWORK_ERROR_CODE_HELP)]
     network_error_code: bool,
+
+    #[clap(long = "max_memory_size", value_name = "MAX_MEMORY_SIZE", help = MAX_MEMORY_SIZE_HELP)]
+    max_memory_size: Option<u64>,
 }
 
 impl CliCommandOpts {
@@ -304,6 +310,7 @@ impl CliCommandOpts {
         conf.0.set_stdin_args(self.args);
         conf.0.set_map_dirs(self.dirs);
         conf.0.set_feature_thread(self.feature_thread);
+        conf.0.limited_memory(self.max_memory_size);
 
         // Handle IO settings
         if let Some(stderr) = self.stderr {

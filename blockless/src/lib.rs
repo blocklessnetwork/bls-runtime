@@ -429,7 +429,7 @@ impl BlocklessRunner {
                 let instance = linker
                     .instantiate_async(&mut *store, &module)
                     .await
-                    .context(format!("failed to instantiate {:?}", entry))?;
+                    .unwrap();
 
                 // If `_initialize` is present, meaning a reactor, then invoke the function.
                 if let Some(func) = instance.get_func(&mut *store, "_initialize") {
