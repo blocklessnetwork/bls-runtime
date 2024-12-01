@@ -332,7 +332,7 @@ impl BlocklessRunner {
         // prepare linker.
         match linker {
             BlsLinker::Core(ref mut linker) => {
-                Self::preview1_linker_setup(linker, support_thread);
+                Self::preview1_linker_setup(linker);
             }
             BlsLinker::Component(ref mut linker) => {
                 wasmtime_wasi::add_to_linker_async(linker)?;
@@ -552,7 +552,7 @@ impl BlocklessRunner {
         })
     }
 
-    fn preview1_linker_setup(linker: &mut Linker<BlocklessContext>, support_thread: bool) {
+    fn preview1_linker_setup(linker: &mut Linker<BlocklessContext>) {
         // define the macro of extends.
         macro_rules! add_to_linker {
             ($method:expr) => {
