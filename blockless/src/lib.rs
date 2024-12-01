@@ -553,21 +553,19 @@ impl BlocklessRunner {
     }
 
     fn preview1_linker_setup(linker: &mut Linker<BlocklessContext>, support_thread: bool) {
-        if !support_thread {
-            // define the macro of extends.
-            macro_rules! add_to_linker {
-                ($method:expr) => {
-                    $method(linker, |s| s.preview1_ctx.as_mut().unwrap()).unwrap()
-                };
-            }
-            add_to_linker!(blockless_env::add_drivers_to_linker);
-            add_to_linker!(blockless_env::add_http_to_linker);
-            add_to_linker!(blockless_env::add_ipfs_to_linker);
-            add_to_linker!(blockless_env::add_s3_to_linker);
-            add_to_linker!(blockless_env::add_memory_to_linker);
-            add_to_linker!(blockless_env::add_cgi_to_linker);
-            add_to_linker!(blockless_env::add_socket_to_linker);
+        // define the macro of extends.
+        macro_rules! add_to_linker {
+            ($method:expr) => {
+                $method(linker, |s| s.preview1_ctx.as_mut().unwrap()).unwrap()
+            };
         }
+        add_to_linker!(blockless_env::add_drivers_to_linker);
+        add_to_linker!(blockless_env::add_http_to_linker);
+        add_to_linker!(blockless_env::add_ipfs_to_linker);
+        add_to_linker!(blockless_env::add_s3_to_linker);
+        add_to_linker!(blockless_env::add_memory_to_linker);
+        add_to_linker!(blockless_env::add_cgi_to_linker);
+        add_to_linker!(blockless_env::add_socket_to_linker);
         wasi_common::sync::add_to_linker(linker, |host| host.preview1_ctx.as_mut().unwrap())
             .unwrap();
     }
