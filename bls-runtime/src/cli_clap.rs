@@ -73,8 +73,7 @@ const CLI_EXIT_WITH_CODE_HELP: &str =
 const NETWORK_ERROR_CODE_HELP: &str =
     "Enable WASI APIs marked as: @unstable(feature = network-error-code).";
 
-const MAX_MEMORY_SIZE_HELP: &str =
-    "The max memoery size limited.";    
+const MAX_MEMORY_SIZE_HELP: &str = "The max memory size limited.";
 
 fn parse_envs(envs: &str) -> Result<(String, String)> {
     let parts: Vec<_> = envs.splitn(2, "=").collect();
