@@ -19,51 +19,53 @@ use url::Url;
 
 use crate::config::CliConfig;
 
-const INPUT_HELP: &str = "the input file is wasm file, configure file, or car file";
+const INPUT_HELP: &str = "The input file can be a WASM file, a configuration file, or a CAR file.";
 
-const DEBUG_INFO_HELP: &str = "the debug info for the runtime.";
+const DEBUG_INFO_HELP: &str = "Runtime debugging information.";
 
-const APP_ARGS_HELP: &str = "the app args will pass into the app.";
+const APP_ARGS_HELP: &str = "Application arguments will be passed into the app.";
 
-const FS_ROOT_PATH_HELP: &str = "the root directory for the runtime.";
+const FS_ROOT_PATH_HELP: &str = "The root directory for the runtime.";
 
-const DRIVERS_ROOT_PATH_HELP: &str = "the drivers root directory for the runtime.";
+const DRIVERS_ROOT_PATH_HELP: &str = "The root directory for the runtime's drivers.";
 
-const RUNTIME_LOGGER_HELP: &str = "the logger file for the runtime.";
+const RUNTIME_LOGGER_HELP: &str = "The log file for the runtime.";
 
-const LIMITED_MEMORY_HELP: &str = "the limited memory for the runtime, default is infine.";
+const LIMITED_MEMORY_HELP: &str =
+    "The runtime's memory is limited, with the default set to infinite.";
 
-const RUN_TIME_HELP: &str = "the run time for the runtime, default is infine.";
+const RUN_TIME_HELP: &str = "The runtime's time limit, with the default set to infinite.";
 
-const ENTRY_HELP: &str = "the entry for wasm, default is _start";
+const ENTRY_HELP: &str = "The entry point for the WASM, default is _start.";
 
-const LIMITED_FUEL_HELP: &str = "the limited fuel for runtime, default is infine";
+const LIMITED_FUEL_HELP: &str = "The limited fuel for runtime, default is infine";
 
-const ENVS_HELP: &str = "the app envs will pass into the app";
+const ENVS_HELP: &str = "Application environment variables will be passed into the app.";
 
-const ENV_FILE_HELP: &str = "path to an environment file (.env) to load variables from";
+const ENV_FILE_HELP: &str = "Path to an environment file (.env) to load variables from";
 
 const OPTS_HELP: &str = "Optimization and tuning related options for wasm performance";
 
-const PERMISSION_HELP: &str = "the permissions for app";
+const PERMISSION_HELP: &str = "The permissions for app";
 
-const MODULES_HELP: &str = "the modules used by app";
+const MODULES_HELP: &str = "The modules used by app";
 
-const STDOUT_HELP: &str = "the app's stdout setting can be configured with one of the following values: inherit, null, or a specific file name";
+const STDOUT_HELP: &str = "The app's stdout setting, which can be configured to one of the following values: inherit, null, or a specific file name.";
 
-const STDERR_HELP: &str = "the app's stderr setting can be configured with one of the following values: inherit, null, or a specific file name";
+const STDERR_HELP: &str = "The app's stderr setting, which can be configured to one of the following values: inherit, null, or a specific file name";
 
-const STDIN_HELP: &str = "the app's stdin setting can be configured with one of the following values: inherit or fixed input string";
+const STDIN_HELP: &str = "The app's stdin setting, which can be configured to one of the following values: inherit or a fixed input string.";
 
-const MAP_DIR_HELP: &str = "grant access of a host directory to a guest. If specified as just `HOST_DIR` then the same directory name on the host is made available within the guest.";
+const MAP_DIR_HELP: &str =
+    "Grant access to a host directory for a guest. If specified as HOST_DIR, the corresponding directory on the host will be made available within the guest.";
 
 const V86_HELP: &str =
-    "The v86 model flag when the v86 flag the car file must be v86 configure and image.";
+    "V86 model flag when the v86 flag the car file must be v86 configure and image.";
 
 const THREAD_SUPPORT_HELP: &str =
-    "The thread support flag when the flag setting the runtime will support multi-threads.";
+    "Thread support flag. when enabled, the runtime will support multi-threading.";
 
-const TCP_LISTEN_HELP: &str = "grant access to the given TCP listen socket. ";
+const TCP_LISTEN_HELP: &str = "Grant access to the given TCP listen socket. ";
 
 const UNKNOW_IMPORTS_TRAP_HELP: &str = "Allow the main module to import unknown functions.";
 
