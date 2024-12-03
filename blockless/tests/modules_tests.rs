@@ -58,7 +58,8 @@ fn test_linker_module() {
     let mut config = BlocklessConfig::new("_start");
     config.set_version(BlocklessConfigVersion::Version1);
     config.set_modules(modules);
-    let code = run_blockless(config).unwrap();
+    let rs = run_blockless(config);
+    let code = rs.unwrap();
     assert_eq!(code.code, 0);
 }
 
