@@ -651,18 +651,6 @@ impl BlocklessRunner {
             if let Some(exit) = e.downcast_ref::<wasi_common::I32Exit>() {
                 std::process::exit(exit.0);
             }
-            if e.is::<Trap>() {
-                eprintln!("Error: {e:?}");
-
-                if cfg!(unix) {
-                    // On Unix, return the error code of an abort.
-                    std::process::exit(128 + libc::SIGABRT);
-                } else if cfg!(windows) {
-                    // On Windows, return 3.
-                    // https://docs.microsoft.com/en-us/cpp/c-runtime-library/reference/abort?view=vs-2019
-                    std::process::exit(3);
-                }
-            }
         }
         let trap_code_2_exit_code = |trap_code: &Trap| -> Option<i32> {
             match *trap_code {
