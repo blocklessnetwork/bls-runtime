@@ -50,11 +50,14 @@ const PERMISSION_HELP: &str = "The permissions for app";
 
 const MODULES_HELP: &str = "The modules used by app";
 
-const STDOUT_HELP: &str = "The app's stdout setting, which can be configured to one of the following values: inherit, null, or a specific file name.";
+const STDOUT_HELP: &str =
+    "The app's stdout setting, which can be configured to one of the following values: inherit, null, or a specific file name.";
 
-const STDERR_HELP: &str = "The app's stderr setting, which can be configured to one of the following values: inherit, null, or a specific file name";
+const STDERR_HELP: &str =
+    "The app's stderr setting, which can be configured to one of the following values: inherit, null, or a specific file name";
 
-const STDIN_HELP: &str = "The app's stdin setting, which can be configured to one of the following values: inherit or a fixed input string.";
+const STDIN_HELP: &str =
+    "The app's stdin setting, which can be configured to one of the following values: inherit or a fixed input string.";
 
 const MAP_DIR_HELP: &str =
     "Grant access to a host directory for a guest. If specified as HOST_DIR, the corresponding directory on the host will be made available within the guest.";
