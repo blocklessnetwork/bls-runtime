@@ -330,12 +330,14 @@ impl BlocklessRunner {
         }
         let (mut linker, mut run_target, entry) =
             self.module_linker(entry, &engine, &mut store).await?;
+        let mut is_component = false;
         // prepare linker.
         match linker {
             BlsLinker::Core(ref mut linker) => {
                 Self::preview1_linker_setup(linker);
             }
             BlsLinker::Component(ref mut linker) => {
+                is_component = true;
                 wasmtime_wasi::add_to_linker_async(linker)?;
                 self.preview2_setup(store.data_mut())?;
             }
@@ -352,7 +354,9 @@ impl BlocklessRunner {
         let result =
             Self::load_main_module(&b_conf, &mut store, &mut linker, &mut run_target, &entry).await;
         let exit_code = match result {
-            Err(ref t) => Self::error_process(t, || store.get_fuel().unwrap(), max_fuel),
+            Err(ref t) => {
+                Self::error_process(is_component, t, || store.get_fuel().unwrap(), max_fuel)
+            }
             Ok(_) => {
                 debug!("program exit normal.");
                 0
@@ -630,10 +634,24 @@ impl BlocklessRunner {
     }
 
     /// the error code process.
-    fn error_process<F>(t: &anyhow::Error, used_fuel: F, max_fuel: Option<u64>) -> i32
+    fn error_process<F>(
+        is_component: bool,
+        e: &anyhow::Error,
+        used_fuel: F,
+        max_fuel: Option<u64>,
+    ) -> i32
     where
         F: FnOnce() -> u64,
     {
+        if is_component {
+            if let Some(exit) = e.downcast_ref::<wasmtime_wasi::I32Exit>() {
+                std::process::exit(exit.0);
+            }
+        } else {
+            if let Some(exit) = e.downcast_ref::<wasi_common::I32Exit>() {
+                std::process::exit(exit.0);
+            }
+        }
         let trap_code_2_exit_code = |trap_code: &Trap| -> Option<i32> {
             match *trap_code {
                 Trap::OutOfFuel => Some(1),
@@ -652,7 +670,7 @@ impl BlocklessRunner {
                 _ => None,
             }
         };
-        let trap = t.downcast_ref::<Trap>();
+        let trap = e.downcast_ref::<Trap>();
         let rs = trap.and_then(|t| trap_code_2_exit_code(t)).unwrap_or(-1);
         match trap {
             Some(Trap::OutOfFuel) => {
@@ -666,7 +684,7 @@ impl BlocklessRunner {
                     used_fuel, max_fuel
                 );
             }
-            _ => error!("error: {}", t),
+            _ => error!("error: {}", e),
         };
         rs
     }
@@ -685,7 +703,7 @@ mod test {
     #[test]
     fn test_exit_code() {
         let err = Trap::OutOfFuel.into();
-        let rs = BlocklessRunner::error_process(&err, || 20u64, Some(30));
+        let rs = BlocklessRunner::error_process(false, &err, || 20u64, Some(30));
         assert_eq!(rs, 1);
     }
 }
