@@ -354,7 +354,9 @@ impl BlocklessRunner {
         let result =
             Self::load_main_module(&b_conf, &mut store, &mut linker, &mut run_target, &entry).await;
         let exit_code = match result {
-            Err(ref t) => Self::error_process(is_component, t, || store.get_fuel().unwrap(), max_fuel),
+            Err(ref t) => {
+                Self::error_process(is_component, t, || store.get_fuel().unwrap(), max_fuel)
+            }
             Ok(_) => {
                 debug!("program exit normal.");
                 0
@@ -634,9 +636,9 @@ impl BlocklessRunner {
     /// the error code process.
     fn error_process<F>(
         is_component: bool,
-        e: &anyhow::Error, 
-        used_fuel: F, 
-        max_fuel: Option<u64>
+        e: &anyhow::Error,
+        used_fuel: F,
+        max_fuel: Option<u64>,
     ) -> i32
     where
         F: FnOnce() -> u64,
@@ -651,7 +653,7 @@ impl BlocklessRunner {
             }
             if e.is::<Trap>() {
                 eprintln!("Error: {e:?}");
-        
+
                 if cfg!(unix) {
                     // On Unix, return the error code of an abort.
                     std::process::exit(128 + libc::SIGABRT);
