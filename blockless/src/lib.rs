@@ -254,6 +254,7 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
         if self.feature_thread() {
             conf.wasm_threads(true);
         }
+        conf.cache_config_load_default().unwrap();
         conf
     }
 
