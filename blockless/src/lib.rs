@@ -715,7 +715,7 @@ mod test {
     #[test]
     fn test_exit_code() {
         let err = Trap::OutOfFuel.into();
-        let rs = BlocklessRunner::error_process(&err, || 20u64, Some(30));
+        let rs = BlocklessRunner::error_process(false, &err, || 20u64, Some(30));
         assert_eq!(rs, 1);
     }
 }
