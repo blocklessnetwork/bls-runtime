@@ -27,12 +27,9 @@ jobs:
         uses: bruceadams/get-release@v1.2.3
         env:
           GITHUB_TOKEN: ${{ github.token }}
-      - name: Edit Toml
-        uses: dmikey/toml-editor@master
-        with:
-          file: "bls-runtime/Cargo.toml"
-          key: "version"
-          value: "${{ steps.get_release.outputs.tag_name }}"
+      - name: Edit Version
+        run: |
+          sed -i 's/^version.*/version=${{ steps.get_release.outputs.tag_name }}/g' bls-runtime/Cargo.toml
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
