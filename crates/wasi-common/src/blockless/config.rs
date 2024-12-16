@@ -370,15 +370,23 @@ impl Default for Stdio {
     }
 }
 
+#[derive(Debug, Clone, PartialEq)]
+pub struct BlsNnGraph {
+    pub format: String,
+    pub dir: String,
+}
+
 #[derive(Clone)]
 pub struct BlocklessConfig {
     pub entry: String,
+    pub nn: bool,
     pub stdio: Stdio,
     pub debug_info: bool,
     pub is_carfile: bool,
     pub opts: OptimizeOpts,
     pub feature_thread: bool,
     pub run_time: Option<u64>,
+    pub nn_graph: Vec<BlsNnGraph>,
     pub stdin_args: Vec<String>,
     pub coredump: Option<String>,
     pub limited_fuel: Option<u64>,
@@ -406,6 +414,7 @@ pub struct BlocklessConfig {
 impl BlocklessConfig {
     pub fn new(entry: &str) -> BlocklessConfig {
         Self {
+            nn: false,
             run_time: None,
             coredump: None,
             envs: Vec::new(),
@@ -431,6 +440,7 @@ impl BlocklessConfig {
             extensions_path: None,
             drivers_root_path: None,
             unknown_imports_trap: false,
+            nn_graph: Vec::new(),
             entry: String::from(entry),
             permisions: Default::default(),
             group_permisions: HashMap::new(),

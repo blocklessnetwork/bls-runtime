@@ -1,8 +1,7 @@
 #![allow(unused)]
 use anyhow::{bail, Result};
 use blockless::{
-    BlocklessConfig, BlocklessModule, BlsOptions, ModuleType, OptimizeOpts, Permission, Stderr,
-    Stdin, Stdout,
+    BlocklessConfig, BlocklessModule, BlsNnGraph, BlsOptions, ModuleType, OptimizeOpts, Permission, Stderr, Stdin, Stdout
 };
 use clap::{
     builder::{TypedValueParser, ValueParser},
@@ -80,12 +79,29 @@ const NETWORK_ERROR_CODE_HELP: &str =
 
 const MAX_MEMORY_SIZE_HELP: &str = "The max memory size limited.";
 
+const NN_HELP: &str = "Enable support for WASI neural network imports .";
+
+const NN_GRAPH_HELP: &str =
+    "Pre-load machine learning graphs (i.e., models) for use by wasi-nn.  \
+Each use of the flag will preload a ML model from the host directory using the given model encoding";
+
 fn parse_envs(envs: &str) -> Result<(String, String)> {
     let parts: Vec<_> = envs.splitn(2, "=").collect();
     if parts.len() != 2 {
         bail!("must be of the form `key=value`")
     }
     Ok((parts[0].to_string(), parts[1].to_string()))
+}
+
+fn parse_nn_graph(envs: &str) -> Result<BlsNnGraph> {
+    let parts: Vec<_> = envs.splitn(2, "=").collect();
+    if parts.len() != 2 {
+        bail!("must be of the form `key=value`")
+    }
+    Ok(BlsNnGraph{
+        format: parts[0].to_string(), 
+        dir: parts[1].to_string(),
+    })
 }
 
 fn parse_opts(opt: &str) -> Result<OptimizeOpts> {
@@ -280,6 +296,12 @@ pub(crate) struct CliCommandOpts {
 
     #[clap(long = "max_memory_size", value_name = "MAX_MEMORY_SIZE", help = MAX_MEMORY_SIZE_HELP)]
     max_memory_size: Option<u64>,
+
+    #[clap(long = "nn", value_name = "NN", help = NN_HELP)]
+    nn: bool,
+
+    #[clap(long = "nn-graph", value_name = "NN_GRAPH", value_parser = parse_nn_graph, help = NN_GRAPH_HELP)]
+    nn_graph: Vec<BlsNnGraph>,
 }
 
 impl CliCommandOpts {
@@ -354,9 +376,11 @@ impl CliCommandOpts {
             conf.0
                 .set_version(blockless::BlocklessConfigVersion::Version1);
         }
+        conf.0.nn = self.nn;
         conf.0.tcp_listens = self.tcp_listens;
         conf.0.network_error_code = self.network_error_code;
         conf.0.unknown_imports_trap = self.unknown_imports_trap;
+        conf.0.nn_graph = self.nn_graph;
         Ok(())
     }
 
