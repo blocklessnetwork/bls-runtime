@@ -12,12 +12,18 @@ pub(crate) struct BlocklessContext {
 
     pub(crate) wasi_threads: Option<Arc<WasiThreadsCtx<BlocklessContext>>>,
 
+    pub(crate) wasi_nn_wit: Option<Arc<wasmtime_wasi_nn::wit::WasiNnCtx>>,
+    
+    pub(crate) wasi_nn_witx: Option<Arc<wasmtime_wasi_nn::witx::WasiNnCtx>>,
+
     pub(crate) store_limits: StoreLimits,
 }
 
 impl Default for BlocklessContext {
     fn default() -> Self {
         Self {
+            wasi_nn_wit: None,
+            wasi_nn_witx: None,
             preview1_ctx: None,
             preview2_ctx: None,
             wasi_threads: None,

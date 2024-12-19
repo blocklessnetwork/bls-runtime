@@ -24,6 +24,7 @@ libc = { version = "0.2.112", default-features = true }
 wasmtime = "=26.0.0"
 wasmtime-wasi = "=26.0.0"
 wiggle-generate = "=26.0.0"
+wasmtime-wasi-nn = { version = "=26.0.0" }
 wasmtime-wasi-threads = "=26.0.0" 
 wasi-common = { path = "crates/wasi-common", version="=26.0.0" }
 # witx dependency by wiggle
