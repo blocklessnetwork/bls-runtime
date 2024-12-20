@@ -1,7 +1,8 @@
 #![allow(unused)]
 use anyhow::{bail, Result};
 use blockless::{
-    BlocklessConfig, BlocklessModule, BlsNnGraph, BlsOptions, ModuleType, OptimizeOpts, Permission, Stderr, Stdin, Stdout
+    BlocklessConfig, BlocklessModule, BlsNnGraph, BlsOptions, ModuleType, OptimizeOpts, Permission,
+    Stderr, Stdin, Stdout,
 };
 use clap::{
     builder::{TypedValueParser, ValueParser},
@@ -98,8 +99,8 @@ fn parse_nn_graph(envs: &str) -> Result<BlsNnGraph> {
     if parts.len() != 2 {
         bail!("must be of the form `key=value`")
     }
-    Ok(BlsNnGraph{
-        format: parts[0].to_string(), 
+    Ok(BlsNnGraph {
+        format: parts[0].to_string(),
         dir: parts[1].to_string(),
     })
 }

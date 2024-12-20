@@ -12,18 +12,18 @@ use context::BlocklessContext;
 pub use error::*;
 use log::{debug, error};
 use modules::ModuleLinker;
-use wasmtime_wasi_nn::wit::WasiNnView;
 use std::sync::Mutex;
 use std::{env, path::Path, sync::Arc};
 use wasi_common::sync::WasiCtxBuilder;
 use wasi_common::sync::{Dir, TcpListener};
 pub use wasi_common::*;
 use wasmtime::{
-    component::Component, Config, Engine, Linker, Module, 
-    Precompiled, Store, StoreLimits, StoreLimitsBuilder, Trap,
+    component::Component, Config, Engine, Linker, Module, Precompiled, Store, StoreLimits,
+    StoreLimitsBuilder, Trap,
 };
-use wasmtime_wasi::{DirPerms, FilePerms};
 use wasmtime_wasi::WasiView;
+use wasmtime_wasi::{DirPerms, FilePerms};
+use wasmtime_wasi_nn::wit::WasiNnView;
 use wasmtime_wasi_threads::WasiThreadsCtx;
 
 // the default wasm entry name.
@@ -499,9 +499,9 @@ impl BlocklessRunner {
     }
 
     fn nn_setup(
-        &self, 
-        linker: &mut BlsLinker, 
-        store: &mut Store<BlocklessContext>
+        &self,
+        linker: &mut BlsLinker,
+        store: &mut Store<BlocklessContext>,
     ) -> AnyResult<()> {
         let (backends, registry) = self.collect_preloaded_nn_graphs()?;
         match linker {
@@ -513,11 +513,10 @@ impl BlocklessRunner {
                 store.data_mut().wasi_nn_witx = Some(Arc::new(
                     wasmtime_wasi_nn::witx::WasiNnCtx::new(backends, registry),
                 ));
-            },
+            }
             BlsLinker::Component(linker) => {
                 wasmtime_wasi_nn::wit::add_to_linker(linker, |h: &mut BlocklessContext| {
-                    let preview2_ctx =
-                        h.preview2_ctx.as_mut().expect("wasip2 is not configured");
+                    let preview2_ctx = h.preview2_ctx.as_mut().expect("wasip2 is not configured");
                     let preview2_ctx = Arc::get_mut(preview2_ctx)
                         .expect("wasmtime_wasi is not compatible with threads")
                         .get_mut()
@@ -529,7 +528,7 @@ impl BlocklessRunner {
                 store.data_mut().wasi_nn_wit = Some(Arc::new(
                     wasmtime_wasi_nn::wit::WasiNnCtx::new(backends, registry),
                 ));
-            },
+            }
         }
         Ok(())
     }
