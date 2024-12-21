@@ -21,7 +21,9 @@ use wasmtime::{
     component::Component, Config, Engine, Linker, Module, Precompiled, Store, StoreLimits,
     StoreLimitsBuilder, Trap,
 };
+use wasmtime_wasi::WasiView;
 use wasmtime_wasi::{DirPerms, FilePerms};
+use wasmtime_wasi_nn::wit::WasiNnView;
 use wasmtime_wasi_threads::WasiThreadsCtx;
 
 // the default wasm entry name.
@@ -331,6 +333,9 @@ impl BlocklessRunner {
         let (mut linker, mut run_target, entry) =
             self.module_linker(entry, &engine, &mut store).await?;
         let mut is_component = false;
+        if b_conf.nn {
+            self.nn_setup(&mut linker, &mut store)?;
+        }
         // prepare linker.
         match linker {
             BlsLinker::Core(ref mut linker) => {
@@ -383,6 +388,18 @@ impl BlocklessRunner {
         let preview2_ctx = builder.build_p1();
         ctx.preview2_ctx = Some(Arc::new(Mutex::new(preview2_ctx)));
         Ok(())
+    }
+
+    fn collect_preloaded_nn_graphs(
+        &self,
+    ) -> AnyResult<(Vec<wasmtime_wasi_nn::Backend>, wasmtime_wasi_nn::Registry)> {
+        let graphs = self
+            .0
+            .nn_graph
+            .iter()
+            .map(|g| (g.format.clone(), g.dir.clone()))
+            .collect::<Vec<_>>();
+        wasmtime_wasi_nn::preload(&graphs)
     }
 
     fn write_core_dump(
@@ -479,6 +496,41 @@ impl BlocklessRunner {
             }
         };
         result
+    }
+
+    fn nn_setup(
+        &self,
+        linker: &mut BlsLinker,
+        store: &mut Store<BlocklessContext>,
+    ) -> AnyResult<()> {
+        let (backends, registry) = self.collect_preloaded_nn_graphs()?;
+        match linker {
+            BlsLinker::Core(linker) => {
+                wasmtime_wasi_nn::witx::add_to_linker(linker, |host| {
+                    Arc::get_mut(host.wasi_nn_witx.as_mut().unwrap())
+                        .expect("wasi-nn is not implemented with multi-threading support")
+                })?;
+                store.data_mut().wasi_nn_witx = Some(Arc::new(
+                    wasmtime_wasi_nn::witx::WasiNnCtx::new(backends, registry),
+                ));
+            }
+            BlsLinker::Component(linker) => {
+                wasmtime_wasi_nn::wit::add_to_linker(linker, |h: &mut BlocklessContext| {
+                    let preview2_ctx = h.preview2_ctx.as_mut().expect("wasip2 is not configured");
+                    let preview2_ctx = Arc::get_mut(preview2_ctx)
+                        .expect("wasmtime_wasi is not compatible with threads")
+                        .get_mut()
+                        .unwrap();
+                    let nn_ctx = Arc::get_mut(h.wasi_nn_wit.as_mut().unwrap())
+                        .expect("wasi-nn is not implemented with multi-threading support");
+                    WasiNnView::new(preview2_ctx.table(), nn_ctx)
+                })?;
+                store.data_mut().wasi_nn_wit = Some(Arc::new(
+                    wasmtime_wasi_nn::wit::WasiNnCtx::new(backends, registry),
+                ));
+            }
+        }
+        Ok(())
     }
 
     fn handle_core_dump(
