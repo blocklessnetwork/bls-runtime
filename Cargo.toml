@@ -10,7 +10,7 @@ members = [
 ]
 
 [workspace.package]
-version = "26.0.0"
+version = "28.0.0"
 authors = ["The Blockless Project Developers"]
 edition = "2021"
 
@@ -19,24 +19,24 @@ edition = "2021"
 wasi-common = {path = "crates/wasi-common"}
 
 [workspace.dependencies]
-tempfile = "3.3.0"
+tempfile = "3.4.1"
 libc = { version = "0.2.112", default-features = true }
-wasmtime = "=26.0.0"
-wasmtime-wasi = "=26.0.0"
-wiggle-generate = "=26.0.0"
-wasmtime-wasi-nn = { version = "=26.0.0" }
-wasmtime-wasi-threads = "=26.0.0" 
-wasi-common = { path = "crates/wasi-common", version="=26.0.0" }
+wasmtime = "=28.0.0"
+wasmtime-wasi = "=28.0.0"
+wiggle-generate = "=28.0.0"
+wasmtime-wasi-nn = { version = "=28.0.0" }
+wasmtime-wasi-threads = "=28.0.0" 
+wasi-common = { path = "crates/wasi-common", version="=28.0.0" }
 # witx dependency by wiggle
-wiggle = "=26.0.0"
+wiggle = "=28.0.0"
 witx = "0.9.1"
 
-anyhow = "1.0.22"
-cap-std = "3.3.0"
-cap-fs-ext = "3.3.0"
-cap-time-ext = "3.0.0"
-cap-tempfile = "3.3.0"
-cap-rand = { version = "3.3.0", features = ["small_rng"] }
+anyhow = "1.0.93"
+cap-std = "3.4.1"
+cap-fs-ext = "3.4.1"
+cap-time-ext = "3.4.1"
+cap-tempfile = "3.4.1"
+cap-rand = { version = "3.4.1", features = ["small_rng"] }
 test-log = { version = "0.2", default-features = false, features = ["trace"] }
 tracing-subscriber = { version = "0.3.1", default-features = false, features = ['fmt', 'env-filter', 'ansi', 'tracing-log'] }
 clap = { version = "4.5.17", default-features = false, features = ["std", "derive"] }

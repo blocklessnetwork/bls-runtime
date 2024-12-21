@@ -12,6 +12,7 @@ use context::BlocklessContext;
 pub use error::*;
 use log::{debug, error};
 use modules::ModuleLinker;
+use std::fs::File;
 use std::sync::Mutex;
 use std::{env, path::Path, sync::Arc};
 use wasi_common::sync::WasiCtxBuilder;
@@ -190,26 +191,37 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
     /// convert the blockless configure  to wasmtime configure.
     fn preview1_engine_config(&self) -> Config {
         let mut conf = Config::new();
-        if let Some(max) = self.opts.static_memory_maximum_size {
-            conf.static_memory_maximum_size(max);
+
+        if let Some(max) = self.opts.memory_reservation {
+            conf.memory_reservation(max);
         }
         if let Some(enable) = self.opts.static_memory_forced {
-            conf.static_memory_forced(enable);
+            conf.memory_may_move(!enable);
         }
-        if let Some(size) = self.opts.static_memory_guard_size {
-            conf.static_memory_guard_size(size);
+        if let Some(size) = self.opts.memory_may_move {
+            conf.memory_may_move(size);
         }
-        if let Some(size) = self.opts.dynamic_memory_guard_size {
-            conf.dynamic_memory_guard_size(size);
-        }
-        if let Some(size) = self.opts.dynamic_memory_reserved_for_growth {
-            conf.dynamic_memory_reserved_for_growth(size);
+        if let Some(size) = self.opts.memory_guard_size {
+            conf.memory_guard_size(size);
         }
         if let Some(enable) = self.opts.guard_before_linear_memory {
             conf.guard_before_linear_memory(enable);
         }
+        if let Some(enable) = self.opts.memory_init_cow {
+            conf.memory_init_cow(enable);
+        }
+        if let Some(enable) = self.opts.signals_based_traps {
+            conf.signals_based_traps(enable);
+        }
         if let Some(enable) = self.opts.table_lazy_init {
             conf.table_lazy_init(enable);
+        }
+        let mem_for_growth = self
+            .opts
+            .memory_reservation_for_growth
+            .or(self.opts.dynamic_memory_reserved_for_growth);
+        if let Some(size) = mem_for_growth {
+            conf.memory_reservation_for_growth(size);
         }
 
         if !self.opts.is_empty() {
@@ -244,6 +256,28 @@ impl BlocklessConfig2Preview1WasiBuilder for BlocklessConfig {
             if let Some(limit) = self.opts.pooling_max_memory_size {
                 cfg.max_memory_size(limit);
             }
+            if let Some(max) = self.opts.pooling_max_component_instance_size {
+                cfg.max_component_instance_size(max);
+            }
+            if let Some(max) = self.opts.pooling_max_core_instances_per_component {
+                cfg.max_core_instances_per_component(max);
+            }
+            if let Some(max) = self.opts.pooling_max_memories_per_component {
+                cfg.max_memories_per_component(max);
+            }
+            if let Some(max) = self.opts.pooling_max_tables_per_component {
+                cfg.max_tables_per_component(max);
+            }
+            if let Some(max) = self.opts.pooling_max_tables_per_module {
+                cfg.max_tables_per_module(max);
+            }
+            if let Some(max) = self.opts.pooling_max_memories_per_module {
+                cfg.max_memories_per_module(max);
+            }
+            if let Some(max) = self.opts.pooling_total_gc_heaps {
+                cfg.total_gc_heaps(max);
+            }
+
             conf.allocation_strategy(wasmtime::InstanceAllocationStrategy::Pooling(cfg));
         }
         conf.debug_info(self.get_debug_info());
@@ -561,8 +595,8 @@ impl BlocklessRunner {
             Some("-") => "/dev/stdin".as_ref(),
             _ => path.as_ref(),
         };
-
-        match wasmtime::_internal::MmapVec::from_file(path) {
+        let file = File::open(path)?;
+        match wasmtime::_internal::MmapVec::from_file(file) {
             Ok(map) => Self::load_module_contents(
                 engine,
                 path,

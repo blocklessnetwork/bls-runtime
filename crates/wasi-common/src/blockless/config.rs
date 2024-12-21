@@ -263,28 +263,40 @@ impl OptionParser<String> for bool {
     }
 }
 
+impl OptionParser<String> for wasmtime::RegallocAlgorithm {
+    fn parse(val: &String) -> anyhow::Result<Self> {
+        match val.as_str() {
+            "backtracking" => Ok(wasmtime::RegallocAlgorithm::Backtracking),
+            "single-pass" => Ok(wasmtime::RegallocAlgorithm::SinglePass),
+            other => bail!(
+                "unknown regalloc algorithm`{}`, only backtracking,single-pass accepted",
+                other
+            ),
+        }
+    }
+}
+
 bls_options! {
     #[derive(PartialEq, Clone)]
     pub struct OptimizeOpts {
-        /// Optimization level of generated code (n:None, s:Speed, ss:SpeedAndSize; default: ss)
-        pub opt_level: Option<OptLevel>,
+        /// Optimization level of generated code (0-2, s; default: 2)
+        pub opt_level: Option<wasmtime::OptLevel>,
 
-        /// Byte size of the guard region after dynamic memories are allocated
-        pub dynamic_memory_guard_size: Option<u64>,
+        /// Register allocator algorithm choice.
+        pub regalloc_algorithm: Option<wasmtime::RegallocAlgorithm>,
 
-        /// Force using a "static" style for all wasm memories
-        pub static_memory_forced: Option<bool>,
+        /// Do not allow Wasm linear memories to move in the host process's
+        /// address space.
+        pub memory_may_move: Option<bool>,
 
-        /// Maximum size in bytes of wasm memory before it becomes dynamically
-        /// relocatable instead of up-front-reserved.
-        pub static_memory_maximum_size: Option<u64>,
+        /// Initial virtual memory allocation size for memories.
+        pub memory_reservation: Option<u64>,
 
-        /// Byte size of the guard region after static memories are allocated
-        pub static_memory_guard_size: Option<u64>,
+        /// Bytes to reserve at the end of linear memory for growth into.
+        pub memory_reservation_for_growth: Option<u64>,
 
-        /// Bytes to reserve at the end of linear memory for growth for dynamic
-        /// memories.
-        pub dynamic_memory_reserved_for_growth: Option<u64>,
+        /// Size, in bytes, of guard pages for linear memories.
+        pub memory_guard_size: Option<u64>,
 
         /// Indicates whether an unmapped region of memory is placed before all
         /// linear memories.
@@ -301,7 +313,7 @@ bls_options! {
 
         /// The number of decommits to do per batch. A batch size of 1
         /// effectively disables decommit batching. (default: 1)
-        pub pooling_decommit_batch_size: Option<u32>,
+        pub pooling_decommit_batch_size: Option<usize>,
 
         /// How many bytes to keep resident between instantiations for the
         /// pooling allocator in linear memories.
@@ -313,7 +325,11 @@ bls_options! {
 
         /// Enable memory protection keys for the pooling allocator; this can
         /// optimize the size of memory slots.
-        pub memory_protection_keys: Option<bool>,
+        pub pooling_memory_protection_keys: Option<bool>,
+
+        /// Sets an upper limit on how many memory protection keys (MPK) Wasmtime
+        /// will use. (default: 16)
+        pub pooling_max_memory_protection_keys: Option<usize>,
 
         /// Configure attempting to initialize linear memory via a
         /// copy-on-write mapping (default: yes)
@@ -345,11 +361,66 @@ bls_options! {
 
         /// The maximum table elements for any table defined in a module when
         /// using the pooling allocator.
-        pub pooling_table_elements: Option<u32>,
+        pub pooling_table_elements: Option<usize>,
 
         /// The maximum size, in bytes, allocated for a core instance's metadata
         /// when using the pooling allocator.
         pub pooling_max_core_instance_size: Option<usize>,
+
+        /// Configures the maximum number of "unused warm slots" to retain in the
+        /// pooling allocator. (default: 100)
+        pub pooling_max_unused_warm_slots: Option<u32>,
+
+        /// Configures whether or not stacks used for async futures are reset to
+        /// zero after usage. (default: false)
+        pub pooling_async_stack_zeroing: Option<bool>,
+
+        /// How much memory, in bytes, to keep resident for async stacks allocated
+        /// with the pooling allocator. (default: 0)
+        pub pooling_async_stack_keep_resident: Option<usize>,
+
+        /// The maximum size, in bytes, allocated for a component instance's
+        /// `VMComponentContext` metadata. (default: 1MiB)
+        pub pooling_max_component_instance_size: Option<usize>,
+
+        /// The maximum number of core instances a single component may contain
+        /// (default is unlimited).
+        pub pooling_max_core_instances_per_component: Option<u32>,
+
+        /// The maximum number of Wasm linear memories that a single component may
+        /// transitively contain (default is unlimited).
+        pub pooling_max_memories_per_component: Option<u32>,
+
+        /// The maximum number of tables that a single component may transitively
+        /// contain (default is unlimited).
+        pub pooling_max_tables_per_component: Option<u32>,
+
+        /// The maximum number of defined tables for a core module. (default: 1)
+        pub pooling_max_tables_per_module: Option<u32>,
+
+        /// The maximum number of defined linear memories for a module. (default: 1)
+        pub pooling_max_memories_per_module: Option<u32>,
+
+        /// The maximum number of concurrent GC heaps supported. (default: 1000)
+        pub pooling_total_gc_heaps: Option<u32>,
+
+        /// Enable or disable the use of host signal handlers for traps.
+        pub signals_based_traps: Option<bool>,
+
+        /// DEPRECATED: Use `-Cmemory-guard-size=N` instead.
+        pub dynamic_memory_guard_size: Option<u64>,
+
+        /// DEPRECATED: Use `-Cmemory-guard-size=N` instead.
+        pub static_memory_guard_size: Option<u64>,
+
+        /// DEPRECATED: Use `-Cmemory-may-move` instead.
+        pub static_memory_forced: Option<bool>,
+
+        /// DEPRECATED: Use `-Cmemory-reservation=N` instead.
+        pub static_memory_maximum_size: Option<u64>,
+
+        /// DEPRECATED: Use `-Cmemory-reservation-for-growth=N` instead.
+        pub dynamic_memory_reserved_for_growth: Option<u64>,
     }
 }
 
