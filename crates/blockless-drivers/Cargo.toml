@@ -23,12 +23,12 @@ log = {workspace = true}
 async-trait = {workspace = true}
 dlopen = {workspace = true}
 json = {workspace = true}
-reqwest = {version = "0.11", features = ["stream"]}
+reqwest = {version = "0.12.9", features = ["stream", "rustls-tls"], default-features = false}
 serde_urlencoded = "0.7"
 bytes = { workspace = true }
 httparse = "1"
 url = { workspace = true }
-rust-s3 = {git = "https://github.com/Joinhack/rust-s3", version="0.36.0-beta.4"}
+rust-s3 = {git = "https://github.com/Joinhack/rust-s3", features = ["tokio-rustls-tls"]}
 futures-core = {workspace = true}
 futures-util = {workspace = true}
 md5 = "0.7.0"
