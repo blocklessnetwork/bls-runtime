@@ -52,19 +52,19 @@ jobs:
           echo `pwd`
           sudo apt install gcc-aarch64-linux-gnu
           sudo apt-get install build-essential gcc musl-tools musl-dev make perl dkms
-          wget https://phoenixnap.dl.sourceforge.net/project/libpng/zlib/1.2.11/zlib-1.2.11.tar.gz\?viasf\=1 -O zlib-1.2.11.tar.gz
-          tar xf zlib-1.2.11.tar.gz && rm zlib-1.2.11.tar.gz
-          cd zlib-1.2.11
-          sed   '394,400d' configure > _configure && mv _configure configure && chmod +x configure
-          mkdir build
-          CHOST=arm CC=/usr/bin/aarch64-linux-gnu-gcc \
-          AR=/usr/bin/aarch64-linux-gnu-ar \
-          RANLIB=/usr/bin/aarch64-linux-gnu-ranlib \
-          ./configure --prefix=/usr/local/
-          make -j$(nproc) 
-          sudo make install
-          cd ..
-          ZLIBPATH=/usr/local/
+          #wget https://phoenixnap.dl.sourceforge.net/project/libpng/zlib/1.2.11/zlib-1.2.11.tar.gz\?viasf\=1 -O zlib-1.2.11.tar.gz
+          #tar xf zlib-1.2.11.tar.gz && rm zlib-1.2.11.tar.gz
+          #cd zlib-1.2.11
+          #sed   '394,400d' configure > _configure && mv _configure configure && chmod +x configure
+          #mkdir build
+          #CHOST=arm CC=/usr/bin/aarch64-linux-gnu-gcc \
+          #AR=/usr/bin/aarch64-linux-gnu-ar \
+          #RANLIB=/usr/bin/aarch64-linux-gnu-ranlib \
+          #./configure --prefix=/usr/local/
+          #make -j$(nproc) 
+          #sudo make install
+          #cd ..
+          #ZLIBPATH=/usr/local/
           #wget https://www.openssl.org/source/openssl-1.1.1.tar.gz
           #tar -xvzf openssl-1.1.1.tar.gz
           #cd openssl-1.1.1/
@@ -73,7 +73,6 @@ jobs:
           #--with-zlib-include=${ZLIBPATH}/include --openssldir=/usr/local shared zlib 
           #make -j$(($(nproc)+1))
           #sudo make install
-        if: startsWith(matrix.arch, 'aarch64')
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
