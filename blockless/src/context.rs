@@ -36,7 +36,7 @@ impl BlocklessContext {
     pub(crate) fn preview2_ctx(&mut self) -> &mut WasiP1Ctx {
         let ctx = self.preview2_ctx.as_mut().unwrap();
         Arc::get_mut(ctx)
-            .expect("wasmtime_wasi was not compatiable threads")
+            .expect("wasmtime_wasi was not compatible threads")
             .get_mut()
             .unwrap()
     }
