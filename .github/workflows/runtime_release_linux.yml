@@ -47,15 +47,8 @@ jobs:
       - name: install libssl-dev
         run: |
           echo `pwd`
-          sudo apt install  aarch64-linux-musl-gcc
-          sudo apt-get install build-essential gcc musl-tools musl-dev make perl dkms
-        if: startsWith(matrix.arch, 'aarch64')
-      - name: install libssl-dev
-        run: |
-          echo `pwd`
           sudo apt install  gcc-aarch64-linux-gnu
           sudo apt-get install build-essential gcc musl-tools musl-dev make perl dkms
-        if: startsWith(matrix.arch, 'x86_64')
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
