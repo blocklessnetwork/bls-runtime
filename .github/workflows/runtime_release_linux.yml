@@ -27,7 +27,7 @@ jobs:
             os: linux-latest
             runson: ubuntu-latest
             rust: stable
-            target: aarch64-unknown-linux-gnu
+            target: aarch64-unknown-linux-musl
             arch: aarch64
             cross: false
     runs-on: ${{ matrix.runson }}
