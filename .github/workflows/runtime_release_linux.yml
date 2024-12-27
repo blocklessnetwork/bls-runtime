@@ -50,7 +50,7 @@ jobs:
           AARCH64_UNKNOWN_LINUX_GNU_OPENSSL_DIR: /usr/local/ssl
         run: |
           echo `pwd`
-          sudo apt install gcc-aarch64-linux-gnu
+          sudo apt install gcc-aarch64-linux-gnu aarch64-linux-musl-gcc
           sudo apt-get install build-essential gcc musl-tools musl-dev make perl dkms
           #wget https://phoenixnap.dl.sourceforge.net/project/libpng/zlib/1.2.11/zlib-1.2.11.tar.gz\?viasf\=1 -O zlib-1.2.11.tar.gz
           #tar xf zlib-1.2.11.tar.gz && rm zlib-1.2.11.tar.gz
