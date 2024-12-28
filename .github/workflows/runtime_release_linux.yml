@@ -68,7 +68,7 @@ jobs:
       - name: Build runtime
         uses: actions-rs/cargo@v1
         env:
-          RUSTFLAGS: "-C link-arg=-L/usr/local/lib"
+          RUSTFLAGS: "-C link-arg=-L/usr/local/lib -C link-arg=-ldl"
           LD_LIBRARY_PATH: "$LD_LIBRARY_PATH:/usr/local/lib"
           DYLD_LIBRARY_PATH: "$DYLD_LIBRARY_PATH:/usr/local/lib"
           AARCH64_UNKNOWN_LINUX_GNU_OPENSSL_INCLUDE_DIR: /usr/local/include
