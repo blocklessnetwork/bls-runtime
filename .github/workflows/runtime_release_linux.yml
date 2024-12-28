@@ -44,7 +44,7 @@ jobs:
           file: "bls-runtime/Cargo.toml"
           key: "version"
           value: "${{ steps.get_release.outputs.tag_name }}"
-      - name: install libssl-dev
+      - name: Prepared Tools
         run: |
           echo `pwd`
           sudo apt install  gcc-aarch64-linux-gnu
@@ -52,7 +52,10 @@ jobs:
           tar xzvf aarch64-linux-musl-cross.tgz
           sudo mv aarch64-linux-musl-cross /
           echo `pwd`
-          sudo apt-get install build-essential gcc musl-tools musl-dev make perl dkms    
+          sudo apt-get install build-essential gcc musl-tools musl-dev make perl dkms
+          sed  "2 s/linker.*/linker = \"\/aarch64-linux-musl-cross\/bin\/aarch64-linux-musl-gcc\"/" .cargo/config.toml > tmp.toml
+          mv tmp.toml .cargo/config.toml
+          cat .cargo/config.toml
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -61,10 +64,10 @@ jobs:
         run: |
           rustup target add ${{ matrix.target }}
           rustup target list
+      
       - name: Build runtime
         uses: actions-rs/cargo@v1
         env:
-          PATH: ${{ env.PATH }}:/aarch64-linux-musl-cross/bin
           RUSTFLAGS: "-C link-arg=-L/usr/local/lib"
           LD_LIBRARY_PATH: "$LD_LIBRARY_PATH:/usr/local/lib"
           DYLD_LIBRARY_PATH: "$DYLD_LIBRARY_PATH:/usr/local/lib"
