@@ -48,7 +48,10 @@ jobs:
         run: |
           echo `pwd`
           sudo apt install  gcc-aarch64-linux-gnu
-          sudo apt-get install build-essential gcc musl-tools musl-dev make perl dkms
+          curl https://musl.cc/aarch64-linux-musl-cross.tgz -o aarch64-linux-musl-cross.tgz
+          tar xzvf aarch64-linux-musl-cross.tgz
+          echo `pwd`
+          sudo apt-get install build-essential gcc musl-tools musl-dev make perl dkms    
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
@@ -60,6 +63,7 @@ jobs:
       - name: Build runtime
         uses: actions-rs/cargo@v1
         env:
+          PATH: "$PATH:/aarch64-linux-musl-cross/bin"
           RUSTFLAGS: "-C link-arg=-L/usr/local/lib"
           LD_LIBRARY_PATH: "$LD_LIBRARY_PATH:/usr/local/lib"
           DYLD_LIBRARY_PATH: "$DYLD_LIBRARY_PATH:/usr/local/lib"
