@@ -56,11 +56,6 @@ jobs:
           sed  "2 s/linker.*/linker = \"\/aarch64-linux-musl-cross\/bin\/aarch64-linux-musl-gcc\"/" .cargo/config.toml > tmp.toml
           mv tmp.toml .cargo/config.toml
           cat .cargo/config.toml
-      - name: Install Libc
-        run: |
-          apt 
-          sudo apt install libc6-dev
-        if: matrix.build == "ubuntu-24.04"
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
