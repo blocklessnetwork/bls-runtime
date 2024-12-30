@@ -9,10 +9,10 @@ jobs:
     strategy:
       matrix:
         include:
-          - build: ubuntu-20.04
-            os: ubuntu-20.04
+          - build: ubuntu-22.04
+            os: ubuntu-22.04
             rust: stable
-            runson: ubuntu-20.04
+            runson: ubuntu-22.04
             target: x86_64-unknown-linux-musl
             arch: x86_64
             cross: false
@@ -60,7 +60,7 @@ jobs:
         run: |
           apt 
           sudo apt install libc6-dev
-        if: matrix.arch == "ubuntu-20.04"
+        if: matrix.build == "ubuntu-20.04"
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
