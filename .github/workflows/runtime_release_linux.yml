@@ -60,7 +60,7 @@ jobs:
         run: |
           apt 
           sudo apt install libc6-dev
-        if: matrix.build == "ubuntu-20.04"
+        if: matrix.build == "ubuntu-22.04"
       - uses: actions-rs/toolchain@v1
         with:
           toolchain: stable
